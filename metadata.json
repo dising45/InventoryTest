@@ -1,0 +1,5 @@
+{
+  "name": "InventoryPro",
+  "description": "A modern PWA-ready inventory management application featuring product tracking, variant support, and real-time stock analytics.",
+  "requestFramePermissions": []
+}
