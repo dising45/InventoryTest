@@ -69,7 +69,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDelete })
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                              <div className="text-xs text-gray-500 truncate max-w-xs">{product.has_variants ? `${product.variants.length} Variants` : 'Single Item'}</div>
+                              <div className="text-xs text-gray-500 truncate max-w-xs">{product.has_variants ? `${(product.variants ?? []).length} Variants` : 'Single Item'}</div>
                             </div>
                           </div>
                         </td>
