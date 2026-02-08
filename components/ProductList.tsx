@@ -122,7 +122,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDelete })
                   </div>
                   <div className="flex justify-between items-center mt-3">
                       <span className="text-xs text-gray-500">
-                          {product.has_variants ? `${product.variants.length} variants` : 'Standard'}
+                        {product.has_variants ? `${(product.variants ?? []).length} variants` : 'Standard'}
                       </span>
                       <div className="flex space-x-3">
                          <button 
