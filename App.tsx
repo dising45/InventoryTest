@@ -27,8 +27,6 @@ import {
   LayoutDashboard,
   Package,
   Plus,
-  Menu,
-  X,
   Box,
   Users,
   Truck,
@@ -47,7 +45,6 @@ export default function App() {
   const [editingSale, setEditingSale] = useState<SalesOrder | undefined>();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   /* -------------------- INITIAL LOAD -------------------- */
   useEffect(() => {
@@ -69,43 +66,31 @@ export default function App() {
   };
 
   const loadProducts = async () => {
-    const data = await inventoryService.getProducts();
-    setProducts(data);
+    setProducts(await inventoryService.getProducts());
   };
 
   const loadCustomers = async () => {
-    const data = await customerService.getCustomers();
-    setCustomers(data);
+    setCustomers(await customerService.getCustomers());
   };
 
   const loadSuppliers = async () => {
-    const data = await supplierService.getSuppliers();
-    setSuppliers(data);
+    setSuppliers(await supplierService.getSuppliers());
   };
 
   const loadSales = async () => {
-    const data = await salesService.getSales();
-    setSales(data);
+    setSales(await salesService.getSales());
   };
 
   /* -------------------- PRODUCT -------------------- */
-  const handleSaveProduct = async (productData: any) => {
-    try {
-      if (editingProduct) {
-        await inventoryService.updateProduct({
-          ...productData,
-          id: editingProduct.id,
-        });
-      } else {
-        await inventoryService.addProduct(productData);
-      }
-
-      await loadProducts();
-      setEditingProduct(undefined);
-      setCurrentView('inventory');
-    } catch {
-      alert('Failed to save product');
+  const handleSaveProduct = async (data: any) => {
+    if (editingProduct) {
+      await inventoryService.updateProduct({ ...data, id: editingProduct.id });
+    } else {
+      await inventoryService.addProduct(data);
     }
+    await loadProducts();
+    setEditingProduct(undefined);
+    setCurrentView('inventory');
   };
 
   const handleDeleteProduct = async (id: string) => {
@@ -115,30 +100,23 @@ export default function App() {
   };
 
   /* -------------------- SALES -------------------- */
-  const handleSaveSale = async (saleData: {
+  const handleSaveSale = async (data: {
     customer_id: string;
     items: SalesItem[];
     total_amount: number;
   }) => {
-    try {
-      if (editingSale) {
-        await salesService.updateSale(editingSale.id, saleData);
-        setEditingSale(undefined);
-      } else {
-        await salesService.createSale(saleData);
-      }
-
-      await Promise.all([loadSales(), loadProducts()]);
-      setCurrentView('sales');
-    } catch (e) {
-      console.error(e);
-      alert('Failed to save sale');
+    if (editingSale) {
+      await salesService.updateSale(editingSale.id, data);
+      setEditingSale(undefined);
+    } else {
+      await salesService.createSale(data);
     }
+    await Promise.all([loadSales(), loadProducts()]);
+    setCurrentView('sales');
   };
 
   const handleDeleteSale = async (id: string) => {
     if (!confirm('Delete this sale? Stock will be restored.')) return;
-
     await salesService.deleteSale(id);
     await Promise.all([loadSales(), loadProducts()]);
   };
@@ -152,39 +130,25 @@ export default function App() {
     view: ViewState;
     icon: any;
     label: string;
-  }) => {
-    const isActive =
-      currentView === view ||
-      (view === 'inventory' &&
-        (currentView === 'add-product' ||
-          currentView === 'edit-product')) ||
-      (view === 'sales' &&
-        (currentView === 'add-sale' ||
-          currentView === 'edit-sale'));
-
-    return (
-      <button
-        onClick={() => {
-          setCurrentView(view);
-          setIsMobileMenuOpen(false);
-        }}
-        className={`flex items-center w-full px-4 py-3 rounded-lg ${
-          isActive
-            ? 'bg-indigo-50 text-indigo-600'
-            : 'text-gray-600 hover:bg-gray-50'
-        }`}
-      >
-        <Icon className="w-5 h-5 mr-3" />
-        {label}
-      </button>
-    );
-  };
+  }) => (
+    <button
+      onClick={() => setCurrentView(view)}
+      className={`flex items-center w-full px-4 py-3 rounded-lg ${
+        currentView === view
+          ? 'bg-indigo-50 text-indigo-600'
+          : 'text-gray-600 hover:bg-gray-50'
+      }`}
+    >
+      <Icon className="w-5 h-5 mr-3" />
+      {label}
+    </button>
+  );
 
   /* -------------------- RENDER -------------------- */
   return (
     <div className="min-h-screen flex bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r hidden md:block">
+      <aside className="w-64 bg-white border-r">
         <div className="p-6 font-bold text-lg flex items-center">
           <Box className="mr-2" /> InventoryPro
         </div>
@@ -203,9 +167,7 @@ export default function App() {
           <div className="flex justify-center py-20">Loading…</div>
         ) : (
           <>
-            {currentView === 'dashboard' && (
-              <Dashboard products={products} />
-            )}
+            {currentView === 'dashboard' && <Dashboard products={products} />}
 
             {currentView === 'inventory' && (
               <>
@@ -218,7 +180,6 @@ export default function App() {
                 >
                   <Plus className="mr-2" /> Add Product
                 </button>
-
                 <ProductList
                   products={products}
                   onEdit={(p) => {
@@ -250,7 +211,6 @@ export default function App() {
                 >
                   <Plus className="mr-2" /> New Sale
                 </button>
-
                 <SalesList
                   sales={sales}
                   onEdit={(s) => {
@@ -277,11 +237,49 @@ export default function App() {
             )}
 
             {currentView === 'customers' && (
-              <CustomerList customers={customers} onDelete={() => {}} />
+              <>
+                <button
+                  onClick={() => setCurrentView('add-customer')}
+                  className="mb-4 flex items-center bg-indigo-600 text-white px-4 py-2 rounded"
+                >
+                  <Plus className="mr-2" /> Add Customer
+                </button>
+                <CustomerList customers={customers} onDelete={() => {}} />
+              </>
+            )}
+
+            {currentView === 'add-customer' && (
+              <CustomerForm
+                onSave={async (data) => {
+                  await customerService.addCustomer(data);
+                  await loadCustomers();
+                  setCurrentView('customers');
+                }}
+                onCancel={() => setCurrentView('customers')}
+              />
             )}
 
             {currentView === 'suppliers' && (
-              <SupplierList suppliers={suppliers} onDelete={() => {}} />
+              <>
+                <button
+                  onClick={() => setCurrentView('add-supplier')}
+                  className="mb-4 flex items-center bg-indigo-600 text-white px-4 py-2 rounded"
+                >
+                  <Plus className="mr-2" /> Add Supplier
+                </button>
+                <SupplierList suppliers={suppliers} onDelete={() => {}} />
+              </>
+            )}
+
+            {currentView === 'add-supplier' && (
+              <SupplierForm
+                onSave={async (data) => {
+                  await supplierService.addSupplier(data);
+                  await loadSuppliers();
+                  setCurrentView('suppliers');
+                }}
+                onCancel={() => setCurrentView('suppliers')}
+              />
             )}
           </>
         )}
