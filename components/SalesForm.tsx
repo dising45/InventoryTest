@@ -69,16 +69,29 @@ const SalesForm: React.FC<SalesFormProps> = ({
   /* -------------------- HELPERS -------------------- */
 
   const getAvailableStock = (item: SalesItem) => {
-    const product = products.find((p) => p.id === item.product_id);
+    const product = products.find(p => p.id === item.product_id);
     if (!product) return 0;
 
+    let currentStock = 0;
+
     if (item.variant_id && product.has_variants) {
-      const variant = product.variants.find((v) => v.id === item.variant_id);
-      return variant?.stock ?? 0;
+      const variant = product.variants.find(v => v.id === item.variant_id);
+      currentStock = variant?.stock ?? 0;
+    } else {
+      currentStock = product.stock;
     }
 
-    return product.stock;
+    // IMPORTANT: add back the quantity already in this sale (edit mode)
+    const originalQty =
+      initialData?.items?.find(
+        i =>
+          i.product_id === item.product_id &&
+          i.variant_id === item.variant_id
+      )?.quantity ?? 0;
+
+    return currentStock + originalQty;
   };
+
 
   const updateItem = (
     index: number,
