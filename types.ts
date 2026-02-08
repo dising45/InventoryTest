@@ -18,6 +18,25 @@ export interface Product {
   updated_at: string;
 }
 
+export interface Supplier {
+  id: string;
+  name: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  created_at: string;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  created_at: string;
+}
+
 export type ViewState = 'dashboard' | 'inventory' | 'add-product' | 'edit-product';
 
 export interface InventoryStats {
