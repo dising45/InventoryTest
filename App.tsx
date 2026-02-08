@@ -56,10 +56,14 @@ export default function App() {
   const handleSaveProduct = async (productData: any) => {
     try {
       if (editingProduct) {
-        await inventoryService.updateProduct(editingProduct.id, productData);
+        await inventoryService.updateProduct({
+          ...productData,
+          id: editingProduct.id,
+        });
       } else {
         await inventoryService.addProduct(productData);
       }
+
       await loadProducts();
       setCurrentView('inventory');
       setEditingProduct(undefined);
@@ -134,9 +138,9 @@ export default function App() {
   };
 
   const NavItem = ({ view, icon: Icon, label }: { view: ViewState, icon: any, label: string }) => {
-    const isActive = 
-      currentView === view || 
-      (view === 'inventory' && (currentView === 'add-product' || currentView === 'edit-product')) || 
+    const isActive =
+      currentView === view ||
+      (view === 'inventory' && (currentView === 'add-product' || currentView === 'edit-product')) ||
       (view === 'customers' && currentView === 'add-customer') ||
       (view === 'suppliers' && currentView === 'add-supplier');
 
@@ -146,11 +150,10 @@ export default function App() {
           setCurrentView(view);
           setIsMobileMenuOpen(false);
         }}
-        className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-          isActive
-            ? 'bg-indigo-50 text-indigo-600' 
+        className={`flex items-center w-full px-4 py-3 text-sm font-medium rounded-lg transition-colors ${isActive
+            ? 'bg-indigo-50 text-indigo-600'
             : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-        }`}
+          }`}
       >
         <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-indigo-600' : 'text-gray-400'}`} />
         {label}
@@ -160,29 +163,28 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      
+
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 w-full bg-white border-b border-gray-200 z-50 px-4 py-3 flex items-center justify-between">
-         <div className="flex items-center space-x-2">
-             <div className="bg-indigo-600 p-1.5 rounded-lg">
-                <Box className="w-5 h-5 text-white" />
-             </div>
-             <span className="font-bold text-gray-900">InventoryPro</span>
-         </div>
-         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-gray-600">
-            {isMobileMenuOpen ? <X /> : <Menu />}
-         </button>
+        <div className="flex items-center space-x-2">
+          <div className="bg-indigo-600 p-1.5 rounded-lg">
+            <Box className="w-5 h-5 text-white" />
+          </div>
+          <span className="font-bold text-gray-900">InventoryPro</span>
+        </div>
+        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-gray-600">
+          {isMobileMenuOpen ? <X /> : <Menu />}
+        </button>
       </div>
 
       {/* Sidebar Navigation */}
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:h-screen ${
-        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:h-screen ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
         <div className="flex flex-col h-full">
           <div className="h-16 flex items-center px-6 border-b border-gray-100 hidden md:flex">
-             <div className="bg-indigo-600 p-1.5 rounded-lg mr-3">
-                <Box className="w-6 h-6 text-white" />
-             </div>
+            <div className="bg-indigo-600 p-1.5 rounded-lg mr-3">
+              <Box className="w-6 h-6 text-white" />
+            </div>
             <span className="text-xl font-bold text-gray-900">InventoryPro</span>
           </div>
 
@@ -194,22 +196,22 @@ export default function App() {
           </div>
 
           <div className="p-4 border-t border-gray-100">
-             <div className="flex items-center p-3 rounded-lg bg-gray-50 border border-gray-100">
-                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
-                  JD
-                </div>
-                <div className="ml-3">
-                   <p className="text-sm font-medium text-gray-900">John Doe</p>
-                   <p className="text-xs text-gray-500">Admin</p>
-                </div>
-             </div>
+            <div className="flex items-center p-3 rounded-lg bg-gray-50 border border-gray-100">
+              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
+                JD
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-900">John Doe</p>
+                <p className="text-xs text-gray-500">Admin</p>
+              </div>
+            </div>
           </div>
         </div>
       </aside>
 
       {/* Overlay for mobile sidebar */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-30 md:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
@@ -218,7 +220,7 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto h-screen pt-16 md:pt-0">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          
+
           {/* Header Action Area */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
             <div>
@@ -233,14 +235,14 @@ export default function App() {
                 {currentView === 'add-supplier' && 'New Supplier'}
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                 {currentView === 'dashboard' && 'Track performance and stock levels'}
-                 {currentView === 'inventory' && 'Manage your entire catalog'}
-                 {currentView === 'customers' && 'View and manage your customer base'}
-                 {currentView === 'suppliers' && 'Manage your supply chain partners'}
-                 {(currentView === 'add-product' || currentView === 'edit-product' || currentView === 'add-customer' || currentView === 'add-supplier') && 'Fill in the details below'}
+                {currentView === 'dashboard' && 'Track performance and stock levels'}
+                {currentView === 'inventory' && 'Manage your entire catalog'}
+                {currentView === 'customers' && 'View and manage your customer base'}
+                {currentView === 'suppliers' && 'Manage your supply chain partners'}
+                {(currentView === 'add-product' || currentView === 'edit-product' || currentView === 'add-customer' || currentView === 'add-supplier') && 'Fill in the details below'}
               </p>
             </div>
-            
+
             {/* Contextual Action Button */}
             {(currentView === 'inventory') && (
               <button
@@ -279,39 +281,39 @@ export default function App() {
             <>
               {currentView === 'dashboard' && <Dashboard products={products} />}
               {currentView === 'inventory' && (
-                <ProductList 
-                  products={products} 
-                  onEdit={handleEditProductInit} 
-                  onDelete={handleDeleteProduct} 
+                <ProductList
+                  products={products}
+                  onEdit={handleEditProductInit}
+                  onDelete={handleDeleteProduct}
                 />
               )}
               {(currentView === 'add-product' || currentView === 'edit-product') && (
-                <ProductForm 
+                <ProductForm
                   initialData={editingProduct}
                   onSave={handleSaveProduct}
                   onCancel={() => setCurrentView('inventory')}
                 />
               )}
               {currentView === 'customers' && (
-                <CustomerList 
+                <CustomerList
                   customers={customers}
                   onDelete={handleDeleteCustomer}
                 />
               )}
               {currentView === 'add-customer' && (
-                <CustomerForm 
+                <CustomerForm
                   onSave={handleSaveCustomer}
                   onCancel={() => setCurrentView('customers')}
                 />
               )}
               {currentView === 'suppliers' && (
-                <SupplierList 
+                <SupplierList
                   suppliers={suppliers}
                   onDelete={handleDeleteSupplier}
                 />
               )}
               {currentView === 'add-supplier' && (
-                <SupplierForm 
+                <SupplierForm
                   onSave={handleSaveSupplier}
                   onCancel={() => setCurrentView('suppliers')}
                 />
