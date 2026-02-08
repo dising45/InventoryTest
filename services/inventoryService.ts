@@ -1,117 +1,116 @@
-import { supabase } from '../lib/supabase';
-import { Product, ProductWithVariants, Variant } from '../types';
-import { USE_MOCK_DATA, MOCK_PRODUCTS, MOCK_VARIANTS } from '../constants';
+import { Product } from '../types';
 
-// In-memory mock store
-let mockProducts: Product[] = [...MOCK_PRODUCTS];
-let mockVariants: Variant[] = [...MOCK_VARIANTS];
+const STORAGE_KEY = 'inventory_pro_data';
 
-export const getProducts = async (): Promise<ProductWithVariants[]> => {
-  if (USE_MOCK_DATA) {
-    return mockProducts.map(p => {
-      const variants = mockVariants.filter(v => v.product_id === p.id);
-      return { ...p, variants };
-    });
-  }
-
-  const { data: products, error: pError } = await supabase.from('products').select('*');
-  if (pError) throw pError;
-
-  const { data: variants, error: vError } = await supabase.from('variants').select('*');
-  if (vError) throw vError;
-
-  return (products || []).map((p: Product) => ({
-    ...p,
-    variants: (variants || []).filter((v: Variant) => v.product_id === p.id)
-  }));
+// Helper to generate UUIDs
+const generateId = () => {
+  return crypto.randomUUID();
 };
 
-export const createProduct = async (product: Omit<Product, 'id' | 'created_at'>, variants: Omit<Variant, 'id' | 'created_at' | 'product_id'>[]) => {
-  if (USE_MOCK_DATA) {
-    const newProduct = { ...product, id: crypto.randomUUID(), created_at: new Date().toISOString() } as Product;
-    mockProducts.push(newProduct);
-    
-    if (product.has_variants && variants.length > 0) {
-      const newVariants = variants.map(v => ({
-        ...v,
-        id: crypto.randomUUID(),
-        product_id: newProduct.id,
-        created_at: new Date().toISOString()
-      } as Variant));
-      mockVariants.push(...newVariants);
+// Initial dummy data
+const initialData: Product[] = [
+  {
+    id: generateId(),
+    name: 'Classic White T-Shirt',
+    description: '100% Cotton basic tee',
+    buy_price: 5.00,
+    sell_price: 15.00,
+    stock: 50,
+    has_variants: true,
+    variants: [
+      { id: generateId(), name: 'S', sku: 'TS-WHT-S', stock: 10, price_modifier: 0 },
+      { id: generateId(), name: 'M', sku: 'TS-WHT-M', stock: 25, price_modifier: 0 },
+      { id: generateId(), name: 'L', sku: 'TS-WHT-L', stock: 15, price_modifier: 0 },
+    ],
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: generateId(),
+    name: 'Denim Jeans',
+    description: 'Slim fit blue jeans',
+    buy_price: 20.00,
+    sell_price: 45.00,
+    stock: 12,
+    has_variants: false,
+    variants: [],
+    updated_at: new Date().toISOString(),
+  }
+];
+
+// Helper to simulate network delay
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+class InventoryService {
+  private getStoredData(): Product[] {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
+      return initialData;
     }
+    return JSON.parse(stored);
+  }
+
+  private setStoredData(data: Product[]) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  async getProducts(): Promise<Product[]> {
+    await delay(300); // Simulate network
+    return this.getStoredData();
+  }
+
+  async getProductById(id: string): Promise<Product | undefined> {
+    await delay(200);
+    const products = this.getStoredData();
+    return products.find(p => p.id === id);
+  }
+
+  async addProduct(product: Omit<Product, 'id' | 'updated_at'>): Promise<Product> {
+    await delay(400);
+    const products = this.getStoredData();
+    
+    // Calculate total stock if variants exist
+    let calculatedStock = product.stock;
+    if (product.has_variants && product.variants.length > 0) {
+      calculatedStock = product.variants.reduce((acc, v) => acc + v.stock, 0);
+    }
+
+    const newProduct: Product = {
+      ...product,
+      id: generateId(),
+      stock: calculatedStock,
+      updated_at: new Date().toISOString(),
+    };
+
+    this.setStoredData([newProduct, ...products]);
     return newProduct;
   }
 
-  // 1. Insert Product
-  const { data: pData, error: pError } = await supabase
-    .from('products')
-    .insert(product)
-    .select()
-    .single();
-  
-  if (pError) throw pError;
-  const newProduct = pData as Product;
+  async updateProduct(id: string, updates: Partial<Product>): Promise<Product> {
+    await delay(400);
+    const products = this.getStoredData();
+    const index = products.findIndex(p => p.id === id);
+    if (index === -1) throw new Error("Product not found");
 
-  // 2. Insert Variants if any
-  if (product.has_variants && variants.length > 0) {
-    const variantsToInsert = variants.map(v => ({ ...v, product_id: newProduct.id }));
-    const { error: vError } = await supabase.from('variants').insert(variantsToInsert);
-    if (vError) throw vError; // Note: In real app, consider rollback or transaction
+    const existing = products[index];
+    const updatedProduct = { ...existing, ...updates, updated_at: new Date().toISOString() };
+    
+    // Recalculate stock if variants changed
+    if (updatedProduct.has_variants && updatedProduct.variants) {
+      updatedProduct.stock = updatedProduct.variants.reduce((acc, v) => acc + v.stock, 0);
+    }
+
+    products[index] = updatedProduct;
+    this.setStoredData(products);
+    return updatedProduct;
   }
 
-  return newProduct;
-};
-
-export const updateProduct = async (
-  productId: string, 
-  updates: Partial<Product>, 
-  variantUpdates: { created: any[], updated: any[], deletedIds: string[] }
-) => {
-  if (USE_MOCK_DATA) {
-    // Mock Update Logic
-    const idx = mockProducts.findIndex(p => p.id === productId);
-    if (idx > -1) mockProducts[idx] = { ...mockProducts[idx], ...updates };
-
-    // Handle Variants
-    variantUpdates.created.forEach(v => {
-      mockVariants.push({ ...v, id: crypto.randomUUID(), product_id: productId, created_at: new Date().toISOString() });
-    });
-    variantUpdates.updated.forEach(v => {
-      const vIdx = mockVariants.findIndex(mv => mv.id === v.id);
-      if (vIdx > -1) mockVariants[vIdx] = { ...mockVariants[vIdx], ...v };
-    });
-    mockVariants = mockVariants.filter(v => !variantUpdates.deletedIds.includes(v.id));
-    return;
+  async deleteProduct(id: string): Promise<void> {
+    await delay(300);
+    const products = this.getStoredData();
+    const filtered = products.filter(p => p.id !== id);
+    this.setStoredData(filtered);
   }
+}
 
-  // 1. Update Product
-  const { error: pError } = await supabase.from('products').update(updates).eq('id', productId);
-  if (pError) throw pError;
-
-  // 2. Handle Variants (Create, Update, Delete)
-  // This logic must be explicit to avoid "duplicate variant" bugs
-  if (variantUpdates.created.length > 0) {
-    const toInsert = variantUpdates.created.map(v => ({ ...v, product_id: productId }));
-    await supabase.from('variants').insert(toInsert);
-  }
-  
-  for (const v of variantUpdates.updated) {
-    const { id, ...rest } = v;
-    await supabase.from('variants').update(rest).eq('id', id);
-  }
-
-  if (variantUpdates.deletedIds.length > 0) {
-    await supabase.from('variants').delete().in('id', variantUpdates.deletedIds);
-  }
-};
-
-export const deleteProduct = async (id: string) => {
-  if (USE_MOCK_DATA) {
-    mockProducts = mockProducts.filter(p => p.id !== id);
-    mockVariants = mockVariants.filter(v => v.product_id !== id);
-    return;
-  }
-  // ON DELETE CASCADE in SQL handles variants
-  await supabase.from('products').delete().eq('id', id);
-};
+export const inventoryService = new InventoryService();
