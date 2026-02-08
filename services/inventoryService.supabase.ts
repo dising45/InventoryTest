@@ -13,35 +13,44 @@ class InventoryServiceSupabase {
   }
 
 async addProduct(product: any) {
-  // 1️⃣ Insert product (WITHOUT variants)
+  // 1️⃣ Calculate stock correctly
+  const calculatedStock =
+    product.has_variants && product.variants?.length
+      ? product.variants.reduce(
+          (sum: number, v: any) => sum + Number(v.stock || 0),
+          0
+        )
+      : Number(product.stock || 0)
+
+  // 2️⃣ Insert product (NO variants here)
   const { data: productRow, error: productError } = await supabase
     .from('products')
     .insert([
       {
         name: product.name,
         description: product.description,
-        buy_price: product.buy_price,
-        sell_price: product.sell_price,
-        stock: product.stock,
-        has_variants: product.has_variants,
+        buy_price: Number(product.buy_price),
+        sell_price: Number(product.sell_price),
+        stock: calculatedStock,
+        has_variants: !!product.has_variants,
       },
     ])
     .select()
     .single()
 
   if (productError) {
-    console.error('Product insert failed', productError)
+    console.error('PRODUCT INSERT FAILED', productError)
     throw productError
   }
 
-  // 2️⃣ Insert variants (ONLY if present)
+  // 3️⃣ Insert variants (only if applicable)
   if (product.has_variants && product.variants?.length > 0) {
     const variantsPayload = product.variants.map((v: any) => ({
       product_id: productRow.id,
       name: v.name,
       sku: v.sku,
-      stock: v.stock,
-      price_modifier: v.price_modifier ?? 0,
+      stock: Number(v.stock || 0),
+      price_modifier: Number(v.price_modifier || 0),
     }))
 
     const { error: variantError } = await supabase
@@ -49,7 +58,7 @@ async addProduct(product: any) {
       .insert(variantsPayload)
 
     if (variantError) {
-      console.error('Variant insert failed', variantError)
+      console.error('VARIANT INSERT FAILED', variantError)
       throw variantError
     }
   }
