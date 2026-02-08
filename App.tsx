@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ViewState, Product, Customer, Supplier } from './types';
-import { inventoryService } from './services/inventoryService';
+import { inventoryService } from "./services/inventoryService.supabase";
 import { customerService } from './services/customerService';
 import { supplierService } from './services/supplierService';
 import Dashboard from './components/Dashboard';
