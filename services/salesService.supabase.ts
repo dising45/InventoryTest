@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient';
+import { supabase } from './supabaseClient';
 import { SalesOrder, SalesItem } from '../types';
 
 export const salesService = {
