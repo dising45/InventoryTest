@@ -1,4 +1,4 @@
-import { Product } from '../types';
+import { Product } from '../../types';
 
 const STORAGE_KEY = 'inventory_pro_data';
 

@@ -1,5 +1,5 @@
 {
-  "name": "inventorypro-v-1.0.0",
+  "name": "inventorypro",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,9 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.95.3",
+    "lucide-react": "^0.563.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "lucide-react": "^0.563.0",
     "recharts": "^3.7.0"
   },
   "devDependencies": {

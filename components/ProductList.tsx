@@ -69,7 +69,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDelete })
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                              <div className="text-xs text-gray-500 truncate max-w-xs">{product.has_variants ? `${product.variants.length} Variants` : 'Single Item'}</div>
+                              <div className="text-xs text-gray-500 truncate max-w-xs">{product.has_variants ? `${(product.variants ?? []).length} Variants` : 'Single Item'}</div>
                             </div>
                           </div>
                         </td>
@@ -122,7 +122,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDelete })
                   </div>
                   <div className="flex justify-between items-center mt-3">
                       <span className="text-xs text-gray-500">
-                          {product.has_variants ? `${product.variants.length} variants` : 'Standard'}
+                        {product.has_variants ? `${(product.variants ?? []).length} variants` : 'Standard'}
                       </span>
                       <div className="flex space-x-3">
                          <button 
