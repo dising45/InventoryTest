@@ -44,6 +44,8 @@ export default function App() {
   const [sales, setSales] = useState<SalesOrder[]>([]);
 
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
+  const [editingSale, setEditingSale] = useState<SalesOrder | undefined>();
+
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -113,20 +115,32 @@ export default function App() {
   };
 
   /* -------------------- SALES -------------------- */
-  const handleSaveSale = async (sale: {
+  const handleSaveSale = async (saleData: {
     customer_id: string;
     items: SalesItem[];
-    discount_type?: 'flat' | 'percent';
-    discount_value?: number;
+    total_amount: number;
   }) => {
     try {
-      await salesService.createSale(sale);
+      if (editingSale) {
+        await salesService.updateSale(editingSale.id, saleData);
+        setEditingSale(undefined);
+      } else {
+        await salesService.createSale(saleData);
+      }
+
       await Promise.all([loadSales(), loadProducts()]);
       setCurrentView('sales');
     } catch (e) {
       console.error(e);
       alert('Failed to save sale');
     }
+  };
+
+  const handleDeleteSale = async (id: string) => {
+    if (!confirm('Delete this sale? Stock will be restored.')) return;
+
+    await salesService.deleteSale(id);
+    await Promise.all([loadSales(), loadProducts()]);
   };
 
   /* -------------------- NAV ITEM -------------------- */
@@ -144,7 +158,9 @@ export default function App() {
       (view === 'inventory' &&
         (currentView === 'add-product' ||
           currentView === 'edit-product')) ||
-      (view === 'sales' && currentView === 'add-sale');
+      (view === 'sales' &&
+        (currentView === 'add-sale' ||
+          currentView === 'edit-sale'));
 
     return (
       <button
@@ -202,6 +218,7 @@ export default function App() {
                 >
                   <Plus className="mr-2" /> Add Product
                 </button>
+
                 <ProductList
                   products={products}
                   onEdit={(p) => {
@@ -225,21 +242,37 @@ export default function App() {
             {currentView === 'sales' && (
               <>
                 <button
-                  onClick={() => setCurrentView('add-sale')}
+                  onClick={() => {
+                    setEditingSale(undefined);
+                    setCurrentView('add-sale');
+                  }}
                   className="mb-4 flex items-center bg-indigo-600 text-white px-4 py-2 rounded"
                 >
                   <Plus className="mr-2" /> New Sale
                 </button>
-                <SalesList sales={sales} />
+
+                <SalesList
+                  sales={sales}
+                  onEdit={(s) => {
+                    setEditingSale(s);
+                    setCurrentView('edit-sale');
+                  }}
+                  onDelete={handleDeleteSale}
+                />
               </>
             )}
 
-            {currentView === 'add-sale' && (
+            {(currentView === 'add-sale' ||
+              currentView === 'edit-sale') && (
               <SalesForm
                 customers={customers}
                 products={products}
+                initialData={editingSale}
                 onSave={handleSaveSale}
-                onCancel={() => setCurrentView('sales')}
+                onCancel={() => {
+                  setEditingSale(undefined);
+                  setCurrentView('sales');
+                }}
               />
             )}
 

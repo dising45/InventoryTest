@@ -58,7 +58,7 @@ export interface SalesOrder {
   customer?: Customer;
 }
 
-export type ViewState = 'dashboard' | 'inventory' | 'add-product' | 'edit-product' | 'customers' | 'add-customer' | 'suppliers' | 'add-supplier' | 'sales' | 'add-sale';
+export type ViewState = 'dashboard' | 'inventory' | 'add-product' | 'edit-product' | 'customers' | 'add-customer' | 'suppliers' | 'add-supplier' | 'sales' | 'add-sale' | 'edit-sale';
 
 export interface InventoryStats {
   totalProducts: number;
