@@ -37,7 +37,28 @@ export interface Customer {
   created_at: string;
 }
 
-export type ViewState = 'dashboard' | 'inventory' | 'add-product' | 'edit-product';
+export interface SalesItem {
+  id?: string;
+  sales_order_id?: string;
+  product_id: string;
+  variant_id?: string;
+  quantity: number;
+  unit_price: number;
+  product_name?: string; // For display
+  variant_name?: string; // For display
+}
+
+export interface SalesOrder {
+  id: string;
+  customer_id: string;
+  total_amount: number;
+  status: 'pending' | 'completed' | 'cancelled';
+  created_at: string;
+  items?: SalesItem[];
+  customer?: Customer;
+}
+
+export type ViewState = 'dashboard' | 'inventory' | 'add-product' | 'edit-product' | 'customers' | 'add-customer' | 'suppliers' | 'add-supplier' | 'sales' | 'add-sale';
 
 export interface InventoryStats {
   totalProducts: number;
