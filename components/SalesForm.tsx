@@ -1,281 +1,222 @@
 import React, { useState, useEffect } from 'react';
-import { Customer, Product, SalesItem, Variant } from '../types';
-import { ArrowLeft, Save, Plus, Trash2, ShoppingBag } from 'lucide-react';
+import { Customer, ProductWithVariants, SalesItem, Variant } from '../types';
+import { getCustomers } from '../services/customerService';
+import { getProducts } from '../services/inventoryService';
+import { createSale } from '../services/salesService';
 
 interface SalesFormProps {
-  customers: Customer[];
-  products: Product[];
-  initialData?: {
-    id: string;
-    customer_id: string;
-    items: SalesItem[];
-  };
-  onSave: (
-    saleData: { customer_id: string; items: SalesItem[]; total_amount: number },
-    saleId?: string
-  ) => Promise<void>;
+  onSuccess: () => void;
   onCancel: () => void;
 }
 
-const SalesForm: React.FC<SalesFormProps> = ({
-  customers,
-  products,
-  initialData,
-  onSave,
-  onCancel,
-}) => {
-  const [loading, setLoading] = useState(false);
-  const [customerId, setCustomerId] = useState('');
-  const [items, setItems] = useState<SalesItem[]>([]);
+export const SalesForm: React.FC<SalesFormProps> = ({ onSuccess, onCancel }) => {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [products, setProducts] = useState<ProductWithVariants[]>([]);
+  
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [cart, setCart] = useState<Partial<SalesItem>[]>([]);
+  
+  // Selection State
+  const [selectedProduct, setSelectedProduct] = useState<ProductWithVariants | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
+  const [qty, setQty] = useState(1);
 
-  // Current item being added
-  const [selectedProduct, setSelectedProduct] = useState<Product | undefined>();
-  const [selectedVariant, setSelectedVariant] = useState<Variant | undefined>();
-  const [quantity, setQuantity] = useState(1);
-  const [unitPrice, setUnitPrice] = useState(0);
-
-  /* -----------------------------------
-     EDIT MODE INITIALIZATION
-  ----------------------------------- */
   useEffect(() => {
-    if (!initialData) return;
+    const init = async () => {
+      setCustomers(await getCustomers());
+      setProducts(await getProducts());
+    };
+    init();
+  }, []);
 
-    setCustomerId(initialData.customer_id);
+  const addToCart = () => {
+    if (!selectedProduct) return;
+    
+    const price = selectedVariant 
+      ? selectedProduct.price + selectedVariant.price_adjustment 
+      : selectedProduct.price;
 
-    const mappedItems = initialData.items.map(item => {
-      const product = products.find(p => p.id === item.product_id);
-      const variant = product?.variants.find(v => v.id === item.variant_id);
+    const availableStock = selectedVariant ? selectedVariant.stock_quantity : selectedProduct.stock_quantity;
 
-      return {
-        ...item,
-        product_name: product?.name ?? 'Unknown Product',
-        variant_name: variant?.name,
-      };
-    });
-
-    setItems(mappedItems);
-  }, [initialData, products]);
-
-  /* -----------------------------------
-     AUTO PRICE UPDATE
-  ----------------------------------- */
-  useEffect(() => {
-    if (!selectedProduct) {
-      setUnitPrice(0);
+    if (qty > availableStock) {
+      alert(`Insufficient stock! Only ${availableStock} available.`);
       return;
     }
 
-    if (selectedProduct.has_variants && selectedVariant) {
-      setUnitPrice(
-        selectedProduct.sell_price + (selectedVariant.price_modifier || 0)
-      );
-    } else {
-      setUnitPrice(selectedProduct.sell_price);
-    }
-  }, [selectedProduct, selectedVariant]);
-
-  /* -----------------------------------
-     ADD / REMOVE ITEMS
-  ----------------------------------- */
-  const addItem = () => {
-    if (!selectedProduct) return;
-    if (selectedProduct.has_variants && !selectedVariant) return;
-
-    const newItem: SalesItem = {
+    const newItem: Partial<SalesItem> = {
       product_id: selectedProduct.id,
-      variant_id: selectedVariant?.id,
-      quantity,
-      unit_price: unitPrice,
       product_name: selectedProduct.name,
+      variant_id: selectedVariant?.id,
       variant_name: selectedVariant?.name,
+      quantity: qty,
+      unit_price: price,
+      subtotal: price * qty
     };
 
-    setItems(prev => [...prev, newItem]);
-
-    setSelectedProduct(undefined);
-    setSelectedVariant(undefined);
-    setQuantity(1);
-    setUnitPrice(0);
+    setCart([...cart, newItem]);
+    
+    // Reset selection
+    setSelectedProduct(null);
+    setSelectedVariant(null);
+    setQty(1);
   };
 
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+  const handleProductSelect = (productId: string) => {
+    const p = products.find(prod => prod.id === productId) || null;
+    setSelectedProduct(p);
+    setSelectedVariant(null);
+    setQty(1);
   };
 
-  const totalAmount = items.reduce(
-    (sum, item) => sum + item.quantity * item.unit_price,
-    0
-  );
-
-  /* -----------------------------------
-     SUBMIT HANDLER
-  ----------------------------------- */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customerId || items.length === 0) return;
-
-    setLoading(true);
+  const handleSubmit = async () => {
+    if (!selectedCustomerId || cart.length === 0) return;
     try {
-      await onSave(
-        {
-          customer_id: customerId,
-          items,
-          total_amount: totalAmount,
-        },
-        initialData?.id
-      );
-    } finally {
-      setLoading(false);
+      const total = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+      await createSale(selectedCustomerId, total, cart as any);
+      onSuccess();
+    } catch (err) {
+      alert("Sale failed: " + err);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-4 duration-300">
-      <div className="mb-6 flex items-center justify-between">
-        <button
-          onClick={onCancel}
-          className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 mr-2" /> Back
-        </button>
-        <h2 className="text-2xl font-bold text-gray-900">
-          {initialData ? 'Edit Sales Order' : 'New Sales Order'}
-        </h2>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* LEFT */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Customer */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold mb-4">Customer</h3>
-            <select
-              value={customerId}
-              onChange={e => setCustomerId(e.target.value)}
-              className="w-full rounded-lg border px-4 py-2"
+    <div className="bg-white p-6 rounded-xl shadow border border-slate-200 h-full flex flex-col">
+      <h3 className="text-xl font-bold mb-4">New Sales Order</h3>
+      
+      <div className="grid grid-cols-3 gap-6 flex-1">
+        {/* Left Col: Selections */}
+        <div className="col-span-2 space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Customer</label>
+            <select 
+              className="mt-1 block w-full border border-slate-300 rounded-md p-2"
+              value={selectedCustomerId}
+              onChange={e => setSelectedCustomerId(e.target.value)}
             >
               <option value="">Select Customer</option>
-              {customers.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
+              {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
 
-          {/* Add Items */}
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h3 className="text-lg font-semibold mb-4">Add Items</h3>
-
-            <select
-              value={selectedProduct?.id || ''}
-              onChange={e => {
-                const prod = products.find(p => p.id === e.target.value);
-                setSelectedProduct(prod);
-                setSelectedVariant(undefined);
-              }}
-              className="w-full rounded-lg border px-4 py-2 mb-3"
-            >
-              <option value="">Select Product</option>
-              {products.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-
-            {selectedProduct?.has_variants && (
-              <select
-                value={selectedVariant?.id || ''}
-                onChange={e =>
-                  setSelectedVariant(
-                    selectedProduct.variants.find(v => v.id === e.target.value)
-                  )
-                }
-                className="w-full rounded-lg border px-4 py-2 mb-3"
-              >
-                <option value="">Select Variant</option>
-                {selectedProduct.variants.map(v => (
-                  <option key={v.id} value={v.id}>
-                    {v.name} (Stock: {v.stock})
-                  </option>
-                ))}
-              </select>
-            )}
-
+          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-4">
+            <h4 className="font-medium text-slate-800">Add Item</h4>
             <div className="grid grid-cols-2 gap-4">
-              <input
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={e => setQuantity(Number(e.target.value) || 1)}
-                className="rounded-lg border px-4 py-2"
-              />
-              <input
-                type="number"
-                step="0.01"
-                value={unitPrice}
-                onChange={e => setUnitPrice(Number(e.target.value) || 0)}
-                className="rounded-lg border px-4 py-2"
-              />
+              <div>
+                <label className="block text-xs font-medium text-slate-500">Product</label>
+                <select 
+                  className="mt-1 block w-full border border-slate-300 rounded-md p-2 text-sm"
+                  value={selectedProduct?.id || ''}
+                  onChange={e => handleProductSelect(e.target.value)}
+                >
+                  <option value="">Select Product</option>
+                  {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+
+              {selectedProduct?.has_variants && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-500">Variant</label>
+                  <select 
+                    className="mt-1 block w-full border border-slate-300 rounded-md p-2 text-sm"
+                    value={selectedVariant?.id || ''}
+                    onChange={e => setSelectedVariant(selectedProduct.variants?.find(v => v.id === e.target.value) || null)}
+                  >
+                    <option value="">Select Variant</option>
+                    {selectedProduct.variants?.map(v => (
+                      <option key={v.id} value={v.id}>
+                        {v.name} (Stock: {v.stock_quantity})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
-            <button
-              type="button"
-              onClick={addItem}
-              disabled={!selectedProduct}
-              className="mt-3 w-full bg-gray-100 rounded-lg py-2"
-            >
-              <Plus className="inline w-4 h-4 mr-2" /> Add Item
-            </button>
+            <div className="flex items-end gap-4">
+               <div className="w-24">
+                 <label className="block text-xs font-medium text-slate-500">Quantity</label>
+                 <input 
+                   type="number" min="1" 
+                   className="mt-1 block w-full border border-slate-300 rounded-md p-2 text-sm"
+                   value={qty}
+                   onChange={e => setQty(parseInt(e.target.value))}
+                 />
+               </div>
+               <button 
+                 disabled={!selectedProduct || (selectedProduct.has_variants && !selectedVariant)}
+                 onClick={addToCart}
+                 className="flex-1 bg-slate-900 text-white px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-50 text-sm"
+               >
+                 Add to Cart
+               </button>
+            </div>
+          </div>
+
+          {/* Cart Table */}
+          <div className="border rounded-lg overflow-hidden">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-slate-500">Item</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-slate-500">Qty</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-slate-500">Total</th>
+                  <th className="px-4 py-2"></th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {cart.map((item, idx) => (
+                  <tr key={idx}>
+                    <td className="px-4 py-2 text-sm">
+                      <div className="font-medium text-slate-900">{item.product_name}</div>
+                      <div className="text-xs text-slate-500">{item.variant_name}</div>
+                    </td>
+                    <td className="px-4 py-2 text-sm text-right">{item.quantity}</td>
+                    <td className="px-4 py-2 text-sm text-right">${item.subtotal?.toFixed(2)}</td>
+                    <td className="px-4 py-2 text-right">
+                      <button onClick={() => setCart(cart.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700">&times;</button>
+                    </td>
+                  </tr>
+                ))}
+                {cart.length === 0 && <tr><td colSpan={4} className="p-4 text-center text-slate-400 text-sm">Cart is empty</td></tr>}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* RIGHT */}
-        <div className="bg-white rounded-xl shadow-sm border p-6 sticky top-6">
-          <h3 className="font-semibold flex items-center mb-4">
-            <ShoppingBag className="w-5 h-5 mr-2" /> Summary
-          </h3>
-
-          {items.map((item, i) => (
-            <div key={i} className="flex justify-between mb-2 text-sm">
-              <div>
-                <p>{item.product_name}</p>
-                {item.variant_name && (
-                  <p className="text-xs text-gray-500">
-                    {item.variant_name}
-                  </p>
-                )}
-              </div>
-              <div className="text-right">
-                ${(item.quantity * item.unit_price).toFixed(2)}
-                <button
-                  onClick={() => removeItem(i)}
-                  className="ml-2 text-red-500"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
+        {/* Right Col: Summary */}
+        <div className="bg-slate-50 p-6 rounded-lg border border-slate-200 flex flex-col justify-between">
+          <div>
+            <h4 className="text-lg font-bold text-slate-900 mb-4">Order Summary</h4>
+            <div className="space-y-2 text-sm text-slate-600">
+               <div className="flex justify-between">
+                 <span>Subtotal</span>
+                 <span>${cart.reduce((sum, i) => sum + (i.subtotal || 0), 0).toFixed(2)}</span>
+               </div>
+               <div className="flex justify-between">
+                 <span>Tax (0%)</span>
+                 <span>$0.00</span>
+               </div>
+               <div className="flex justify-between font-bold text-slate-900 text-lg pt-4 border-t border-slate-200 mt-4">
+                 <span>Total</span>
+                 <span>${cart.reduce((sum, i) => sum + (i.subtotal || 0), 0).toFixed(2)}</span>
+               </div>
             </div>
-          ))}
-
-          <div className="border-t mt-4 pt-4 flex justify-between font-bold">
-            <span>Total</span>
-            <span>${totalAmount.toFixed(2)}</span>
           </div>
-
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="mt-4 w-full bg-indigo-600 text-white py-3 rounded-lg"
-          >
-            <Save className="inline w-4 h-4 mr-2" />
-            {initialData ? 'Update Sale' : 'Save Sale'}
-          </button>
+          
+          <div className="space-y-3 mt-8">
+            <button 
+              onClick={handleSubmit}
+              disabled={cart.length === 0 || !selectedCustomerId}
+              className="w-full bg-primary-600 text-white py-3 rounded-lg font-bold hover:bg-primary-700 disabled:opacity-50 shadow-lg shadow-primary-500/30"
+            >
+              Complete Sale
+            </button>
+            <button onClick={onCancel} className="w-full bg-white text-slate-700 py-3 rounded-lg font-medium border border-slate-300 hover:bg-slate-50">
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 };
-
-export default SalesForm;

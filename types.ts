@@ -1,31 +1,28 @@
-export interface Variant {
-  id: string;
-  name: string;
-  sku: string;
-  stock: number;
-  price_modifier?: number; // Added to base sell_price
-}
-
 export interface Product {
   id: string;
   name: string;
+  sku: string;
   description?: string;
-  buy_price: number;
-  sell_price: number;
-  stock: number; // Total stock if variants exist, or direct stock
+  price: number;
+  stock_quantity: number; // For products without variants
   has_variants: boolean;
-  variants: Variant[];
-  updated_at: string;
+  supplier_id?: string;
+  created_at: string;
 }
 
-export interface Supplier {
+export interface Variant {
   id: string;
+  product_id: string;
   name: string;
-  contact_person?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
+  sku: string;
+  price_adjustment: number;
+  stock_quantity: number;
   created_at: string;
+}
+
+// Derived type for UI convenience
+export interface ProductWithVariants extends Product {
+  variants?: Variant[];
 }
 
 export interface Customer {
@@ -37,32 +34,54 @@ export interface Customer {
   created_at: string;
 }
 
-export interface SalesItem {
-  id?: string;
-  sales_order_id?: string;
-  product_id: string;
-  variant_id?: string;
-  quantity: number;
-  unit_price: number;
-  product_name?: string; // For display
-  variant_name?: string; // For display
+export interface Supplier {
+  id: string;
+  name: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  created_at: string;
 }
+
+export type SaleStatus = 'pending' | 'completed' | 'cancelled';
 
 export interface SalesOrder {
   id: string;
   customer_id: string;
+  status: SaleStatus;
   total_amount: number;
-  status: 'pending' | 'completed' | 'cancelled';
+  sale_date: string;
   created_at: string;
-  items?: SalesItem[];
-  customer?: Customer;
+  customer?: Customer; // Joined
 }
 
-export type ViewState = 'dashboard' | 'inventory' | 'add-product' | 'edit-product' | 'customers' | 'add-customer' | 'suppliers' | 'add-supplier' | 'sales' | 'add-sale' | 'edit-sale';
+export interface SalesItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  variant_id?: string | null;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  product_name?: string; // Joined or derived
+  variant_name?: string; // Joined or derived
+}
 
-export interface InventoryStats {
-  totalProducts: number;
-  totalStock: number;
-  totalValue: number;
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  date: string;
+  supplier_id?: string;
+  created_at: string;
+  supplier?: Supplier; // Joined
+}
+
+export interface DashboardMetrics {
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
   lowStockCount: number;
+  totalOrders: number;
 }

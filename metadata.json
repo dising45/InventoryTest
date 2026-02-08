@@ -1,5 +1,5 @@
 {
   "name": "InventoryPro",
-  "description": "A modern PWA-ready inventory management application featuring product tracking, variant support, and real-time stock analytics.",
+  "description": "Enterprise-grade inventory management system with variant support, sales tracking, and Supabase integration.",
   "requestFramePermissions": []
 }

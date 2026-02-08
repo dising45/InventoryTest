@@ -1,294 +1,190 @@
 import React, { useState, useEffect } from 'react';
-import { Product, Variant } from '../types';
-import { Trash2, Plus, ArrowLeft, Save } from 'lucide-react';
+import { ProductWithVariants, Variant } from '../types';
+import { createProduct, updateProduct } from '../services/inventoryService';
 
 interface ProductFormProps {
-  initialData?: Product;
-  onSave: (product: any) => Promise<void>;
+  initialData?: ProductWithVariants;
+  onSuccess: () => void;
   onCancel: () => void;
 }
 
-const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel }) => {
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<Partial<Product>>({
+export const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSuccess, onCancel }) => {
+  const [formData, setFormData] = useState<Partial<ProductWithVariants>>({
     name: '',
-    description: '',
-    buy_price: 0,
-    sell_price: 0,
-    stock: 0,
+    sku: '',
+    price: 0,
+    stock_quantity: 0,
     has_variants: false,
-    variants: [],
-    ...initialData,
+    ...initialData
   });
 
-  // Ensure variants is initialized
-  useEffect(() => {
-    if (initialData) {
-      setFormData({ ...initialData });
-    }
-  }, [initialData]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'number' ? parseFloat(value) || 0 : value
-    }));
-  };
-
-  const handleVariantChange = (id: string, field: keyof Variant, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      variants: prev.variants?.map(v => 
-        v.id === id ? { ...v, [field]: value } : v
-      )
-    }));
-  };
-
-  const addVariant = () => {
-    const newVariant: Variant = {
-      id: crypto.randomUUID(),
-      name: '',
-      sku: '',
-      stock: 0,
-      price_modifier: 0,
-    };
-    setFormData(prev => ({
-      ...prev,
-      variants: [...(prev.variants || []), newVariant]
-    }));
-  };
-
-  const removeVariant = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      variants: prev.variants?.filter(v => v.id !== id)
-    }));
-  };
+  const [variants, setVariants] = useState<Partial<Variant>[]>(initialData?.variants || []);
+  const [deletedVariantIds, setDeletedVariantIds] = useState<string[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     try {
-      await onSave(formData);
-    } finally {
-      setLoading(false);
+      if (initialData?.id) {
+        // Prepare Variant Updates
+        const created = variants.filter(v => !v.id);
+        const updated = variants.filter(v => v.id && !deletedVariantIds.includes(v.id));
+        
+        await updateProduct(initialData.id, {
+          name: formData.name,
+          sku: formData.sku,
+          price: Number(formData.price),
+          stock_quantity: formData.has_variants ? 0 : Number(formData.stock_quantity),
+          has_variants: formData.has_variants
+        }, { created, updated, deletedIds: deletedVariantIds });
+      } else {
+        await createProduct({
+          name: formData.name!,
+          sku: formData.sku!,
+          price: Number(formData.price),
+          stock_quantity: formData.has_variants ? 0 : Number(formData.stock_quantity),
+          has_variants: formData.has_variants!,
+          supplier_id: formData.supplier_id // Should add supplier select
+        }, variants as any);
+      }
+      onSuccess();
+    } catch (err) {
+      alert("Error saving product: " + err);
     }
   };
 
+  const handleVariantChange = (index: number, field: keyof Variant, value: any) => {
+    const newVariants = [...variants];
+    newVariants[index] = { ...newVariants[index], [field]: value };
+    setVariants(newVariants);
+  };
+
+  const addVariant = () => {
+    setVariants([...variants, { name: '', sku: formData.sku + '-VAR', price_adjustment: 0, stock_quantity: 0 }]);
+  };
+
+  const removeVariant = (index: number) => {
+    const v = variants[index];
+    if (v.id) {
+      setDeletedVariantIds([...deletedVariantIds, v.id]);
+    }
+    setVariants(variants.filter((_, i) => i !== index));
+  };
+
   return (
-    <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-4 duration-300">
-      <div className="mb-6 flex items-center justify-between">
-        <button 
-          onClick={onCancel}
-          className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 mr-2" /> Back
-        </button>
-        <h2 className="text-2xl font-bold text-gray-900">
-          {initialData ? 'Edit Product' : 'Add New Product'}
-        </h2>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Info Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
-          <div className="grid grid-cols-1 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-              <input
-                required
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                placeholder="e.g., Summer T-Shirt"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                name="description"
-                rows={3}
-                value={formData.description}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                placeholder="Product details..."
-              />
-            </div>
+    <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200">
+      <h3 className="text-xl font-bold mb-4">{initialData ? 'Edit Product' : 'New Product'}</h3>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Name</label>
+            <input 
+              required
+              className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700">SKU</label>
+            <input 
+              required
+              className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2"
+              value={formData.sku}
+              onChange={e => setFormData({ ...formData, sku: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Base Price</label>
+            <input 
+              type="number"
+              required
+              min="0"
+              step="0.01"
+              className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2"
+              value={formData.price}
+              onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+            />
           </div>
         </div>
 
-        {/* Pricing & Stock Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Pricing & Inventory</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Buy Price ($)</label>
-              <input
-                required
-                type="number"
-                step="0.01"
-                min="0"
-                name="buy_price"
-                value={formData.buy_price}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sell Price ($)</label>
-              <input
-                required
-                type="number"
-                step="0.01"
-                min="0"
-                name="sell_price"
-                value={formData.sell_price}
-                onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-              />
-            </div>
-            
-            <div className="md:col-span-2">
-               <label className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={formData.has_variants}
-                    onChange={(e) => setFormData(prev => ({ ...prev, has_variants: e.target.checked }))}
-                    className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-gray-900">This product has variants</span>
-                    <p className="text-xs text-gray-500">Enable if you have different sizes, colors, etc.</p>
-                  </div>
-               </label>
-            </div>
-
-            {!formData.has_variants && (
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Stock Quantity</label>
-                <input
-                  required={!formData.has_variants}
-                  type="number"
-                  min="0"
-                  name="stock"
-                  value={formData.stock}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                />
-              </div>
-            )}
-          </div>
+        <div className="flex items-center space-x-2 mt-4">
+          <input 
+            type="checkbox"
+            id="has_variants"
+            checked={formData.has_variants}
+            onChange={e => setFormData({ ...formData, has_variants: e.target.checked })}
+            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+          />
+          <label htmlFor="has_variants" className="text-sm font-medium text-slate-700">This product has variants</label>
         </div>
 
-        {/* Variants Card */}
-        {formData.has_variants && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Variants</h3>
-              <button
-                type="button"
-                onClick={addVariant}
-                className="flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors"
-              >
-                <Plus className="w-4 h-4 mr-1" /> Add Variant
+        {!formData.has_variants ? (
+          <div>
+            <label className="block text-sm font-medium text-slate-700">Stock Quantity</label>
+            <input 
+              type="number"
+              min="0"
+              className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm border p-2"
+              value={formData.stock_quantity}
+              onChange={e => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) })}
+            />
+          </div>
+        ) : (
+          <div className="mt-4 border-t border-slate-200 pt-4">
+            <div className="flex justify-between items-center mb-2">
+              <h4 className="text-sm font-semibold text-slate-900">Variants</h4>
+              <button type="button" onClick={addVariant} className="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded">
+                + Add Variant
               </button>
             </div>
-            
-            {(!formData.variants || formData.variants.length === 0) ? (
-              <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                No variants added yet. Click "Add Variant" to start.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-gray-50 text-gray-600 uppercase">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">Variant Name</th>
-                      <th className="px-4 py-3 font-medium">SKU</th>
-                      <th className="px-4 py-3 font-medium">Stock</th>
-                      <th className="px-4 py-3 font-medium">Extra Price ($)</th>
-                      <th className="px-4 py-3 font-medium w-16"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {formData.variants.map((variant) => (
-                      <tr key={variant.id} className="group hover:bg-gray-50">
-                        <td className="px-4 py-2">
-                          <input
-                            required
-                            type="text"
-                            value={variant.name}
-                            onChange={(e) => handleVariantChange(variant.id, 'name', e.target.value)}
-                            className="w-full bg-transparent border-b border-gray-300 focus:border-indigo-500 outline-none px-1 py-1"
-                            placeholder="Size / Color"
-                          />
-                        </td>
-                        <td className="px-4 py-2">
-                          <input
-                            type="text"
-                            value={variant.sku}
-                            onChange={(e) => handleVariantChange(variant.id, 'sku', e.target.value)}
-                            className="w-full bg-transparent border-b border-gray-300 focus:border-indigo-500 outline-none px-1 py-1"
-                            placeholder="SKU-123"
-                          />
-                        </td>
-                        <td className="px-4 py-2">
-                          <input
-                            required
-                            type="number"
-                            min="0"
-                            value={variant.stock}
-                            onChange={(e) => handleVariantChange(variant.id, 'stock', parseFloat(e.target.value) || 0)}
-                            className="w-20 bg-transparent border-b border-gray-300 focus:border-indigo-500 outline-none px-1 py-1"
-                          />
-                        </td>
-                         <td className="px-4 py-2">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={variant.price_modifier}
-                            onChange={(e) => handleVariantChange(variant.id, 'price_modifier', parseFloat(e.target.value) || 0)}
-                            className="w-20 bg-transparent border-b border-gray-300 focus:border-indigo-500 outline-none px-1 py-1"
-                          />
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <button
-                            type="button"
-                            onClick={() => removeVariant(variant.id)}
-                            className="text-gray-400 hover:text-red-500 transition-colors p-1"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <div className="space-y-3">
+              {variants.map((v, i) => (
+                <div key={i} className="flex gap-2 items-end bg-slate-50 p-3 rounded-lg">
+                  <div className="flex-1">
+                    <label className="text-xs text-slate-500">Name</label>
+                    <input 
+                      placeholder="Size/Color"
+                      className="w-full text-sm border p-1 rounded"
+                      value={v.name}
+                      onChange={e => handleVariantChange(i, 'name', e.target.value)}
+                    />
+                  </div>
+                  <div className="w-24">
+                    <label className="text-xs text-slate-500">Stock</label>
+                    <input 
+                      type="number"
+                      className="w-full text-sm border p-1 rounded"
+                      value={v.stock_quantity}
+                      onChange={e => handleVariantChange(i, 'stock_quantity', parseInt(e.target.value))}
+                    />
+                  </div>
+                  <div className="w-24">
+                    <label className="text-xs text-slate-500">Price (+/-)</label>
+                    <input 
+                      type="number"
+                      className="w-full text-sm border p-1 rounded"
+                      value={v.price_adjustment}
+                      onChange={e => handleVariantChange(i, 'price_adjustment', parseFloat(e.target.value))}
+                    />
+                  </div>
+                  <button type="button" onClick={() => removeVariant(i)} className="text-red-500 hover:text-red-700 pb-1">
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        <div className="flex justify-end pt-6">
-          <button
-            type="submit"
-            disabled={loading}
-            className={`flex items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-100 transition-all ${
-              loading ? 'opacity-70 cursor-not-allowed' : ''
-            }`}
-          >
-            <Save className="w-5 h-5 mr-2" />
-            {loading ? 'Saving...' : 'Save Product'}
+        <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+          <button type="button" onClick={onCancel} className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-md">
+            Cancel
+          </button>
+          <button type="submit" className="px-4 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700">
+            Save Product
           </button>
         </div>
       </form>
     </div>
   );
 };
-
-export default ProductForm;
