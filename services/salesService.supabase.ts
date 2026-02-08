@@ -25,11 +25,13 @@ export const salesService = {
       .from('sales_orders')
       .insert({
         customer_id: sale.customer_id,
+        subtotal: sale.total_amount,   // ✅ REQUIRED
         total_amount: sale.total_amount,
         status: 'completed'
       })
       .select()
       .single();
+
 
     if (orderError) throw orderError;
 
@@ -57,7 +59,7 @@ export const salesService = {
           .select('stock')
           .eq('id', item.variant_id)
           .single();
-        
+
         if (variant) {
           await supabase
             .from('variants')
@@ -70,7 +72,7 @@ export const salesService = {
           .select('stock')
           .eq('id', item.product_id)
           .single();
-        
+
         if (product) {
           await supabase
             .from('products')
