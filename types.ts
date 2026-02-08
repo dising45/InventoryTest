@@ -66,3 +66,22 @@ export interface InventoryStats {
   totalValue: number;
   lowStockCount: number;
 }
+export interface PurchaseOrder {
+  id: string;
+  supplier_id: string;
+  supplier?: Supplier;
+  total_amount: number;
+  created_at: string;
+  items: PurchaseItem[];
+}
+
+export interface PurchaseItem {
+  id?: string;
+  purchase_order_id?: string;
+  product_id: string;
+  variant_id?: string | null;
+  quantity: number;
+  unit_cost: number;
+  product_name?: string;
+  variant_name?: string;
+}

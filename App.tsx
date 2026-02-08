@@ -6,12 +6,15 @@ import {
   Supplier,
   SalesOrder,
   SalesItem,
+  PurchaseOrder,
+  PurchaseItem,
 } from './types';
 
 import { inventoryService } from './services/inventoryService.supabase';
 import { customerService } from './services/customerService.supabase';
 import { supplierService } from './services/supplierService.supabase';
 import { salesService } from './services/salesService.supabase';
+import { purchaseService } from './services/purchaseService.supabase';
 
 import Dashboard from './components/Dashboard';
 import ProductList from './components/ProductList';
@@ -22,6 +25,8 @@ import SupplierList from './components/SupplierList';
 import SupplierForm from './components/SupplierForm';
 import SalesList from './components/SalesList';
 import SalesForm from './components/SalesForm';
+import PurchaseOrderList from './components/PurchaseOrderList';
+import PurchaseOrderForm from './components/PurchaseOrderForm';
 
 import {
   LayoutDashboard,
@@ -40,6 +45,7 @@ export default function App() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [sales, setSales] = useState<SalesOrder[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
 
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
   const [editingSale, setEditingSale] = useState<SalesOrder | undefined>();
@@ -59,6 +65,7 @@ export default function App() {
         loadCustomers(),
         loadSuppliers(),
         loadSales(),
+        loadPOs(),
       ]);
     } finally {
       setIsLoading(false);
@@ -79,6 +86,10 @@ export default function App() {
 
   const loadSales = async () => {
     setSales(await salesService.getSales());
+  };
+
+  const loadPOs = async () => {
+    setPurchaseOrders(await purchaseService.getPOs());
   };
 
   /* -------------------- PRODUCT -------------------- */
@@ -121,6 +132,23 @@ export default function App() {
     await Promise.all([loadSales(), loadProducts()]);
   };
 
+  /* -------------------- PURCHASE ORDERS -------------------- */
+  const handleSavePO = async (po: {
+    supplier_id: string;
+    items: PurchaseItem[];
+    total_amount: number;
+  }) => {
+    await purchaseService.createPO(po);
+    await Promise.all([loadPOs(), loadProducts()]);
+    setCurrentView('purchase-orders');
+  };
+
+  const handleDeletePO = async (id: string) => {
+    if (!confirm('Delete this PO? Stock will be reverted.')) return;
+    await purchaseService.deletePO(id);
+    await Promise.all([loadPOs(), loadProducts()]);
+  };
+
   /* -------------------- NAV ITEM -------------------- */
   const NavItem = ({
     view,
@@ -156,6 +184,7 @@ export default function App() {
           <NavItem view="dashboard" icon={LayoutDashboard} label="Dashboard" />
           <NavItem view="inventory" icon={Package} label="Inventory" />
           <NavItem view="sales" icon={ShoppingCart} label="Sales" />
+          <NavItem view="purchase-orders" icon={Truck} label="Supplier Orders" />
           <NavItem view="customers" icon={Users} label="Customers" />
           <NavItem view="suppliers" icon={Truck} label="Suppliers" />
         </nav>
@@ -169,6 +198,7 @@ export default function App() {
           <>
             {currentView === 'dashboard' && <Dashboard products={products} />}
 
+            {/* INVENTORY */}
             {currentView === 'inventory' && (
               <>
                 <button
@@ -200,6 +230,7 @@ export default function App() {
               />
             )}
 
+            {/* SALES */}
             {currentView === 'sales' && (
               <>
                 <button
@@ -236,6 +267,32 @@ export default function App() {
               />
             )}
 
+            {/* PURCHASE ORDERS */}
+            {currentView === 'purchase-orders' && (
+              <>
+                <button
+                  onClick={() => setCurrentView('add-po')}
+                  className="mb-4 flex items-center bg-indigo-600 text-white px-4 py-2 rounded"
+                >
+                  <Plus className="mr-2" /> New PO
+                </button>
+                <PurchaseOrderList
+                  orders={purchaseOrders}
+                  onDelete={handleDeletePO}
+                />
+              </>
+            )}
+
+            {currentView === 'add-po' && (
+              <PurchaseOrderForm
+                suppliers={suppliers}
+                products={products}
+                onSave={handleSavePO}
+                onCancel={() => setCurrentView('purchase-orders')}
+              />
+            )}
+
+            {/* CUSTOMERS */}
             {currentView === 'customers' && (
               <>
                 <button
@@ -259,6 +316,7 @@ export default function App() {
               />
             )}
 
+            {/* SUPPLIERS */}
             {currentView === 'suppliers' && (
               <>
                 <button
