@@ -57,20 +57,20 @@ export default function App() {
     loadAll();
   }, []);
 
-  const loadAll = async () => {
-    setIsLoading(true);
-    try {
-      await Promise.all([
-        loadProducts(),
-        loadCustomers(),
-        loadSuppliers(),
-        loadSales(),
-        loadPOs(),
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // const loadAll = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     await Promise.all([
+  //       loadProducts(),
+  //       loadCustomers(),
+  //       loadSuppliers(),
+  //       loadSales(),
+  //       loadPOs(),
+  //     ]);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   const loadProducts = async () => {
     setProducts(await inventoryService.getProducts());
@@ -178,7 +178,7 @@ export default function App() {
           <NavItem view="dashboard" icon={LayoutDashboard} label="Dashboard" />
           <NavItem view="inventory" icon={Package} label="Inventory" />
           <NavItem view="sales" icon={ShoppingCart} label="Sales" />
-          <NavItem view="purchase-orders" icon={Truck} label="Supplier Orders" />
+          {/* <NavItem view="purchase-orders" icon={Truck} label="Supplier Orders" /> */}
           <NavItem view="customers" icon={Users} label="Customers" />
           <NavItem view="suppliers" icon={Truck} label="Suppliers" />
         </nav>
@@ -262,7 +262,7 @@ export default function App() {
             )}
 
             {/* PURCHASE ORDERS */}
-            {currentView === 'purchase-orders' && (
+            {/* {currentView === 'purchase-orders' && (
               <>
                 <button
                   onClick={() => setCurrentView('add-po')}
@@ -284,7 +284,7 @@ export default function App() {
                 onSave={handleSavePO}
                 onCancel={() => setCurrentView('purchase-orders')}
               />
-            )}
+            )} */}
 
             {/* CUSTOMERS */}
             {currentView === 'customers' && (
