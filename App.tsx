@@ -57,20 +57,20 @@ export default function App() {
     loadAll();
   }, []);
 
-  // const loadAll = async () => {
-  //   setIsLoading(true);
-  //   try {
-  //     await Promise.all([
-  //       loadProducts(),
-  //       loadCustomers(),
-  //       loadSuppliers(),
-  //       loadSales(),
-  //       loadPOs(),
-  //     ]);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
+  const loadAll = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([
+        loadProducts(),
+        loadCustomers(),
+        loadSuppliers(),
+        loadSales(),
+        // loadPOs(),
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loadProducts = async () => {
     setProducts(await inventoryService.getProducts());
