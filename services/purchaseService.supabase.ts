@@ -1,136 +1,147 @@
 import { supabase } from './supabaseClient';
-import { PurchaseItem } from '../types';
+import { SalesItem } from '../types';
 
 export const purchaseService = {
-  async getPOs() {
-    const { data, error } = await supabase
-      .from('purchase_orders')
-      .select(`
-        *,
-        supplier:suppliers(*),
-        items:purchase_items(*)
-      `)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data;
-  },
-
-  async createPO(po: {
+  /* ===============================
+     CREATE PURCHASE ORDER
+     =============================== */
+  async createPO(data: {
     supplier_id: string;
-    items: PurchaseItem[];
-    total_amount: number;
+    items: {
+      product_id: string;
+      variant_id?: string;
+      quantity: number;
+      unit_cost: number;
+    }[];
   }) {
-    // 1️⃣ Create PO
-    const { data: order, error } = await supabase
+    /* 1️⃣ Calculate total */
+    const totalAmount = data.items.reduce(
+      (sum, i) => sum + i.quantity * i.unit_cost,
+      0
+    );
+
+    /* 2️⃣ Create PO */
+    const { data: po, error: poError } = await supabase
       .from('purchase_orders')
       .insert({
-        supplier_id: po.supplier_id,
-        total_amount: po.total_amount,
+        supplier_id: data.supplier_id,
+        total_amount: totalAmount,
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (poError || !po) throw poError;
 
-    // 2️⃣ Insert items
-    const itemsPayload = po.items.map(i => ({
-      purchase_order_id: order.id,
+    /* 3️⃣ Insert items */
+    const itemsPayload = data.items.map((i) => ({
+      purchase_order_id: po.id,
       product_id: i.product_id,
       variant_id: i.variant_id ?? null,
       quantity: i.quantity,
       unit_cost: i.unit_cost,
+      line_total: i.quantity * i.unit_cost,
     }));
 
-    await supabase.from('purchase_items').insert(itemsPayload);
+    const { error: itemsError } = await supabase
+      .from('purchase_items')
+      .insert(itemsPayload);
 
-    // 3️⃣ Increase stock
-    for (const i of po.items) {
-      if (i.variant_id) {
-        const { data: v } = await supabase
-          .from('variants')
-          .select('stock, product_id')
-          .eq('id', i.variant_id)
-          .single();
+    if (itemsError) throw itemsError;
 
-        if (!v) continue;
+    /* 4️⃣ Increase stock */
+    await this.adjustStock(data.items, 'add');
 
-        await supabase
-          .from('variants')
-          .update({ stock: v.stock + i.quantity })
-          .eq('id', i.variant_id);
-
-        const { data: vars } = await supabase
-          .from('variants')
-          .select('stock')
-          .eq('product_id', v.product_id);
-
-        const total = vars?.reduce((s, x) => s + x.stock, 0) ?? 0;
-        await supabase.from('products').update({ stock: total }).eq('id', v.product_id);
-      } else {
-        const { data: p } = await supabase
-          .from('products')
-          .select('stock')
-          .eq('id', i.product_id)
-          .single();
-
-        if (!p) continue;
-
-        await supabase
-          .from('products')
-          .update({ stock: p.stock + i.quantity })
-          .eq('id', i.product_id);
-      }
-    }
+    return po;
   },
 
-  async deletePO(id: string) {
-    const { data: items } = await supabase
+  /* ===============================
+     DELETE PURCHASE ORDER
+     =============================== */
+  async deletePO(poId: string) {
+    /* 1️⃣ Fetch items */
+    const { data: items, error } = await supabase
       .from('purchase_items')
       .select('*')
-      .eq('purchase_order_id', id);
+      .eq('purchase_order_id', poId);
 
-    if (items) {
-      for (const i of items) {
-        if (i.variant_id) {
-          const { data: v } = await supabase
-            .from('variants')
-            .select('stock, product_id')
-            .eq('id', i.variant_id)
-            .single();
+    if (error) throw error;
 
-          if (!v) continue;
-
-          await supabase
-            .from('variants')
-            .update({ stock: v.stock - i.quantity })
-            .eq('id', i.variant_id);
-
-          const { data: vars } = await supabase
-            .from('variants')
-            .select('stock')
-            .eq('product_id', v.product_id);
-
-          const total = vars?.reduce((s, x) => s + x.stock, 0) ?? 0;
-          await supabase.from('products').update({ stock: total }).eq('id', v.product_id);
-        } else {
-          const { data: p } = await supabase
-            .from('products')
-            .select('stock')
-            .eq('id', i.product_id)
-            .single();
-
-          if (!p) continue;
-
-          await supabase
-            .from('products')
-            .update({ stock: p.stock - i.quantity })
-            .eq('id', i.product_id);
-        }
-      }
+    /* 2️⃣ Roll back stock */
+    if (items?.length) {
+      await this.adjustStock(items, 'deduct');
     }
 
-    await supabase.from('purchase_items').delete().eq('purchase_order_id', id);
-    await supabase.from('purchase_orders').delete().eq('id', id);
+    /* 3️⃣ Delete PO (items cascade) */
+    const { error: deleteError } = await supabase
+      .from('purchase_orders')
+      .delete()
+      .eq('id', poId);
+
+    if (deleteError) throw deleteError;
+  },
+
+  /* ===============================
+     STOCK HANDLER (SAFE)
+     =============================== */
+  async adjustStock(
+    items: {
+      product_id: string;
+      variant_id?: string | null;
+      quantity: number;
+    }[],
+    mode: 'add' | 'deduct'
+  ) {
+    const factor = mode === 'add' ? 1 : -1;
+
+    for (const item of items) {
+      /* -------- Variant -------- */
+      if (item.variant_id) {
+        const { data: variant } = await supabase
+          .from('variants')
+          .select('id, stock, product_id')
+          .eq('id', item.variant_id)
+          .single();
+
+        if (!variant) continue;
+
+        const newVariantStock = variant.stock + item.quantity * factor;
+
+        await supabase
+          .from('variants')
+          .update({ stock: newVariantStock })
+          .eq('id', variant.id);
+
+        /* Recalculate product stock */
+        const { data: allVariants } = await supabase
+          .from('variants')
+          .select('stock')
+          .eq('product_id', variant.product_id);
+
+        const totalStock =
+          allVariants?.reduce((sum, v) => sum + v.stock, 0) ?? 0;
+
+        await supabase
+          .from('products')
+          .update({ stock: totalStock })
+          .eq('id', variant.product_id);
+
+      /* -------- Simple Product -------- */
+      } else {
+        const { data: product } = await supabase
+          .from('products')
+          .select('id, stock')
+          .eq('id', item.product_id)
+          .single();
+
+        if (!product) continue;
+
+        await supabase
+          .from('products')
+          .update({
+            stock: product.stock + item.quantity * factor,
+          })
+          .eq('id', product.id);
+      }
+    }
   },
 };
