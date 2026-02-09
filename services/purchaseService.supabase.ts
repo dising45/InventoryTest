@@ -1,5 +1,4 @@
 import { supabase } from './supabaseClient';
-import { SalesItem } from '../types';
 
 export const purchaseService = {
   /* ===============================
@@ -8,19 +7,59 @@ export const purchaseService = {
   async createPO(data: {
     supplier_id: string;
     items: {
-      product_id: string;
-      variant_id?: string;
+      product_id?: string;        // optional → allows new product
+      product_name?: string;      // required if product_id missing
       quantity: number;
       unit_cost: number;
     }[];
   }) {
-    /* 1️⃣ Calculate total */
-    const totalAmount = data.items.reduce(
+    /* 1️⃣ Normalize items (ensure product exists) */
+    const normalizedItems: {
+      product_id: string;
+      quantity: number;
+      unit_cost: number;
+    }[] = [];
+
+    for (const item of data.items) {
+      let productId = item.product_id;
+
+      // 🔹 Create product if missing
+      if (!productId) {
+        if (!item.product_name) {
+          throw new Error('Product name is required for new products');
+        }
+
+        const { data: newProduct, error } = await supabase
+          .from('products')
+          .insert({
+            name: item.product_name,
+            cost_price: item.unit_cost,
+            sell_price: item.unit_cost * 1.3, // default margin
+            stock: 0,
+            has_variants: false,
+          })
+          .select()
+          .single();
+
+        if (error || !newProduct) throw error;
+
+        productId = newProduct.id;
+      }
+
+      normalizedItems.push({
+        product_id: productId,
+        quantity: item.quantity,
+        unit_cost: item.unit_cost,
+      });
+    }
+
+    /* 2️⃣ Calculate total */
+    const totalAmount = normalizedItems.reduce(
       (sum, i) => sum + i.quantity * i.unit_cost,
       0
     );
 
-    /* 2️⃣ Create PO */
+    /* 3️⃣ Create PO */
     const { data: po, error: poError } = await supabase
       .from('purchase_orders')
       .insert({
@@ -32,11 +71,10 @@ export const purchaseService = {
 
     if (poError || !po) throw poError;
 
-    /* 3️⃣ Insert items */
-    const itemsPayload = data.items.map((i) => ({
+    /* 4️⃣ Insert PO items */
+    const itemsPayload = normalizedItems.map((i) => ({
       purchase_order_id: po.id,
       product_id: i.product_id,
-      variant_id: i.variant_id ?? null,
       quantity: i.quantity,
       unit_cost: i.unit_cost,
       line_total: i.quantity * i.unit_cost,
@@ -48,8 +86,8 @@ export const purchaseService = {
 
     if (itemsError) throw itemsError;
 
-    /* 4️⃣ Increase stock */
-    await this.adjustStock(data.items, 'add');
+    /* 5️⃣ Increase stock */
+    await this.adjustStock(normalizedItems, 'add');
 
     return po;
   },
@@ -61,7 +99,7 @@ export const purchaseService = {
     /* 1️⃣ Fetch items */
     const { data: items, error } = await supabase
       .from('purchase_items')
-      .select('*')
+      .select('product_id, quantity')
       .eq('purchase_order_id', poId);
 
     if (error) throw error;
@@ -81,12 +119,11 @@ export const purchaseService = {
   },
 
   /* ===============================
-     STOCK HANDLER (SAFE)
+     STOCK HANDLER
      =============================== */
   async adjustStock(
     items: {
       product_id: string;
-      variant_id?: string | null;
       quantity: number;
     }[],
     mode: 'add' | 'deduct'
@@ -94,54 +131,20 @@ export const purchaseService = {
     const factor = mode === 'add' ? 1 : -1;
 
     for (const item of items) {
-      /* -------- Variant -------- */
-      if (item.variant_id) {
-        const { data: variant } = await supabase
-          .from('variants')
-          .select('id, stock, product_id')
-          .eq('id', item.variant_id)
-          .single();
+      const { data: product } = await supabase
+        .from('products')
+        .select('id, stock')
+        .eq('id', item.product_id)
+        .single();
 
-        if (!variant) continue;
+      if (!product) continue;
 
-        const newVariantStock = variant.stock + item.quantity * factor;
-
-        await supabase
-          .from('variants')
-          .update({ stock: newVariantStock })
-          .eq('id', variant.id);
-
-        /* Recalculate product stock */
-        const { data: allVariants } = await supabase
-          .from('variants')
-          .select('stock')
-          .eq('product_id', variant.product_id);
-
-        const totalStock =
-          allVariants?.reduce((sum, v) => sum + v.stock, 0) ?? 0;
-
-        await supabase
-          .from('products')
-          .update({ stock: totalStock })
-          .eq('id', variant.product_id);
-
-      /* -------- Simple Product -------- */
-      } else {
-        const { data: product } = await supabase
-          .from('products')
-          .select('id, stock')
-          .eq('id', item.product_id)
-          .single();
-
-        if (!product) continue;
-
-        await supabase
-          .from('products')
-          .update({
-            stock: product.stock + item.quantity * factor,
-          })
-          .eq('id', product.id);
-      }
+      await supabase
+        .from('products')
+        .update({
+          stock: product.stock + item.quantity * factor,
+        })
+        .eq('id', product.id);
     }
   },
 };
