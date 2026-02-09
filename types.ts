@@ -85,3 +85,14 @@ export interface PurchaseItem {
   product_name?: string;
   variant_name?: string;
 }
+export interface Expense {
+  id: string
+  expense_date: string
+  category: string
+  description?: string
+  amount: number
+  payment_mode?: string
+  reference?: string
+  vendor?: string
+  created_at?: string
+}

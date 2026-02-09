@@ -8,6 +8,7 @@ import {
   SalesItem,
   PurchaseOrder,
   PurchaseItem,
+  Expense
 } from './types';
 
 import { inventoryService } from './services/inventoryService.supabase';
@@ -15,7 +16,11 @@ import { customerService } from './services/customerService.supabase';
 import { supplierService } from './services/supplierService.supabase';
 import { salesService } from './services/salesService.supabase';
 import { purchaseService } from './services/purchaseService.supabase';
+import { expenseService } from './services/expenseService.supabase'
+// import { Expense } from './types'
 
+import ExpenseList from './components/ExpenseList'
+import ExpenseForm from './components/ExpenseForm'
 import Dashboard from './components/Dashboard';
 import ProductList from './components/ProductList';
 import ProductForm from './components/ProductForm';
@@ -51,6 +56,7 @@ export default function App() {
   const [editingSale, setEditingSale] = useState<SalesOrder | undefined>();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
 
   /* -------------------- INITIAL LOAD -------------------- */
   useEffect(() => {
@@ -65,6 +71,7 @@ export default function App() {
         loadCustomers(),
         loadSuppliers(),
         loadSales(),
+        loadExpenses(),
         // loadPOs(),
       ]);
     } finally {
@@ -90,6 +97,9 @@ export default function App() {
 
   const loadPOs = async () => {
     setPurchaseOrders(await purchaseService.getPOs());
+  };
+  const loadExpenses = async () => {
+    setExpenses(await expenseService.getExpenses())
   };
 
   /* -------------------- PRODUCT -------------------- */
@@ -142,6 +152,19 @@ export default function App() {
     await Promise.all([loadPOs(), loadProducts()]);
     setCurrentView('purchase-orders');
   };
+  /* -------------------- EXPENSE -------------------- */
+  const handleSaveExpense = async (data: any) => {
+    await expenseService.addExpense(data)
+    await loadExpenses()
+    setCurrentView('expenses')
+  };
+  /* -------------------- EXPENSE -------------------- */
+  const handleDeleteExpense = async (id: string) => {
+    if (!confirm('Delete expense?')) return
+    await expenseService.deleteExpense(id)
+    await loadExpenses()
+  };
+
 
   /* -------------------- NAV ITEM -------------------- */
   const NavItem = ({
@@ -155,11 +178,10 @@ export default function App() {
   }) => (
     <button
       onClick={() => setCurrentView(view)}
-      className={`flex items-center w-full px-4 py-3 rounded-lg ${
-        currentView === view
-          ? 'bg-indigo-50 text-indigo-600'
-          : 'text-gray-600 hover:bg-gray-50'
-      }`}
+      className={`flex items-center w-full px-4 py-3 rounded-lg ${currentView === view
+        ? 'bg-indigo-50 text-indigo-600'
+        : 'text-gray-600 hover:bg-gray-50'
+        }`}
     >
       <Icon className="w-5 h-5 mr-3" />
       {label}
@@ -181,6 +203,7 @@ export default function App() {
           {/* <NavItem view="purchase-orders" icon={Truck} label="Supplier Orders" /> */}
           <NavItem view="customers" icon={Users} label="Customers" />
           <NavItem view="suppliers" icon={Truck} label="Suppliers" />
+          <NavItem view="expenses" icon={Box} label="Expenses" />
         </nav>
       </aside>
 
@@ -217,12 +240,12 @@ export default function App() {
 
             {(currentView === 'add-product' ||
               currentView === 'edit-product') && (
-              <ProductForm
-                initialData={editingProduct}
-                onSave={handleSaveProduct}
-                onCancel={() => setCurrentView('inventory')}
-              />
-            )}
+                <ProductForm
+                  initialData={editingProduct}
+                  onSave={handleSaveProduct}
+                  onCancel={() => setCurrentView('inventory')}
+                />
+              )}
 
             {/* SALES */}
             {currentView === 'sales' && (
@@ -249,17 +272,17 @@ export default function App() {
 
             {(currentView === 'add-sale' ||
               currentView === 'edit-sale') && (
-              <SalesForm
-                customers={customers}
-                products={products}
-                initialData={editingSale}
-                onSave={handleSaveSale}
-                onCancel={() => {
-                  setEditingSale(undefined);
-                  setCurrentView('sales');
-                }}
-              />
-            )}
+                <SalesForm
+                  customers={customers}
+                  products={products}
+                  initialData={editingSale}
+                  onSave={handleSaveSale}
+                  onCancel={() => {
+                    setEditingSale(undefined);
+                    setCurrentView('sales');
+                  }}
+                />
+              )}
 
             {/* PURCHASE ORDERS */}
             {/* {currentView === 'purchase-orders' && (
@@ -295,7 +318,7 @@ export default function App() {
                 >
                   <Plus className="mr-2" /> Add Customer
                 </button>
-                <CustomerList customers={customers} onDelete={() => {}} />
+                <CustomerList customers={customers} onDelete={() => { }} />
               </>
             )}
 
@@ -319,7 +342,7 @@ export default function App() {
                 >
                   <Plus className="mr-2" /> Add Supplier
                 </button>
-                <SupplierList suppliers={suppliers} onDelete={() => {}} />
+                <SupplierList suppliers={suppliers} onDelete={() => { }} />
               </>
             )}
 
@@ -333,6 +356,26 @@ export default function App() {
                 onCancel={() => setCurrentView('suppliers')}
               />
             )}
+            {/* EXPENSE */}
+            {currentView === 'expenses' && (
+              <>
+                <button
+                  onClick={() => setCurrentView('add-expense')}
+                  className="mb-4 flex items-center bg-indigo-600 text-white px-4 py-2 rounded"
+                >
+                  <Plus className="mr-2" /> Add Expense
+                </button>
+                <ExpenseList expenses={expenses} onDelete={handleDeleteExpense} />
+              </>
+            )}
+
+            {currentView === 'add-expense' && (
+              <ExpenseForm
+                onSave={handleSaveExpense}
+                onCancel={() => setCurrentView('expenses')}
+              />
+            )}
+
           </>
         )}
       </main>
