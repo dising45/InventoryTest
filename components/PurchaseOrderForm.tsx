@@ -1,60 +1,89 @@
 import React, { useState } from 'react';
 import { Supplier, Product } from '../types';
-import { Plus, Trash2, Save } from 'lucide-react';
+import PurchaseItemRow, {
+  PurchaseItem,
+} from './PurchaseItemRow';
+import { purchaseService } from '../services/purchaseService.supabase';
+import { inventoryService } from '../services/inventoryService.supabase';
+import { Plus, Save } from 'lucide-react';
 
 interface Props {
   suppliers: Supplier[];
   products: Product[];
-  onSave: (data: {
-    supplier_id: string;
-    items: {
-      product_id?: string;
-      product_name: string;
-      variant_id?: string;
-      quantity: number;
-      unit_cost: number;
-    }[];
-  }) => Promise<void>;
+  onSuccess: () => void;
   onCancel: () => void;
 }
 
-export default function PurchaseOrderForm({
+const PurchaseOrderForm: React.FC<Props> = ({
   suppliers,
   products,
-  onSave,
+  onSuccess,
   onCancel,
-}: Props) {
+}) => {
   const [supplierId, setSupplierId] = useState('');
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<PurchaseItem[]>([]);
+  const [saving, setSaving] = useState(false);
 
-  const [productId, setProductId] = useState<string | undefined>();
-  const [productName, setProductName] = useState('');
-  const [variantId, setVariantId] = useState<string | undefined>();
-  const [quantity, setQuantity] = useState(1);
-  const [unitCost, setUnitCost] = useState(0);
+  /* ---------------- Add / Update Rows ---------------- */
+  const updateItem = (index: number, updated: PurchaseItem) => {
+    const copy = [...items];
+    copy[index] = updated;
+    setItems(copy);
+  };
 
-  const selectedProduct = products.find(p => p.id === productId);
+  const removeItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
 
-  const addItem = () => {
-    if (!productName && !productId) return;
-
+  const addRow = () => {
     setItems([
       ...items,
       {
-        product_id: productId,
-        product_name:
-          productName || selectedProduct?.name || 'Unknown',
-        variant_id: variantId,
-        quantity,
-        unit_cost: unitCost,
+        quantity: 1,
+        unit_cost: 0,
       },
     ]);
+  };
 
-    setProductId(undefined);
-    setProductName('');
-    setVariantId(undefined);
-    setQuantity(1);
-    setUnitCost(0);
+  /* ---------------- Inline Product Creation ---------------- */
+  const createProduct = async (name: string, baseCost: number) => {
+    const product = await inventoryService.addProduct({
+      name,
+      cost_price: baseCost,
+      sell_price: baseCost,
+      stock: 0,
+      has_variants: false,
+    });
+
+    return product;
+  };
+
+  /* ---------------- Save PO ---------------- */
+  const handleSave = async () => {
+    if (!supplierId || items.length === 0) {
+      alert('Supplier and at least one item required');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await purchaseService.createPO({
+        supplier_id: supplierId,
+        items: items.map(i => ({
+          product_id: i.product_id!,
+          variant_id: i.variant_id,
+          quantity: i.quantity,
+          unit_cost: i.unit_cost,
+        })),
+      });
+
+      onSuccess();
+    } catch (e) {
+      console.error(e);
+      alert('Failed to create PO');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const total = items.reduce(
@@ -62,121 +91,78 @@ export default function PurchaseOrderForm({
     0
   );
 
+  /* ---------------- Render ---------------- */
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <h2 className="text-xl font-bold">New Purchase Order</h2>
+    <div className="max-w-5xl mx-auto bg-white p-6 rounded shadow">
+      <h2 className="text-xl font-semibold mb-4">
+        New Purchase Order
+      </h2>
 
-      <select
-        className="w-full border p-2 rounded"
-        value={supplierId}
-        onChange={e => setSupplierId(e.target.value)}
-      >
-        <option value="">Select Supplier</option>
-        {suppliers.map(s => (
-          <option key={s.id} value={s.id}>
-            {s.name}
-          </option>
-        ))}
-      </select>
-
-      {/* ADD ITEM */}
-      <div className="border rounded p-4 space-y-3">
+      {/* Supplier */}
+      <div className="mb-4">
+        <label className="text-sm text-gray-600">Supplier</label>
         <select
-          className="w-full border p-2 rounded"
-          value={productId || ''}
-          onChange={e => {
-            setProductId(e.target.value || undefined);
-            setProductName('');
-          }}
+          value={supplierId}
+          onChange={e => setSupplierId(e.target.value)}
+          className="w-full border rounded px-3 py-2"
         >
-          <option value="">Select Existing Product</option>
-          {products.map(p => (
-            <option key={p.id} value={p.id}>
-              {p.name}
+          <option value="">Select supplier</option>
+          {suppliers.map(s => (
+            <option key={s.id} value={s.id}>
+              {s.name}
             </option>
           ))}
         </select>
-
-        {!productId && (
-          <input
-            placeholder="New product name"
-            className="w-full border p-2 rounded"
-            value={productName}
-            onChange={e => setProductName(e.target.value)}
-          />
-        )}
-
-        {selectedProduct?.variants?.length > 0 && (
-          <select
-            className="w-full border p-2 rounded"
-            onChange={e => setVariantId(e.target.value)}
-          >
-            <option value="">Select Variant</option>
-            {selectedProduct.variants.map(v => (
-              <option key={v.id} value={v.id}>
-                {v.name}
-              </option>
-            ))}
-          </select>
-        )}
-
-        <div className="grid grid-cols-2 gap-3">
-          <input
-            type="number"
-            placeholder="Quantity"
-            className="border p-2 rounded"
-            value={quantity}
-            onChange={e => setQuantity(+e.target.value)}
-          />
-          <input
-            type="number"
-            placeholder="Unit Cost"
-            className="border p-2 rounded"
-            value={unitCost}
-            onChange={e => setUnitCost(+e.target.value)}
-          />
-        </div>
-
-        <button
-          onClick={addItem}
-          className="flex items-center bg-gray-100 px-3 py-2 rounded"
-        >
-          <Plus className="w-4 h-4 mr-1" /> Add Item
-        </button>
       </div>
 
-      {/* ITEMS */}
-      {items.map((i, idx) => (
-        <div key={idx} className="flex justify-between border-b py-2">
-          <div>
-            <b>{i.product_name}</b>
-            <div className="text-sm text-gray-500">
-              {i.quantity} × {i.unit_cost}
-            </div>
-          </div>
-          <button onClick={() =>
-            setItems(items.filter((_, x) => x !== idx))
-          }>
-            <Trash2 className="w-4 h-4 text-red-500" />
+      {/* Items */}
+      <div className="space-y-3">
+        {items.map((item, index) => (
+          <PurchaseItemRow
+            key={index}
+            item={item}
+            products={products}
+            onChange={updated => updateItem(index, updated)}
+            onRemove={() => removeItem(index)}
+            onCreateProduct={createProduct}
+          />
+        ))}
+      </div>
+
+      {/* Add Row */}
+      <button
+        type="button"
+        onClick={addRow}
+        className="mt-4 flex items-center text-indigo-600 text-sm"
+      >
+        <Plus className="w-4 h-4 mr-1" /> Add item
+      </button>
+
+      {/* Footer */}
+      <div className="flex justify-between items-center mt-6 border-t pt-4">
+        <div className="text-lg font-semibold">
+          Total: ₹{total.toFixed(2)}
+        </div>
+
+        <div className="space-x-3">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 border rounded"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-5 py-2 bg-indigo-600 text-white rounded flex items-center"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {saving ? 'Saving…' : 'Save PO'}
           </button>
         </div>
-      ))}
-
-      <div className="text-right font-bold">
-        Total: ₹{total.toFixed(2)}
-      </div>
-
-      <div className="flex gap-3">
-        <button
-          onClick={() =>
-            onSave({ supplier_id: supplierId, items })
-          }
-          className="bg-indigo-600 text-white px-4 py-2 rounded"
-        >
-          <Save className="w-4 h-4 inline mr-1" /> Save PO
-        </button>
-        <button onClick={onCancel}>Cancel</button>
       </div>
     </div>
   );
-}
+};
+
+export default PurchaseOrderForm;

@@ -143,12 +143,6 @@ export default function App() {
     setCurrentView('purchase-orders');
   };
 
-  const handleDeletePO = async (id: string) => {
-    if (!confirm('Delete this PO? Stock will be reverted.')) return;
-    await purchaseService.deletePO(id);
-    await Promise.all([loadPOs(), loadProducts()]);
-  };
-
   /* -------------------- NAV ITEM -------------------- */
   const NavItem = ({
     view,
@@ -277,8 +271,8 @@ export default function App() {
                   <Plus className="mr-2" /> New PO
                 </button>
                 <PurchaseOrderList
-                  orders={purchaseOrders}
-                  onDelete={handleDeletePO}
+                  purchaseOrders={purchaseOrders}
+                  onRefresh={loadPOs}
                 />
               </>
             )}
