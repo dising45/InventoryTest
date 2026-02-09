@@ -2,19 +2,22 @@ import { supabase } from './supabaseClient'
 import { Product } from '../types'
 
 class InventoryServiceSupabase {
+  /* ===============================
+     GET PRODUCTS
+     =============================== */
   async getProducts(): Promise<Product[]> {
     const { data, error } = await supabase
       .from('products')
       .select(`
-      *,
-      variants (
-        id,
-        name,
-        sku,
-        stock,
-        price_modifier
-      )
-    `)
+        *,
+        variants (
+          id,
+          name,
+          sku,
+          stock,
+          price_modifier
+        )
+      `)
       .order('updated_at', { ascending: false })
 
     if (error) {
@@ -23,23 +26,23 @@ class InventoryServiceSupabase {
     }
 
     // 🔒 Normalize variants so UI never crashes
-    const normalized = (data ?? []).map(p => ({
+    return (data ?? []).map(p => ({
       ...p,
-      variants: p.variants ?? []
-    }))
-
-    return normalized as Product[]
+      variants: p.variants ?? [],
+    })) as Product[]
   }
 
-
+  /* ===============================
+     ADD PRODUCT
+     =============================== */
   async addProduct(product: any) {
     // 1️⃣ Calculate stock correctly
     const calculatedStock =
       product.has_variants && product.variants?.length
         ? product.variants.reduce(
-          (sum: number, v: any) => sum + Number(v.stock || 0),
-          0
-        )
+            (sum: number, v: any) => sum + Number(v.stock || 0),
+            0
+          )
         : Number(product.stock || 0)
 
     // 2️⃣ Insert product (NO variants here)
@@ -48,9 +51,12 @@ class InventoryServiceSupabase {
       .insert([
         {
           name: product.name,
-          description: product.description,
-          buy_price: Number(product.buy_price),
-          sell_price: Number(product.sell_price),
+          description: product.description ?? null,
+
+          // ✅ NEW MODEL
+          base_cost: Number(product.base_cost ?? 0),
+          sell_price: Number(product.sell_price ?? 0),
+
           stock: calculatedStock,
           has_variants: !!product.has_variants,
         },
@@ -68,7 +74,7 @@ class InventoryServiceSupabase {
       const variantsPayload = product.variants.map((v: any) => ({
         product_id: productRow.id,
         name: v.name,
-        sku: v.sku,
+        sku: v.sku ?? null,
         stock: Number(v.stock || 0),
         price_modifier: Number(v.price_modifier || 0),
       }))
@@ -86,24 +92,30 @@ class InventoryServiceSupabase {
     return productRow
   }
 
+  /* ===============================
+     UPDATE PRODUCT
+     =============================== */
   async updateProduct(product: any) {
     // 1️⃣ Recalculate stock
     const calculatedStock =
       product.has_variants && product.variants?.length
         ? product.variants.reduce(
-          (sum: number, v: any) => sum + Number(v.stock || 0),
-          0
-        )
+            (sum: number, v: any) => sum + Number(v.stock || 0),
+            0
+          )
         : Number(product.stock || 0)
 
-    // 2️⃣ Update product (NO variants here)
+    // 2️⃣ Update product
     const { error: productError } = await supabase
       .from('products')
       .update({
         name: product.name,
-        description: product.description,
-        buy_price: Number(product.buy_price),
-        sell_price: Number(product.sell_price),
+        description: product.description ?? null,
+
+        // ✅ NEW MODEL
+        base_cost: Number(product.base_cost ?? 0),
+        sell_price: Number(product.sell_price ?? 0),
+
         stock: calculatedStock,
         has_variants: !!product.has_variants,
         updated_at: new Date().toISOString(),
@@ -126,12 +138,12 @@ class InventoryServiceSupabase {
       throw deleteError
     }
 
-    // 4️⃣ Insert new variants (if any)
+    // 4️⃣ Insert new variants
     if (product.has_variants && product.variants?.length > 0) {
       const variantsPayload = product.variants.map((v: any) => ({
         product_id: product.id,
         name: v.name,
-        sku: v.sku,
+        sku: v.sku ?? null,
         stock: Number(v.stock || 0),
         price_modifier: Number(v.price_modifier || 0),
       }))
@@ -149,7 +161,9 @@ class InventoryServiceSupabase {
     return true
   }
 
-
+  /* ===============================
+     DELETE PRODUCT
+     =============================== */
   async deleteProduct(id: string) {
     const { error } = await supabase
       .from('products')
