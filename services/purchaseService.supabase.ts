@@ -91,6 +91,26 @@ export const purchaseService = {
 
     return po;
   },
+  /* ===============================
+     GET PURCHASE ORDERS
+     =============================== */
+  async getPOs() {
+    const { data, error } = await supabase
+      .from('purchase_orders')
+      .select(`
+      *,
+      supplier:suppliers(*),
+      items:purchase_items(*)
+    `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Failed to load POs', error);
+      return [];
+    }
+
+    return data;
+  },
 
   /* ===============================
      DELETE PURCHASE ORDER
