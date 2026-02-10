@@ -13,7 +13,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
     description: '',
-    buy_price: 0,
+    cost_price: 0,
     sell_price: 0,
     stock: 0,
     has_variants: false,
@@ -132,8 +132,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
                 type="number"
                 step="0.01"
                 min="0"
-                name="buy_price"
-                value={formData.buy_price}
+                name="cost_price"
+                value={formData.cost_price}
                 onChange={handleChange}
                 className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
               />

@@ -38,18 +38,25 @@ export const dashboardService = {
       expensesMTD?.reduce((s, r) => s + Number(r.amount), 0) ?? 0;
 
     /* ---------- INVENTORY ---------- */
-    const { data: products } = await supabase
+    /* ---------- INVENTORY ---------- */
+    const { data: products, error: productError } = await supabase
       .from('products')
-      .select('stock, buy_price');
+      .select('stock, cost_price');
+
+    if (productError) {
+      console.error('DASHBOARD INVENTORY ERROR', productError);
+      throw productError;
+    }
 
     const inventoryValue =
       products?.reduce(
-        (s, p) => s + Number(p.stock) * Number(p.buy_price),
+        (sum, p) => sum + Number(p.stock) * Number(p.cost_price),
         0
       ) ?? 0;
 
     const lowStockCount =
       products?.filter((p) => Number(p.stock) <= 5).length ?? 0;
+
 
     /* ---------- PROFIT ---------- */
     const profitMTD = totalSalesMTD - totalExpensesMTD;
