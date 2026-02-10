@@ -35,7 +35,6 @@ class InventoryServiceSupabase {
      ADD PRODUCT
      =============================== */
   async addProduct(product: any) {
-    // 1️⃣ Calculate stock
     const calculatedStock =
       product.has_variants && product.variants?.length
         ? product.variants.reduce(
@@ -44,17 +43,13 @@ class InventoryServiceSupabase {
           )
         : Number(product.stock || 0)
 
-    // 2️⃣ Insert product (NO variants)
     const { data: productRow, error } = await supabase
       .from('products')
       .insert({
         name: product.name,
         description: product.description ?? null,
-
-        // ✅ CORRECT COLUMN NAME
         cost_price: Number(product.cost_price ?? 0),
         sell_price: Number(product.sell_price ?? 0),
-
         stock: calculatedStock,
         has_variants: !!product.has_variants,
       })
@@ -66,7 +61,6 @@ class InventoryServiceSupabase {
       throw error
     }
 
-    // 3️⃣ Insert variants (if any)
     if (product.has_variants && product.variants?.length > 0) {
       const variantsPayload = product.variants.map((v: any) => ({
         product_id: productRow.id,
@@ -90,10 +84,9 @@ class InventoryServiceSupabase {
   }
 
   /* ===============================
-     UPDATE PRODUCT
+     UPDATE PRODUCT (SAFE)
      =============================== */
   async updateProduct(product: any) {
-    // 1️⃣ Recalculate stock
     const calculatedStock =
       product.has_variants && product.variants?.length
         ? product.variants.reduce(
@@ -102,33 +95,28 @@ class InventoryServiceSupabase {
           )
         : Number(product.stock || 0)
 
-    // 2️⃣ Update product
-    const { error } = await supabase
+    const { error: productError } = await supabase
       .from('products')
       .update({
         name: product.name,
         description: product.description ?? null,
-
-        // ✅ CORRECT COLUMN NAME
         cost_price: Number(product.cost_price ?? 0),
         sell_price: Number(product.sell_price ?? 0),
-
         stock: calculatedStock,
         has_variants: !!product.has_variants,
         updated_at: new Date().toISOString(),
       })
       .eq('id', product.id)
 
-    if (error) {
-      console.error('PRODUCT UPDATE FAILED', error)
-      throw error
+    if (productError) {
+      console.error('PRODUCT UPDATE FAILED', productError)
+      throw productError
     }
 
-    // 3️⃣ Replace variants safely
-    await supabase.from('variants').delete().eq('product_id', product.id)
-
-    if (product.has_variants && product.variants?.length > 0) {
-      const variantsPayload = product.variants.map((v: any) => ({
+    /* ---------- VARIANTS: UPSERT ---------- */
+    if (product.has_variants) {
+      const variantsPayload = (product.variants ?? []).map((v: any) => ({
+        id: v.id || undefined, // critical for upsert
         product_id: product.id,
         name: v.name,
         sku: v.sku ?? null,
@@ -136,13 +124,28 @@ class InventoryServiceSupabase {
         price_modifier: Number(v.price_modifier || 0),
       }))
 
-      const { error: variantError } = await supabase
-        .from('variants')
-        .insert(variantsPayload)
+      if (variantsPayload.length > 0) {
+        const { error: upsertError } = await supabase
+          .from('variants')
+          .upsert(variantsPayload, { onConflict: 'id' })
 
-      if (variantError) {
-        console.error('VARIANT INSERT FAILED', variantError)
-        throw variantError
+        if (upsertError) {
+          console.error('VARIANT UPSERT FAILED', upsertError)
+          throw upsertError
+        }
+      }
+
+      // 🔥 Remove deleted variants (optional but correct)
+      const keptIds = variantsPayload
+        .map(v => v.id)
+        .filter(Boolean)
+
+      if (keptIds.length > 0) {
+        await supabase
+          .from('variants')
+          .delete()
+          .eq('product_id', product.id)
+          .not('id', 'in', `(${keptIds.join(',')})`)
       }
     }
 
