@@ -1,89 +1,134 @@
 import React, { useState } from 'react'
 import { ArrowLeft, Save } from 'lucide-react'
 
-interface Props {
-  onSave: (data: any) => Promise<void>
+interface ExpenseFormProps {
+  onSave: (data: {
+    expense_date: string
+    category: string
+    description?: string
+    amount: number
+    payment_mode?: string
+    reference?: string
+    vendor?: string
+  }) => Promise<void>
   onCancel: () => void
 }
 
-const ExpenseForm: React.FC<Props> = ({ onSave, onCancel }) => {
+const ExpenseForm: React.FC<ExpenseFormProps> = ({
+  onSave,
+  onCancel,
+}) => {
+  const [loading, setLoading] = useState(false)
+
   const [form, setForm] = useState({
     expense_date: new Date().toISOString().slice(0, 10),
     category: '',
     description: '',
-    amount: '',
+    amount: 0,
     payment_mode: '',
-    vendor: '',
     reference: '',
+    vendor: '',
   })
 
-  const submit = async () => {
-    if (!form.category || !form.amount) return
-    await onSave({ ...form, amount: Number(form.amount) })
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target
+    setForm((prev) => ({
+      ...prev,
+      [name]:
+        name === 'amount' ? Number(value) : value,
+    }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await onSave(form)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="max-w-lg bg-white p-6 rounded-lg border">
-      <button
-        onClick={onCancel}
-        className="flex items-center text-sm text-gray-600 mb-4"
-      >
-        <ArrowLeft className="mr-2" size={16} /> Back
-      </button>
-
-      <h2 className="text-lg font-semibold mb-4">Add Expense</h2>
-
-      <div className="space-y-3">
-        <input
-          type="date"
-          value={form.expense_date}
-          onChange={e => setForm({ ...form, expense_date: e.target.value })}
-          className="w-full border rounded px-3 py-2"
-        />
-
-        <input
-          placeholder="Category (Rent, Salary, Internet...)"
-          value={form.category}
-          onChange={e => setForm({ ...form, category: e.target.value })}
-          className="w-full border rounded px-3 py-2"
-        />
-
-        <input
-          placeholder="Amount"
-          type="number"
-          value={form.amount}
-          onChange={e => setForm({ ...form, amount: e.target.value })}
-          className="w-full border rounded px-3 py-2"
-        />
-
-        <input
-          placeholder="Description (optional)"
-          value={form.description}
-          onChange={e => setForm({ ...form, description: e.target.value })}
-          className="w-full border rounded px-3 py-2"
-        />
-
-        <input
-          placeholder="Payment Mode (Cash, UPI, Bank)"
-          value={form.payment_mode}
-          onChange={e => setForm({ ...form, payment_mode: e.target.value })}
-          className="w-full border rounded px-3 py-2"
-        />
-
-        <input
-          placeholder="Vendor (optional)"
-          value={form.vendor}
-          onChange={e => setForm({ ...form, vendor: e.target.value })}
-          className="w-full border rounded px-3 py-2"
-        />
+    <div className="max-w-xl mx-auto bg-white rounded-xl border shadow-sm p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <button
+          onClick={onCancel}
+          className="flex items-center text-gray-600"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </button>
+        <h2 className="font-semibold text-lg">
+          Add Expense
+        </h2>
       </div>
 
-      <button
-        onClick={submit}
-        className="mt-6 flex items-center bg-indigo-600 text-white px-4 py-2 rounded"
-      >
-        <Save className="mr-2" size={16} /> Save Expense
-      </button>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          type="date"
+          name="expense_date"
+          value={form.expense_date}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+          required
+        />
+
+        <input
+          name="category"
+          placeholder="Category (Rent, Salary, Travel)"
+          value={form.category}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+          required
+        />
+
+        <input
+          name="vendor"
+          placeholder="Vendor (optional)"
+          value={form.vendor}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+        />
+
+        <input
+          type="number"
+          name="amount"
+          min={0}
+          step="0.01"
+          value={form.amount}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+          required
+        />
+
+        <input
+          name="payment_mode"
+          placeholder="Payment Mode (Cash / UPI / Bank)"
+          value={form.payment_mode}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+        />
+
+        <input
+          name="reference"
+          placeholder="Reference / Notes"
+          value={form.reference}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+        />
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-indigo-600 text-white py-2 rounded"
+        >
+          <Save className="inline w-4 h-4 mr-2" />
+          {loading ? 'Saving…' : 'Save Expense'}
+        </button>
+      </form>
     </div>
   )
 }

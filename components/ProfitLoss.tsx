@@ -1,4 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import {
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  BarChart3,
+} from 'lucide-react';
 import { profitLossService } from '../services/plService.supabase';
 
 interface Expense {
@@ -30,7 +36,7 @@ const ProfitLoss: React.FC = () => {
     setLoading(false);
   };
 
-  /* ---------- QUICK DATE HELPERS ---------- */
+  /* ---------- DATE HELPERS ---------- */
   const today = () => new Date().toISOString().slice(0, 10);
 
   const startOfMonth = () => {
@@ -54,7 +60,7 @@ const ProfitLoss: React.FC = () => {
       .slice(0, 10);
   };
 
-  /* ---------- CATEGORY GROUPING ---------- */
+  /* ---------- GROUP EXPENSES ---------- */
   const expenseByCategory = expenses.reduce<Record<string, number>>(
     (acc, e) => {
       acc[e.category] = (acc[e.category] || 0) + Number(e.amount || 0);
@@ -64,69 +70,88 @@ const ProfitLoss: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6">
-      {/* DATE FILTERS */}
-      <div className="flex flex-wrap gap-2">
-        <button onClick={() => { setFrom(today()); setTo(today()); }} className="btn">
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* FILTERS */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <QuickBtn onClick={() => { setFrom(today()); setTo(today()); }}>
           Today
-        </button>
-        <button onClick={() => { setFrom(startOfMonth()); setTo(undefined); }} className="btn">
+        </QuickBtn>
+        <QuickBtn onClick={() => { setFrom(startOfMonth()); setTo(undefined); }}>
           This Month
-        </button>
-        <button
-          onClick={() => {
-            setFrom(startOfLastMonth());
-            setTo(endOfLastMonth());
-          }}
-          className="btn"
-        >
+        </QuickBtn>
+        <QuickBtn onClick={() => {
+          setFrom(startOfLastMonth());
+          setTo(endOfLastMonth());
+        }}>
           Last Month
-        </button>
+        </QuickBtn>
 
-        <div className="flex items-center gap-2 ml-4">
+        <div className="flex items-center gap-2 ml-auto">
           <input
             type="date"
             value={from || ''}
             onChange={(e) => setFrom(e.target.value || undefined)}
-            className="border px-2 py-1 rounded"
+            className="border rounded px-2 py-1 text-sm"
           />
-          <span>to</span>
+          <span className="text-sm text-gray-500">to</span>
           <input
             type="date"
             value={to || ''}
             onChange={(e) => setTo(e.target.value || undefined)}
-            className="border px-2 py-1 rounded"
+            className="border rounded px-2 py-1 text-sm"
           />
         </div>
       </div>
 
       {loading ? (
-        <div>Loading P&amp;L…</div>
+        <div className="text-center py-10 text-gray-500">
+          Loading Profit &amp; Loss…
+        </div>
       ) : (
         <>
-          {/* SUMMARY */}
-          <div className="grid grid-cols-3 gap-4">
-            <Card title="Total Sales" value={totalSales} />
-            <Card title="Total Expenses" value={totalExpenses} />
-            <Card
-              title="Net Profit"
+          {/* SUMMARY CARDS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <MetricCard
+              label="Revenue"
+              value={totalSales}
+              icon={<TrendingUp />}
+              color="green"
+            />
+            <MetricCard
+              label="Expenses"
+              value={totalExpenses}
+              icon={<TrendingDown />}
+              color="red"
+            />
+            <MetricCard
+              label="Net Profit"
               value={profit}
-              highlight={profit >= 0 ? 'green' : 'red'}
+              icon={<Wallet />}
+              color={profit >= 0 ? 'green' : 'red'}
+            />
+            <MetricCard
+              label="Status"
+              value={profit >= 0 ? 1 : 0}
+              display={profit >= 0 ? 'Profitable' : 'Loss'}
+              icon={<BarChart3 />}
+              color={profit >= 0 ? 'green' : 'red'}
             />
           </div>
 
-          {/* CATEGORY BREAKDOWN */}
-          <div className="bg-white border rounded-lg p-6">
+          {/* EXPENSE BREAKDOWN */}
+          <div className="bg-white border rounded-xl shadow-sm p-6">
             <h3 className="text-lg font-semibold mb-4">
-              Expenses by Category
+              Expense Breakdown
             </h3>
 
             {Object.keys(expenseByCategory).length === 0 ? (
-              <p className="text-gray-500">No expenses recorded</p>
+              <p className="text-gray-500 text-sm">
+                No expenses recorded for this period.
+              </p>
             ) : (
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b">
+                  <tr className="border-b text-gray-500">
                     <th className="text-left py-2">Category</th>
                     <th className="text-right py-2">Amount</th>
                   </tr>
@@ -135,7 +160,7 @@ const ProfitLoss: React.FC = () => {
                   {Object.entries(expenseByCategory).map(([cat, amt]) => (
                     <tr key={cat} className="border-b last:border-0">
                       <td className="py-2">{cat}</td>
-                      <td className="py-2 text-right">
+                      <td className="py-2 text-right font-medium">
                         ₹{amt.toFixed(2)}
                       </td>
                     </tr>
@@ -150,34 +175,47 @@ const ProfitLoss: React.FC = () => {
   );
 };
 
-/* ---------- CARD ---------- */
-const Card = ({
-  title,
+/* ---------- UI HELPERS ---------- */
+
+const MetricCard = ({
+  label,
   value,
-  highlight,
+  icon,
+  color,
+  display,
 }: {
-  title: string;
+  label: string;
   value: number;
-  highlight?: 'green' | 'red';
+  icon: React.ReactNode;
+  color: 'green' | 'red';
+  display?: string;
 }) => (
-  <div className="bg-white border rounded-lg p-4">
-    <p className="text-sm text-gray-500">{title}</p>
-    <p
-      className={`text-xl font-bold ${
-        highlight === 'green'
-          ? 'text-green-600'
-          : highlight === 'red'
-          ? 'text-red-600'
-          : 'text-gray-900'
-      }`}
-    >
-      ₹{value.toFixed(2)}
-    </p>
+  <div className="bg-white border rounded-xl shadow-sm p-4 flex justify-between items-center">
+    <div>
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className={`text-xl font-bold text-${color}-600`}>
+        {display ?? `₹${value.toFixed(2)}`}
+      </p>
+    </div>
+    <div className={`p-2 rounded-full bg-${color}-50 text-${color}-600`}>
+      {icon}
+    </div>
   </div>
 );
 
-/* ---------- BUTTON STYLE ---------- */
-const btn =
-  'px-3 py-1 border rounded bg-gray-50 hover:bg-gray-100 text-sm';
+const QuickBtn = ({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className="px-3 py-1 border rounded bg-gray-50 hover:bg-gray-100 text-sm"
+  >
+    {children}
+  </button>
+);
 
 export default ProfitLoss;
