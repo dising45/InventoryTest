@@ -35,7 +35,7 @@ const ProductList: React.FC<ProductListProps> = ({
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
-      {/* Search */}
+      {/* SEARCH */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
         <input
@@ -47,7 +47,7 @@ const ProductList: React.FC<ProductListProps> = ({
         />
       </div>
 
-      {/* Empty */}
+      {/* EMPTY STATE */}
       {filteredProducts.length === 0 ? (
         <div className="bg-white rounded-xl border p-8 text-center">
           <Layers className="mx-auto h-10 w-10 text-gray-400" />
@@ -60,7 +60,7 @@ const ProductList: React.FC<ProductListProps> = ({
         </div>
       ) : (
         <>
-          {/* ===================== DESKTOP ===================== */}
+          {/* ===================== DESKTOP (UNCHANGED) ===================== */}
           <div className="hidden md:block bg-white rounded-xl border overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -159,7 +159,7 @@ const ProductList: React.FC<ProductListProps> = ({
             </table>
           </div>
 
-          {/* ===================== MOBILE ===================== */}
+          {/* ===================== MOBILE (TAP-FIRST) ===================== */}
           <div className="md:hidden space-y-3">
             {filteredProducts.map(product => {
               const lowStock = product.stock < LOW_STOCK_THRESHOLD
@@ -167,7 +167,8 @@ const ProductList: React.FC<ProductListProps> = ({
               return (
                 <div
                   key={product.id}
-                  className="bg-white rounded-xl border p-4 shadow-sm"
+                  onClick={() => onEdit(product)}
+                  className="bg-white rounded-2xl border p-4 shadow-sm active:scale-[0.99] transition cursor-pointer"
                 >
                   <div className="flex justify-between items-start">
                     <div>
@@ -180,36 +181,51 @@ const ProductList: React.FC<ProductListProps> = ({
                           : 'Standard product'}
                       </p>
                     </div>
-                    <span className="font-bold">
-                      ₹{product.sell_price}
+
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        lowStock
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}
+                    >
+                      {product.stock}
                     </span>
                   </div>
 
                   <div className="mt-3 flex justify-between items-center">
-                    <span
-                      className={`flex items-center gap-1 text-xs font-medium ${
-                        lowStock ? 'text-red-600' : 'text-green-600'
-                      }`}
-                    >
-                      {lowStock && <AlertCircle className="w-3 h-3" />}
-                      {product.stock} in stock
-                    </span>
+                    <p className="text-sm font-bold">
+                      ₹{product.sell_price}
+                    </p>
 
                     <div className="flex gap-2">
                       <button
-                        onClick={() => onEdit(product)}
-                        className="px-3 py-1 text-xs rounded bg-indigo-50 text-indigo-700"
+                        onClick={e => {
+                          e.stopPropagation()
+                          onEdit(product)
+                        }}
+                        className="px-3 py-1 text-xs rounded-lg bg-indigo-50 text-indigo-700"
                       >
                         Edit
                       </button>
                       <button
-                        onClick={() => onDelete(product.id)}
-                        className="px-3 py-1 text-xs rounded bg-red-50 text-red-700"
+                        onClick={e => {
+                          e.stopPropagation()
+                          onDelete(product.id)
+                        }}
+                        className="px-3 py-1 text-xs rounded-lg bg-red-50 text-red-700"
                       >
                         Delete
                       </button>
                     </div>
                   </div>
+
+                  {lowStock && (
+                    <div className="mt-2 flex items-center text-xs text-red-600">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      Low stock
+                    </div>
+                  )}
                 </div>
               )
             })}
