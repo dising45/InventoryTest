@@ -58,7 +58,7 @@ const ProductList: React.FC<ProductListProps> = ({ products, onEdit, onDelete })
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredProducts.map((product) => {
-                    const margin = product.sell_price - product.buy_price;
+                    const margin = product.sell_price - product.cost_price;
                     const marginPercent = ((margin / product.sell_price) * 100).toFixed(1);
                     return (
                       <tr key={product.id} className="hover:bg-gray-50 transition-colors">

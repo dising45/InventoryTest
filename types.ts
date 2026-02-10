@@ -10,7 +10,7 @@ export interface Product {
   id: string;
   name: string;
   description?: string;
-  buy_price: number;
+  cost_price: number;
   sell_price: number;
   stock: number; // Total stock if variants exist, or direct stock
   has_variants: boolean;

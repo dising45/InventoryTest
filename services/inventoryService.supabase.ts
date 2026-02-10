@@ -54,7 +54,7 @@ class InventoryServiceSupabase {
           description: product.description ?? null,
 
           // ✅ NEW MODEL
-          base_cost: Number(product.base_cost ?? 0),
+          base_cost: Number(product.cost_price ?? 0),
           sell_price: Number(product.sell_price ?? 0),
 
           stock: calculatedStock,
@@ -113,7 +113,7 @@ class InventoryServiceSupabase {
         description: product.description ?? null,
 
         // ✅ NEW MODEL
-        base_cost: Number(product.base_cost ?? 0),
+        base_cost: Number(product.cost_price ?? 0),
         sell_price: Number(product.sell_price ?? 0),
 
         stock: calculatedStock,
