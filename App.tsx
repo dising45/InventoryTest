@@ -16,11 +16,8 @@ import { customerService } from './services/customerService.supabase';
 import { supplierService } from './services/supplierService.supabase';
 import { salesService } from './services/salesService.supabase';
 import { purchaseService } from './services/purchaseService.supabase';
-import { expenseService } from './services/expenseService.supabase'
-// import { Expense } from './types'
-import ProfitLoss from './components/ProfitLoss';
-import ExpenseList from './components/ExpenseList'
-import ExpenseForm from './components/ExpenseForm'
+import { expenseService } from './services/expenseService.supabase';
+
 import Dashboard from './components/Dashboard';
 import ProductList from './components/ProductList';
 import ProductForm from './components/ProductForm';
@@ -30,8 +27,9 @@ import SupplierList from './components/SupplierList';
 import SupplierForm from './components/SupplierForm';
 import SalesList from './components/SalesList';
 import SalesForm from './components/SalesForm';
-import PurchaseOrderList from './components/PurchaseOrderList';
-import PurchaseOrderForm from './components/PurchaseOrderForm';
+import ExpenseList from './components/ExpenseList';
+import ExpenseForm from './components/ExpenseForm';
+import ProfitLoss from './components/ProfitLoss';
 
 import {
   LayoutDashboard,
@@ -41,8 +39,45 @@ import {
   Users,
   Truck,
   ShoppingCart,
-  BarChart3, 
+  BarChart3,
+  Wallet,
 } from 'lucide-react';
+
+/* =======================
+   MOBILE BOTTOM NAV
+======================= */
+const MobileBottomNav = ({
+  currentView,
+  setCurrentView,
+}: {
+  currentView: ViewState;
+  setCurrentView: (v: ViewState) => void;
+}) => {
+  const items = [
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Home' },
+    { id: 'inventory', icon: Package, label: 'Inventory' },
+    { id: 'sales', icon: ShoppingCart, label: 'Sales' },
+    { id: 'expenses', icon: Wallet, label: 'Expenses' },
+    { id: 'pl', icon: BarChart3, label: 'P&L' },
+  ];
+
+  return (
+    <nav className="fixed bottom-0 inset-x-0 bg-white border-t flex justify-around py-2 md:hidden z-50">
+      {items.map(({ id, icon: Icon, label }) => (
+        <button
+          key={id}
+          onClick={() => setCurrentView(id as ViewState)}
+          className={`flex flex-col items-center text-xs ${
+            currentView === id ? 'text-indigo-600' : 'text-gray-500'
+          }`}
+        >
+          <Icon className="w-5 h-5 mb-1" />
+          {label}
+        </button>
+      ))}
+    </nav>
+  );
+};
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
@@ -52,12 +87,12 @@ export default function App() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [sales, setSales] = useState<SalesOrder[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
 
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
   const [editingSale, setEditingSale] = useState<SalesOrder | undefined>();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
 
   /* -------------------- INITIAL LOAD -------------------- */
   useEffect(() => {
@@ -73,35 +108,17 @@ export default function App() {
         loadSuppliers(),
         loadSales(),
         loadExpenses(),
-        // loadPOs(),
       ]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadProducts = async () => {
-    setProducts(await inventoryService.getProducts());
-  };
-
-  const loadCustomers = async () => {
-    setCustomers(await customerService.getCustomers());
-  };
-
-  const loadSuppliers = async () => {
-    setSuppliers(await supplierService.getSuppliers());
-  };
-
-  const loadSales = async () => {
-    setSales(await salesService.getSales());
-  };
-
-  const loadPOs = async () => {
-    setPurchaseOrders(await purchaseService.getPOs());
-  };
-  const loadExpenses = async () => {
-    setExpenses(await expenseService.getExpenses())
-  };
+  const loadProducts = async () => setProducts(await inventoryService.getProducts());
+  const loadCustomers = async () => setCustomers(await customerService.getCustomers());
+  const loadSuppliers = async () => setSuppliers(await supplierService.getSuppliers());
+  const loadSales = async () => setSales(await salesService.getSales());
+  const loadExpenses = async () => setExpenses(await expenseService.getExpenses());
 
   /* -------------------- PRODUCT -------------------- */
   const handleSaveProduct = async (data: any) => {
@@ -143,31 +160,20 @@ export default function App() {
     await Promise.all([loadSales(), loadProducts()]);
   };
 
-  /* -------------------- PURCHASE ORDERS -------------------- */
-  const handleSavePO = async (po: {
-    supplier_id: string;
-    items: PurchaseItem[];
-    total_amount: number;
-  }) => {
-    await purchaseService.createPO(po);
-    await Promise.all([loadPOs(), loadProducts()]);
-    setCurrentView('purchase-orders');
-  };
   /* -------------------- EXPENSE -------------------- */
   const handleSaveExpense = async (data: any) => {
-    await expenseService.addExpense(data)
-    await loadExpenses()
-    setCurrentView('expenses')
+    await expenseService.addExpense(data);
+    await loadExpenses();
+    setCurrentView('expenses');
   };
-  /* -------------------- EXPENSE -------------------- */
+
   const handleDeleteExpense = async (id: string) => {
-    if (!confirm('Delete expense?')) return
-    await expenseService.deleteExpense(id)
-    await loadExpenses()
+    if (!confirm('Delete expense?')) return;
+    await expenseService.deleteExpense(id);
+    await loadExpenses();
   };
 
-
-  /* -------------------- NAV ITEM -------------------- */
+  /* -------------------- NAV ITEM (DESKTOP) -------------------- */
   const NavItem = ({
     view,
     icon: Icon,
@@ -179,10 +185,11 @@ export default function App() {
   }) => (
     <button
       onClick={() => setCurrentView(view)}
-      className={`flex items-center w-full px-4 py-3 rounded-lg ${currentView === view
-        ? 'bg-indigo-50 text-indigo-600'
-        : 'text-gray-600 hover:bg-gray-50'
-        }`}
+      className={`flex items-center w-full px-4 py-3 rounded-lg ${
+        currentView === view
+          ? 'bg-indigo-50 text-indigo-600'
+          : 'text-gray-600 hover:bg-gray-50'
+      }`}
     >
       <Icon className="w-5 h-5 mr-3" />
       {label}
@@ -191,9 +198,9 @@ export default function App() {
 
   /* -------------------- RENDER -------------------- */
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r">
+    <div className="min-h-screen bg-gray-50 md:flex">
+      {/* DESKTOP SIDEBAR */}
+      <aside className="hidden md:block w-64 bg-white border-r">
         <div className="p-6 font-bold text-lg flex items-center">
           <Box className="mr-2" /> InventoryPro
         </div>
@@ -201,23 +208,21 @@ export default function App() {
           <NavItem view="dashboard" icon={LayoutDashboard} label="Dashboard" />
           <NavItem view="inventory" icon={Package} label="Inventory" />
           <NavItem view="sales" icon={ShoppingCart} label="Sales" />
-          {/* <NavItem view="purchase-orders" icon={Truck} label="Supplier Orders" /> */}
           <NavItem view="customers" icon={Users} label="Customers" />
           <NavItem view="suppliers" icon={Truck} label="Suppliers" />
-          <NavItem view="expenses" icon={Box} label="Expenses" />
+          <NavItem view="expenses" icon={Wallet} label="Expenses" />
           <NavItem view="pl" icon={BarChart3} label="Profit & Loss" />
         </nav>
       </aside>
 
-      {/* Main */}
-      <main className="flex-1 p-6">
+      {/* MAIN CONTENT */}
+      <main className="flex-1 p-4 pb-20 md:p-6">
         {isLoading ? (
           <div className="flex justify-center py-20">Loading…</div>
         ) : (
           <>
             {currentView === 'dashboard' && <Dashboard products={products} />}
 
-            {/* INVENTORY */}
             {currentView === 'inventory' && (
               <>
                 <button
@@ -242,14 +247,13 @@ export default function App() {
 
             {(currentView === 'add-product' ||
               currentView === 'edit-product') && (
-                <ProductForm
-                  initialData={editingProduct}
-                  onSave={handleSaveProduct}
-                  onCancel={() => setCurrentView('inventory')}
-                />
-              )}
+              <ProductForm
+                initialData={editingProduct}
+                onSave={handleSaveProduct}
+                onCancel={() => setCurrentView('inventory')}
+              />
+            )}
 
-            {/* SALES */}
             {currentView === 'sales' && (
               <>
                 <button
@@ -274,91 +278,18 @@ export default function App() {
 
             {(currentView === 'add-sale' ||
               currentView === 'edit-sale') && (
-                <SalesForm
-                  customers={customers}
-                  products={products}
-                  initialData={editingSale}
-                  onSave={handleSaveSale}
-                  onCancel={() => {
-                    setEditingSale(undefined);
-                    setCurrentView('sales');
-                  }}
-                />
-              )}
-
-            {/* PURCHASE ORDERS */}
-            {/* {currentView === 'purchase-orders' && (
-              <>
-                <button
-                  onClick={() => setCurrentView('add-po')}
-                  className="mb-4 flex items-center bg-indigo-600 text-white px-4 py-2 rounded"
-                >
-                  <Plus className="mr-2" /> New PO
-                </button>
-                <PurchaseOrderList
-                  purchaseOrders={purchaseOrders}
-                  onRefresh={loadPOs}
-                />
-              </>
-            )}
-
-            {currentView === 'add-po' && (
-              <PurchaseOrderForm
-                suppliers={suppliers}
+              <SalesForm
+                customers={customers}
                 products={products}
-                onSave={handleSavePO}
-                onCancel={() => setCurrentView('purchase-orders')}
-              />
-            )} */}
-
-            {/* CUSTOMERS */}
-            {currentView === 'customers' && (
-              <>
-                <button
-                  onClick={() => setCurrentView('add-customer')}
-                  className="mb-4 flex items-center bg-indigo-600 text-white px-4 py-2 rounded"
-                >
-                  <Plus className="mr-2" /> Add Customer
-                </button>
-                <CustomerList customers={customers} onDelete={() => { }} />
-              </>
-            )}
-
-            {currentView === 'add-customer' && (
-              <CustomerForm
-                onSave={async (data) => {
-                  await customerService.addCustomer(data);
-                  await loadCustomers();
-                  setCurrentView('customers');
+                initialData={editingSale}
+                onSave={handleSaveSale}
+                onCancel={() => {
+                  setEditingSale(undefined);
+                  setCurrentView('sales');
                 }}
-                onCancel={() => setCurrentView('customers')}
               />
             )}
 
-            {/* SUPPLIERS */}
-            {currentView === 'suppliers' && (
-              <>
-                <button
-                  onClick={() => setCurrentView('add-supplier')}
-                  className="mb-4 flex items-center bg-indigo-600 text-white px-4 py-2 rounded"
-                >
-                  <Plus className="mr-2" /> Add Supplier
-                </button>
-                <SupplierList suppliers={suppliers} onDelete={() => { }} />
-              </>
-            )}
-
-            {currentView === 'add-supplier' && (
-              <SupplierForm
-                onSave={async (data) => {
-                  await supplierService.addSupplier(data);
-                  await loadSuppliers();
-                  setCurrentView('suppliers');
-                }}
-                onCancel={() => setCurrentView('suppliers')}
-              />
-            )}
-            {/* EXPENSE */}
             {currentView === 'expenses' && (
               <>
                 <button
@@ -367,7 +298,10 @@ export default function App() {
                 >
                   <Plus className="mr-2" /> Add Expense
                 </button>
-                <ExpenseList expenses={expenses} onDelete={handleDeleteExpense} />
+                <ExpenseList
+                  expenses={expenses}
+                  onDelete={handleDeleteExpense}
+                />
               </>
             )}
 
@@ -377,11 +311,17 @@ export default function App() {
                 onCancel={() => setCurrentView('expenses')}
               />
             )}
-            {currentView === 'pl' && <ProfitLoss />}
 
+            {currentView === 'pl' && <ProfitLoss />}
           </>
         )}
       </main>
+
+      {/* MOBILE BOTTOM NAV */}
+      <MobileBottomNav
+        currentView={currentView}
+        setCurrentView={setCurrentView}
+      />
     </div>
   );
 }

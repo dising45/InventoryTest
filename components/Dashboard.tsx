@@ -35,9 +35,9 @@ const Dashboard: React.FC<DashboardProps> = ({ products }) => {
   /* ================= UI ================= */
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6">
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           title="Products"
           value={totalProducts}
@@ -64,9 +64,9 @@ const Dashboard: React.FC<DashboardProps> = ({ products }) => {
         />
       </div>
 
-      {/* LOW STOCK LIST */}
-      <div className="bg-white rounded-xl border shadow-sm">
-        <div className="p-5 border-b flex items-center justify-between">
+      {/* LOW STOCK ALERTS */}
+      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">
             Low Stock Alerts
           </h3>
@@ -76,7 +76,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products }) => {
         </div>
 
         {lowStockProducts.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
+          <div className="p-6 text-center text-gray-500 text-sm">
             🎉 All products are sufficiently stocked
           </div>
         ) : (
@@ -84,7 +84,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products }) => {
             {lowStockProducts.map((p) => (
               <div
                 key={p.id}
-                className="p-4 flex justify-between items-center"
+                className="px-5 py-4 flex items-center justify-between"
               >
                 <div>
                   <p className="font-medium text-gray-900">
@@ -97,7 +97,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products }) => {
                   </p>
                 </div>
 
-                <span className="text-sm font-semibold text-red-600">
+                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700">
                   {p.stock} left
                 </span>
               </div>
@@ -130,15 +130,14 @@ const KpiCard = ({
   }
 
   return (
-    <div className="bg-white rounded-xl border shadow-sm p-4 flex items-center">
-      <div
-        className={`p-3 rounded-lg ${colorMap[color]}`}
-      >
+    <div className="bg-white rounded-2xl border shadow-sm p-4 flex items-center">
+      <div className={`p-3 rounded-xl ${colorMap[color]}`}>
         <Icon className="w-5 h-5" />
       </div>
+
       <div className="ml-4">
         <p className="text-xs text-gray-500">{title}</p>
-        <p className="text-lg font-bold text-gray-900">
+        <p className="text-xl font-bold text-gray-900">
           {value}
         </p>
       </div>
