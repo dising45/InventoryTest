@@ -8,8 +8,6 @@ import {
   ShoppingBag,
   Zap,
   IndianRupee,
-  CheckCircle,
-  Clock,
 } from 'lucide-react'
 
 interface SalesFormProps {
@@ -46,12 +44,19 @@ const SalesForm: React.FC<SalesFormProps> = ({
   const [quantity, setQuantity] = useState(1)
   const [unitPrice, setUnitPrice] = useState(0)
 
-  /* -------------------- INIT -------------------- */
+  /* -------- Discount / Tax (UI only) -------- */
+  const [discountType, setDiscountType] = useState<'flat' | 'percent'>('flat')
+  const [discountValue, setDiscountValue] = useState(0)
+
+  const [taxType, setTaxType] = useState<'flat' | 'percent'>('percent')
+  const [taxValue, setTaxValue] = useState(0)
+
+  /* ---------------- INIT ---------------- */
   useEffect(() => {
     if (initialData) {
       setCustomerId(initialData.customer_id)
 
-      const mappedItems = (initialData.items || []).map(item => {
+      const mapped = (initialData.items || []).map(item => {
         const product = products.find(p => p.id === item.product_id)
         const variant = product?.variants.find(v => v.id === item.variant_id)
 
@@ -62,7 +67,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
         }
       })
 
-      setItems(mappedItems)
+      setItems(mapped)
       return
     }
 
@@ -72,7 +77,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
     }
   }, [initialData, products, customers, isQuick])
 
-  /* -------------------- PRICE AUTO -------------------- */
+  /* ---------------- PRICE AUTO ---------------- */
   useEffect(() => {
     if (!selectedProduct) {
       setUnitPrice(0)
@@ -85,21 +90,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
     )
   }, [selectedProduct, selectedVariant])
 
-  /* -------------------- STOCK HELPERS -------------------- */
-  const getAvailableStock = (item: SalesItem) => {
-    const product = products.find(p => p.id === item.product_id)
-    if (!product) return 0
-
-    if (item.variant_id && product.has_variants) {
-      return (
-        product.variants.find(v => v.id === item.variant_id)?.stock ?? 0
-      )
-    }
-
-    return product.stock
-  }
-
-  /* -------------------- ADD ITEM -------------------- */
+  /* ---------------- ADD ITEM ---------------- */
   const addItem = () => {
     if (!selectedProduct) return
     if (selectedProduct.has_variants && !selectedVariant) return
@@ -113,32 +104,49 @@ const SalesForm: React.FC<SalesFormProps> = ({
       return
     }
 
-    const newItem: SalesItem = {
-      product_id: selectedProduct.id,
-      variant_id: selectedVariant?.id,
-      quantity,
-      unit_price: unitPrice,
-      product_name: selectedProduct.name,
-      variant_name: selectedVariant?.name,
-    }
+    setItems(prev => [
+      ...prev,
+      {
+        product_id: selectedProduct.id,
+        variant_id: selectedVariant?.id,
+        quantity,
+        unit_price: unitPrice,
+        product_name: selectedProduct.name,
+        variant_name: selectedVariant?.name,
+      },
+    ])
 
-    setItems(prev => [...prev, newItem])
     setSelectedProduct(undefined)
     setSelectedVariant(undefined)
     setQuantity(1)
     setUnitPrice(0)
   }
 
-  const removeItem = (index: number) =>
-    setItems(prev => prev.filter((_, i) => i !== index))
+  const removeItem = (i: number) =>
+    setItems(prev => prev.filter((_, idx) => idx !== i))
 
-  /* -------------------- TOTAL -------------------- */
-  const totalAmount = items.reduce(
-    (sum, item) => sum + item.quantity * item.unit_price,
+  /* ---------------- TOTALS ---------------- */
+  const subTotal = items.reduce(
+    (sum, i) => sum + i.quantity * i.unit_price,
     0
   )
 
-  /* -------------------- SUBMIT -------------------- */
+  const discountAmount =
+    discountType === 'percent'
+      ? (subTotal * discountValue) / 100
+      : discountValue
+
+  const taxAmount =
+    taxType === 'percent'
+      ? ((subTotal - discountAmount) * taxValue) / 100
+      : taxValue
+
+  const finalTotal = Math.max(
+    0,
+    subTotal - discountAmount + taxAmount
+  )
+
+  /* ---------------- SUBMIT ---------------- */
   const handleSubmit = async () => {
     if (!customerId || items.length === 0) return
 
@@ -147,18 +155,18 @@ const SalesForm: React.FC<SalesFormProps> = ({
       await onSave({
         customer_id: customerId,
         items,
-        total_amount: totalAmount,
+        total_amount: finalTotal,
       })
     } finally {
       setLoading(false)
     }
   }
 
-  /* -------------------- UI -------------------- */
+  /* ---------------- UI ---------------- */
   return (
     <div className="pb-28">
       {/* HEADER */}
-      <div className="sticky top-0 bg-green-500 text-white px-4 py-4 flex items-center z-20">
+      <div className="sticky top-0 bg-green-600 text-white px-4 py-4 flex items-center z-20">
         <button onClick={onCancel}>
           <ArrowLeft className="w-5 h-5 mr-3" />
         </button>
@@ -169,9 +177,9 @@ const SalesForm: React.FC<SalesFormProps> = ({
       </div>
 
       <div className="p-4 space-y-4">
-        {/* CUSTOMER (hidden for quick sale) */}
+        {/* CUSTOMER */}
         {!isQuick && (
-          <div className="bg-white rounded-xl p-4 shadow">
+          <Card>
             <select
               value={customerId}
               onChange={e => setCustomerId(e.target.value)}
@@ -184,42 +192,12 @@ const SalesForm: React.FC<SalesFormProps> = ({
                 </option>
               ))}
             </select>
-          </div>
+          </Card>
         )}
 
-        {/* PAYMENT SUMMARY */}
-        <div className="bg-white rounded-xl p-4 shadow space-y-3">
-          <p className="text-sm text-gray-500">Payment Summary</p>
-
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <IndianRupee className="w-5 h-5 text-blue-500" />
-              <span className="font-medium">Total</span>
-            </div>
-            <span className="text-xl font-bold">
-              ₹{totalAmount.toFixed(2)}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <SummaryCard
-              label="Customer Paid"
-              value={totalAmount}
-              icon={CheckCircle}
-              color="green"
-            />
-            <SummaryCard
-              label="Due"
-              value={0}
-              icon={Clock}
-              color="red"
-            />
-          </div>
-        </div>
-
         {/* ADD PRODUCT */}
-        <div className="bg-white rounded-xl p-4 shadow space-y-3">
-          <h3 className="font-semibold">Products</h3>
+        <Card>
+          <h3 className="font-semibold mb-2">Add Product</h3>
 
           <select
             value={selectedProduct?.id || ''}
@@ -228,7 +206,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
               setSelectedProduct(p)
               setSelectedVariant(undefined)
             }}
-            className="w-full border rounded-lg px-3 py-2"
+            className="w-full border rounded-lg px-3 py-2 mb-2"
           >
             <option value="">Select Product</option>
             {products.map(p => (
@@ -246,73 +224,97 @@ const SalesForm: React.FC<SalesFormProps> = ({
                   selectedProduct.variants.find(v => v.id === e.target.value)
                 )
               }
-              className="w-full border rounded-lg px-3 py-2"
+              className="w-full border rounded-lg px-3 py-2 mb-2"
             >
               <option value="">Select Variant</option>
               {selectedProduct.variants.map(v => (
                 <option key={v.id} value={v.id}>
-                  {v.name} (Stock: {v.stock})
+                  {v.name} (Stock {v.stock})
                 </option>
               ))}
             </select>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <input
               type="number"
               min={1}
               value={quantity}
-              onChange={e => setQuantity(Number(e.target.value))}
+              onChange={e => setQuantity(+e.target.value)}
               className="border rounded-lg px-3 py-2"
             />
             <input
               type="number"
-              step="0.01"
               value={unitPrice}
-              onChange={e => setUnitPrice(Number(e.target.value))}
+              onChange={e => setUnitPrice(+e.target.value)}
               className="border rounded-lg px-3 py-2"
             />
           </div>
 
           <button
             onClick={addItem}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg"
+            className="mt-3 w-full bg-blue-600 text-white py-3 rounded-lg"
           >
             <Plus className="inline w-4 h-4 mr-1" /> Add Product
           </button>
-        </div>
+        </Card>
 
-        {/* ORDER SUMMARY */}
-        <div className="bg-white rounded-xl p-4 shadow">
-          <h3 className="font-semibold mb-3 flex items-center">
+        {/* ORDER ITEMS */}
+        <Card>
+          <h3 className="font-semibold mb-2 flex items-center">
             <ShoppingBag className="w-4 h-4 mr-2" /> Order Summary
           </h3>
 
-          {items.map((item, index) => (
+          {items.map((item, i) => (
             <div
-              key={index}
+              key={i}
               className="flex justify-between items-center border-b py-2"
             >
               <div>
                 <p className="text-sm font-medium">{item.product_name}</p>
-                {item.variant_name && (
-                  <p className="text-xs text-gray-500">
-                    {item.variant_name}
-                  </p>
-                )}
                 <p className="text-xs text-gray-500">
                   {item.quantity} × ₹{item.unit_price}
                 </p>
               </div>
-              <button onClick={() => removeItem(index)}>
+              <button onClick={() => removeItem(i)}>
                 <Trash2 className="w-4 h-4 text-red-500" />
               </button>
             </div>
           ))}
-        </div>
+        </Card>
+
+        {/* BILL BREAKDOWN */}
+        <Card>
+          <h3 className="font-semibold mb-3 flex items-center">
+            <IndianRupee className="w-4 h-4 mr-2" /> Bill Details
+          </h3>
+
+          <Row label="Subtotal" value={subTotal} />
+
+          <AdjustRow
+            label="Discount"
+            type={discountType}
+            setType={setDiscountType}
+            value={discountValue}
+            setValue={setDiscountValue}
+          />
+
+          <AdjustRow
+            label="Tax"
+            type={taxType}
+            setType={setTaxType}
+            value={taxValue}
+            setValue={setTaxValue}
+          />
+
+          <div className="flex justify-between font-bold text-lg pt-2 border-t">
+            <span>Total</span>
+            <span>₹{finalTotal.toFixed(2)}</span>
+          </div>
+        </Card>
       </div>
 
-      {/* STICKY CTA */}
+      {/* CTA */}
       <div className="fixed bottom-0 inset-x-0 bg-white border-t p-4">
         <button
           onClick={handleSubmit}
@@ -327,32 +329,43 @@ const SalesForm: React.FC<SalesFormProps> = ({
   )
 }
 
-const SummaryCard = ({
+/* ---------------- UI Helpers ---------------- */
+
+const Card: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="bg-white rounded-xl p-4 shadow">{children}</div>
+)
+
+const Row = ({ label, value }: { label: string; value: number }) => (
+  <div className="flex justify-between text-sm mb-1">
+    <span>{label}</span>
+    <span>₹{value.toFixed(2)}</span>
+  </div>
+)
+
+const AdjustRow = ({
   label,
+  type,
+  setType,
   value,
-  icon: Icon,
-  color,
-}: {
-  label: string
-  value: number
-  icon: any
-  color: 'green' | 'red'
-}) => (
-  <div className="bg-gray-50 rounded-lg p-3">
-    <div className="flex items-center gap-2 text-xs text-gray-500">
-      <Icon
-        className={`w-4 h-4 ${
-          color === 'green' ? 'text-green-500' : 'text-red-500'
-        }`}
+  setValue,
+}: any) => (
+  <div className="flex justify-between items-center text-sm mb-2">
+    <span>{label}</span>
+    <div className="flex items-center gap-2">
+      <select
+        value={type}
+        onChange={e => setType(e.target.value)}
+        className="border rounded px-1 py-0.5 text-xs"
+      >
+        <option value="flat">₹</option>
+        <option value="percent">%</option>
+      </select>
+      <input
+        type="number"
+        value={value}
+        onChange={e => setValue(+e.target.value)}
+        className="border rounded px-2 py-1 w-20 text-right"
       />
-      {label}
-    </div>
-    <div
-      className={`mt-1 font-bold ${
-        color === 'green' ? 'text-green-600' : 'text-red-600'
-      }`}
-    >
-      ₹{value.toFixed(2)}
     </div>
   </div>
 )
