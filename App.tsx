@@ -6,8 +6,6 @@ import {
   Supplier,
   SalesOrder,
   SalesItem,
-  PurchaseOrder,
-  PurchaseItem,
   Expense,
 } from './types'
 
@@ -128,58 +126,86 @@ export default function App() {
 
   /* -------------------- PRODUCT -------------------- */
   const handleSaveProduct = async (data: any) => {
-    if (editingProduct) {
-      await inventoryService.updateProduct({
-        ...data,
-        id: editingProduct.id,
-      })
-    } else {
-      await inventoryService.addProduct(data)
+    try {
+      if (editingProduct) {
+        await inventoryService.updateProduct({
+          ...data,
+          id: editingProduct.id,
+        })
+      } else {
+        await inventoryService.addProduct(data)
+      }
+      await loadProducts()
+      setEditingProduct(undefined)
+      setCurrentView('inventory')
+    } catch {
+      alert('Failed to save product. Please try again.')
     }
-    await loadProducts()
-    setEditingProduct(undefined)
-    setCurrentView('inventory')
   }
 
   const handleDeleteProduct = async (id: string) => {
     if (!confirm('Delete this product?')) return
-    await inventoryService.deleteProduct(id)
-    await loadProducts()
+    try {
+      await inventoryService.deleteProduct(id)
+      await loadProducts()
+    } catch {
+      alert('Failed to delete product.')
+    }
   }
 
-  /* -------------------- SALES -------------------- */
+  /* -------------------- SALES (STRICT, NON-OPTIMISTIC) -------------------- */
   const handleSaveSale = async (data: {
     customer_id: string
     items: SalesItem[]
     total_amount: number
   }) => {
-    if (editingSale) {
-      await salesService.updateSale(editingSale.id, data)
-      setEditingSale(undefined)
-    } else {
-      await salesService.createSale(data)
+    try {
+      if (editingSale) {
+        await salesService.updateSale(editingSale.id, data)
+        setEditingSale(undefined)
+      } else {
+        await salesService.createSale(data)
+      }
+
+      // ✅ Only after DB success
+      await Promise.all([loadSales(), loadProducts()])
+      setCurrentView('sales')
+    } catch (e) {
+      alert(
+        'Unable to save sale. Please check your internet connection and try again.'
+      )
     }
-    await Promise.all([loadSales(), loadProducts()])
-    setCurrentView('sales')
   }
 
   const handleDeleteSale = async (id: string) => {
     if (!confirm('Delete this sale? Stock will be restored.')) return
-    await salesService.deleteSale(id)
-    await Promise.all([loadSales(), loadProducts()])
+    try {
+      await salesService.deleteSale(id)
+      await Promise.all([loadSales(), loadProducts()])
+    } catch {
+      alert('Failed to delete sale.')
+    }
   }
 
   /* -------------------- EXPENSE -------------------- */
   const handleSaveExpense = async (data: any) => {
-    await expenseService.addExpense(data)
-    await loadExpenses()
-    setCurrentView('expenses')
+    try {
+      await expenseService.addExpense(data)
+      await loadExpenses()
+      setCurrentView('expenses')
+    } catch {
+      alert('Failed to save expense.')
+    }
   }
 
   const handleDeleteExpense = async (id: string) => {
     if (!confirm('Delete expense?')) return
-    await expenseService.deleteExpense(id)
-    await loadExpenses()
+    try {
+      await expenseService.deleteExpense(id)
+      await loadExpenses()
+    } catch {
+      alert('Failed to delete expense.')
+    }
   }
 
   /* -------------------- MOBILE NAV VISIBILITY -------------------- */
