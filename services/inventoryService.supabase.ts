@@ -32,9 +32,21 @@ class InventoryServiceSupabase {
   }
 
   /* ===============================
-     ADD PRODUCT
+     ADD PRODUCT (SAFE)
      =============================== */
   async addProduct(product: any) {
+    // 🔒 Validate stock
+    if (product.has_variants) {
+      for (const v of product.variants ?? []) {
+        if (Number(v.stock) < 0) {
+          throw new Error(`Variant "${v.name}" stock cannot be negative`)
+        }
+      }
+    } else if (Number(product.stock) < 0) {
+      throw new Error('Product stock cannot be negative')
+    }
+
+    // Calculate stock
     const calculatedStock =
       product.has_variants && product.variants?.length
         ? product.variants.reduce(
@@ -61,6 +73,7 @@ class InventoryServiceSupabase {
       throw error
     }
 
+    // Insert variants
     if (product.has_variants && product.variants?.length > 0) {
       const variantsPayload = product.variants.map((v: any) => ({
         product_id: productRow.id,
@@ -84,9 +97,21 @@ class InventoryServiceSupabase {
   }
 
   /* ===============================
-     UPDATE PRODUCT (SAFE)
+     UPDATE PRODUCT (SAFE + NON-NEGATIVE)
      =============================== */
   async updateProduct(product: any) {
+    // 🔒 Validate stock before touching DB
+    if (product.has_variants) {
+      for (const v of product.variants ?? []) {
+        if (Number(v.stock) < 0) {
+          throw new Error(`Variant "${v.name}" stock cannot be negative`)
+        }
+      }
+    } else if (Number(product.stock) < 0) {
+      throw new Error('Product stock cannot be negative')
+    }
+
+    // Recalculate stock
     const calculatedStock =
       product.has_variants && product.variants?.length
         ? product.variants.reduce(
@@ -95,6 +120,11 @@ class InventoryServiceSupabase {
           )
         : Number(product.stock || 0)
 
+    if (calculatedStock < 0) {
+      throw new Error('Total stock cannot be negative')
+    }
+
+    // Update product
     const { error: productError } = await supabase
       .from('products')
       .update({
@@ -113,10 +143,12 @@ class InventoryServiceSupabase {
       throw productError
     }
 
-    /* ---------- VARIANTS: UPSERT ---------- */
+    /* ===============================
+       VARIANTS: SAFE UPSERT + CLEANUP
+       =============================== */
     if (product.has_variants) {
       const variantsPayload = (product.variants ?? []).map((v: any) => ({
-        id: v.id || undefined, // critical for upsert
+        id: v.id ?? undefined, // IMPORTANT for upsert
         product_id: product.id,
         name: v.name,
         sku: v.sku ?? null,
@@ -135,7 +167,7 @@ class InventoryServiceSupabase {
         }
       }
 
-      // 🔥 Remove deleted variants (optional but correct)
+      // Remove deleted variants
       const keptIds = variantsPayload
         .map(v => v.id)
         .filter(Boolean)
