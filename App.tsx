@@ -18,7 +18,7 @@ import { salesService } from './services/salesService.supabase';
 import { purchaseService } from './services/purchaseService.supabase';
 import { expenseService } from './services/expenseService.supabase'
 // import { Expense } from './types'
-
+import ProfitLoss from './components/ProfitLoss';
 import ExpenseList from './components/ExpenseList'
 import ExpenseForm from './components/ExpenseForm'
 import Dashboard from './components/Dashboard';
