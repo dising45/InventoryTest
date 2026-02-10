@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { profitLossService } from '../services/profitLossService.supabase';
+import { profitLossService } from '../services/plService.supabase';
 
 interface Expense {
   amount: number;
