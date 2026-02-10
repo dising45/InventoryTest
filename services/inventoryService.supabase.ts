@@ -25,7 +25,6 @@ class InventoryServiceSupabase {
       throw error
     }
 
-    // 🔒 Normalize variants so UI never crashes
     return (data ?? []).map(p => ({
       ...p,
       variants: p.variants ?? [],
@@ -36,7 +35,7 @@ class InventoryServiceSupabase {
      ADD PRODUCT
      =============================== */
   async addProduct(product: any) {
-    // 1️⃣ Calculate stock correctly
+    // 1️⃣ Calculate stock
     const calculatedStock =
       product.has_variants && product.variants?.length
         ? product.variants.reduce(
@@ -45,31 +44,29 @@ class InventoryServiceSupabase {
           )
         : Number(product.stock || 0)
 
-    // 2️⃣ Insert product (NO variants here)
-    const { data: productRow, error: productError } = await supabase
+    // 2️⃣ Insert product (NO variants)
+    const { data: productRow, error } = await supabase
       .from('products')
-      .insert([
-        {
-          name: product.name,
-          description: product.description ?? null,
+      .insert({
+        name: product.name,
+        description: product.description ?? null,
 
-          // ✅ NEW MODEL
-          base_cost: Number(product.cost_price ?? 0),
-          sell_price: Number(product.sell_price ?? 0),
+        // ✅ CORRECT COLUMN NAME
+        cost_price: Number(product.cost_price ?? 0),
+        sell_price: Number(product.sell_price ?? 0),
 
-          stock: calculatedStock,
-          has_variants: !!product.has_variants,
-        },
-      ])
+        stock: calculatedStock,
+        has_variants: !!product.has_variants,
+      })
       .select()
       .single()
 
-    if (productError) {
-      console.error('PRODUCT INSERT FAILED', productError)
-      throw productError
+    if (error) {
+      console.error('PRODUCT INSERT FAILED', error)
+      throw error
     }
 
-    // 3️⃣ Insert variants (only if applicable)
+    // 3️⃣ Insert variants (if any)
     if (product.has_variants && product.variants?.length > 0) {
       const variantsPayload = product.variants.map((v: any) => ({
         product_id: productRow.id,
@@ -106,14 +103,14 @@ class InventoryServiceSupabase {
         : Number(product.stock || 0)
 
     // 2️⃣ Update product
-    const { error: productError } = await supabase
+    const { error } = await supabase
       .from('products')
       .update({
         name: product.name,
         description: product.description ?? null,
 
-        // ✅ NEW MODEL
-        base_cost: Number(product.cost_price ?? 0),
+        // ✅ CORRECT COLUMN NAME
+        cost_price: Number(product.cost_price ?? 0),
         sell_price: Number(product.sell_price ?? 0),
 
         stock: calculatedStock,
@@ -122,23 +119,14 @@ class InventoryServiceSupabase {
       })
       .eq('id', product.id)
 
-    if (productError) {
-      console.error('PRODUCT UPDATE FAILED', productError)
-      throw productError
+    if (error) {
+      console.error('PRODUCT UPDATE FAILED', error)
+      throw error
     }
 
-    // 3️⃣ Delete old variants
-    const { error: deleteError } = await supabase
-      .from('variants')
-      .delete()
-      .eq('product_id', product.id)
+    // 3️⃣ Replace variants safely
+    await supabase.from('variants').delete().eq('product_id', product.id)
 
-    if (deleteError) {
-      console.error('VARIANT DELETE FAILED', deleteError)
-      throw deleteError
-    }
-
-    // 4️⃣ Insert new variants
     if (product.has_variants && product.variants?.length > 0) {
       const variantsPayload = product.variants.map((v: any) => ({
         product_id: product.id,
