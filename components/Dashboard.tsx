@@ -29,15 +29,15 @@ const Dashboard: React.FC<DashboardProps> = ({ products }) => {
   )
 
   const lowStockProducts = products.filter(
-    (p) => (p.stock ?? 0) <= LOW_STOCK_THRESHOLD
+    p => (p.stock ?? 0) <= LOW_STOCK_THRESHOLD
   )
 
   /* ================= UI ================= */
 
   return (
-    <div className="space-y-6">
-      {/* KPI CARDS */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* ================= KPI CARDS ================= */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           title="Products"
           value={totalProducts}
@@ -64,9 +64,9 @@ const Dashboard: React.FC<DashboardProps> = ({ products }) => {
         />
       </div>
 
-      {/* LOW STOCK ALERTS */}
-      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b flex items-center justify-between">
+      {/* ================= LOW STOCK ================= */}
+      <div className="bg-white rounded-xl border shadow-sm">
+        <div className="px-4 py-3 border-b flex justify-between items-center">
           <h3 className="font-semibold text-gray-900">
             Low Stock Alerts
           </h3>
@@ -76,33 +76,61 @@ const Dashboard: React.FC<DashboardProps> = ({ products }) => {
         </div>
 
         {lowStockProducts.length === 0 ? (
-          <div className="p-6 text-center text-gray-500 text-sm">
+          <div className="p-6 text-center text-gray-500">
             🎉 All products are sufficiently stocked
           </div>
         ) : (
-          <div className="divide-y">
-            {lowStockProducts.map((p) => (
-              <div
-                key={p.id}
-                className="px-5 py-4 flex items-center justify-between"
-              >
-                <div>
-                  <p className="font-medium text-gray-900">
-                    {p.name}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {p.has_variants
-                      ? `${p.variants?.length ?? 0} variants`
-                      : 'Single product'}
-                  </p>
-                </div>
+          <>
+            {/* Desktop */}
+            <div className="hidden md:block divide-y">
+              {lowStockProducts.map(p => (
+                <div
+                  key={p.id}
+                  className="px-6 py-4 flex justify-between items-center"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {p.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {p.has_variants
+                        ? `${p.variants?.length ?? 0} variants`
+                        : 'Single product'}
+                    </p>
+                  </div>
 
-                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700">
-                  {p.stock} left
-                </span>
-              </div>
-            ))}
-          </div>
+                  <span className="text-sm font-semibold text-red-600">
+                    {p.stock} left
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Mobile */}
+            <div className="md:hidden space-y-3 p-4">
+              {lowStockProducts.map(p => (
+                <div
+                  key={p.id}
+                  className="border rounded-lg p-3 flex justify-between items-center"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {p.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {p.has_variants
+                        ? `${p.variants?.length ?? 0} variants`
+                        : 'Standard product'}
+                    </p>
+                  </div>
+
+                  <span className="text-xs font-bold text-red-600">
+                    {p.stock} left
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -130,14 +158,13 @@ const KpiCard = ({
   }
 
   return (
-    <div className="bg-white rounded-2xl border shadow-sm p-4 flex items-center">
-      <div className={`p-3 rounded-xl ${colorMap[color]}`}>
+    <div className="bg-white rounded-xl border shadow-sm p-4 flex items-center">
+      <div className={`p-3 rounded-lg ${colorMap[color]}`}>
         <Icon className="w-5 h-5" />
       </div>
-
       <div className="ml-4">
         <p className="text-xs text-gray-500">{title}</p>
-        <p className="text-xl font-bold text-gray-900">
+        <p className="text-lg font-bold text-gray-900">
           {value}
         </p>
       </div>
