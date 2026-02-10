@@ -204,6 +204,7 @@ export default function App() {
           <NavItem view="customers" icon={Users} label="Customers" />
           <NavItem view="suppliers" icon={Truck} label="Suppliers" />
           <NavItem view="expenses" icon={Box} label="Expenses" />
+          <NavItem view="pl" icon={BarChart3} label="Profit & Loss" />
         </nav>
       </aside>
 
@@ -375,6 +376,7 @@ export default function App() {
                 onCancel={() => setCurrentView('expenses')}
               />
             )}
+            {currentView === 'pl' && <ProfitLoss />}
 
           </>
         )}
