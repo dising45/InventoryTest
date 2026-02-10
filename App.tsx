@@ -64,9 +64,8 @@ const MobileBottomNav = ({
         <button
           key={id}
           onClick={() => setCurrentView(id as ViewState)}
-          className={`flex flex-col items-center text-xs ${
-            currentView === id ? 'text-indigo-600' : 'text-gray-500'
-          }`}
+          className={`flex flex-col items-center text-xs ${currentView === id ? 'text-indigo-600' : 'text-gray-500'
+            }`}
         >
           <Icon className="w-5 h-5 mb-1" />
           {label}
@@ -270,12 +269,12 @@ export default function App() {
 
             {(currentView === 'add-product' ||
               currentView === 'edit-product') && (
-              <ProductForm
-                initialData={editingProduct}
-                onSave={handleSaveProduct}
-                onCancel={() => setCurrentView('inventory')}
-              />
-            )}
+                <ProductForm
+                  initialData={editingProduct}
+                  onSave={handleSaveProduct}
+                  onCancel={() => setCurrentView('inventory')}
+                />
+              )}
 
             {currentView === 'sales' && (
               <>
@@ -295,23 +294,27 @@ export default function App() {
                     setCurrentView('edit-sale')
                   }}
                   onDelete={handleDeleteSale}
+                  onAddSale={() => {
+                    setEditingSale(undefined)
+                    setCurrentView('add-sale')
+                  }}
                 />
               </>
             )}
 
             {(currentView === 'add-sale' ||
               currentView === 'edit-sale') && (
-              <SalesForm
-                customers={customers}
-                products={products}
-                initialData={editingSale}
-                onSave={handleSaveSale}
-                onCancel={() => {
-                  setEditingSale(undefined)
-                  setCurrentView('sales')
-                }}
-              />
-            )}
+                <SalesForm
+                  customers={customers}
+                  products={products}
+                  initialData={editingSale}
+                  onSave={handleSaveSale}
+                  onCancel={() => {
+                    setEditingSale(undefined)
+                    setCurrentView('sales')
+                  }}
+                />
+              )}
 
             {currentView === 'expenses' && (
               <>

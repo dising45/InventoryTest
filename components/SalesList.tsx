@@ -6,7 +6,6 @@ import {
   User,
   Edit2,
   Trash2,
-  Zap,
   Plus,
 } from 'lucide-react'
 
@@ -14,38 +13,19 @@ interface SalesListProps {
   sales: SalesOrder[]
   onEdit?: (sale: SalesOrder) => void
   onDelete?: (id: string) => void
-  onQuickSale?: () => void // 🔥 NEW
+  onAddSale?: () => void // ✅ NEW
 }
 
 const SalesList: React.FC<SalesListProps> = ({
   sales,
   onEdit,
   onDelete,
-  onQuickSale,
+  onAddSale,
 }) => {
   const showActions = !!onEdit || !!onDelete
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-300">
-      {/* HEADER ACTIONS */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Sales
-        </h2>
-
-        <div className="flex gap-2">
-          {onQuickSale && (
-            <button
-              onClick={onQuickSale}
-              className="flex items-center gap-1 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm"
-            >
-              <Zap className="w-4 h-4" />
-              Quick Sale
-            </button>
-          )}
-        </div>
-      </div>
-
+    <div className="relative space-y-4 animate-in fade-in duration-300">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {sales.length === 0 ? (
           <div className="p-8 text-center">
@@ -58,16 +38,6 @@ const SalesList: React.FC<SalesListProps> = ({
             <p className="mt-1 text-sm text-gray-500">
               Record a new sale to see it here.
             </p>
-
-            {onQuickSale && (
-              <button
-                onClick={onQuickSale}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Start Quick Sale
-              </button>
-            )}
           </div>
         ) : (
           <>
@@ -163,7 +133,7 @@ const SalesList: React.FC<SalesListProps> = ({
               </table>
             </div>
 
-            {/* ===================== MOBILE (TAP-FIRST) ===================== */}
+            {/* ===================== MOBILE ===================== */}
             <div className="md:hidden divide-y">
               {sales.map((sale) => {
                 const itemCount =
@@ -233,6 +203,17 @@ const SalesList: React.FC<SalesListProps> = ({
           </>
         )}
       </div>
+
+      {/* ===================== MOBILE FAB ===================== */}
+      {onAddSale && (
+        <button
+          onClick={onAddSale}
+          className="md:hidden fixed bottom-24 right-4 z-50 bg-indigo-600 text-white rounded-full p-4 shadow-lg active:scale-95"
+          aria-label="Add Sale"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      )}
     </div>
   )
 }
