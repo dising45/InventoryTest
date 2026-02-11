@@ -229,7 +229,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {formData.variants.map((variant) => (
+                    {(formData.variants || []).map((variant) => (
                       <tr key={variant.id} className="group hover:bg-gray-50">
                         <td className="px-4 py-2">
                           <input
