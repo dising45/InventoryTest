@@ -315,6 +315,90 @@ export default function App() {
                   }}
                 />
               )}
+            {currentView === 'customers' && (
+              <>
+                <button
+                  onClick={() => setCurrentView('add-customer')}
+                  className="mb-4 flex items-center bg-indigo-600 text-white px-4 py-2 rounded"
+                >
+                  <Plus className="mr-2" /> Add Customer
+                </button>
+
+                <CustomerList
+                  customers={customers}
+                  onEdit={(c) => {
+                    setEditingCustomer(c)
+                    setCurrentView('edit-customer')
+                  }}
+                  onDelete={async (id) => {
+                    await customerService.deleteCustomer(id)
+                    await loadCustomers()
+                  }}
+                />
+              </>
+            )}
+            {(currentView === 'add-customer' ||
+              currentView === 'edit-customer') && (
+                <CustomerForm
+                  initialData={editingCustomer}
+                  onSave={async (data) => {
+                    if (editingCustomer) {
+                      await customerService.updateCustomer(editingCustomer.id, data)
+                    } else {
+                      await customerService.addCustomer(data)
+                    }
+                    await loadCustomers()
+                    setEditingCustomer(undefined)
+                    setCurrentView('customers')
+                  }}
+                  onCancel={() => {
+                    setEditingCustomer(undefined)
+                    setCurrentView('customers')
+                  }}
+                />
+              )}
+            {currentView === 'suppliers' && (
+              <>
+                <button
+                  onClick={() => setCurrentView('add-supplier')}
+                  className="mb-4 flex items-center bg-indigo-600 text-white px-4 py-2 rounded"
+                >
+                  <Plus className="mr-2" /> Add Supplier
+                </button>
+
+                <SupplierList
+                  suppliers={suppliers}
+                  onEdit={(s) => {
+                    setEditingSupplier(s)
+                    setCurrentView('edit-supplier')
+                  }}
+                  onDelete={async (id) => {
+                    await supplierService.deleteSupplier(id)
+                    await loadSuppliers()
+                  }}
+                />
+              </>
+            )}
+            {(currentView === 'add-supplier' ||
+              currentView === 'edit-supplier') && (
+                <SupplierForm
+                  initialData={editingSupplier}
+                  onSave={async (data) => {
+                    if (editingSupplier) {
+                      await supplierService.updateSupplier(editingSupplier.id, data)
+                    } else {
+                      await supplierService.addSupplier(data)
+                    }
+                    await loadSuppliers()
+                    setEditingSupplier(undefined)
+                    setCurrentView('suppliers')
+                  }}
+                  onCancel={() => {
+                    setEditingSupplier(undefined)
+                    setCurrentView('suppliers')
+                  }}
+                />
+              )}
 
             {currentView === 'expenses' && (
               <>
@@ -370,8 +454,8 @@ const NavButton = ({
   <button
     onClick={() => setCurrentView(view)}
     className={`flex items-center w-full px-4 py-3 rounded-lg transition ${currentView === view
-        ? 'bg-indigo-50 text-indigo-600'
-        : 'text-gray-600 hover:bg-gray-50'
+      ? 'bg-indigo-50 text-indigo-600'
+      : 'text-gray-600 hover:bg-gray-50'
       }`}
   >
     <Icon className="w-5 h-5 mr-3" />
