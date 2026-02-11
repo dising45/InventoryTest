@@ -21,16 +21,17 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
     ...initialData,
   });
 
-  // // Ensure variants is initialized
-  // useEffect(() => {
-  //   if (initialData) {
-  //     setFormData(prev => ({
-  //       ...prev,
-  //       ...initialData,
-  //       variants: initialData.variants || [],
-  //     }));
-  //   }
-  // }, [initialData]);
+  // Ensure variants is initialized
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        ...initialData,
+        has_variants: !!initialData.has_variants,
+        variants: initialData.variants || [],
+      });
+    }
+  }, [initialData]);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -50,24 +51,21 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
   };
 
   const addVariant = () => {
-    setFormData(prev => {
-      const currentVariants = prev.variants || [];
-
-      return {
-        ...prev,
-        variants: [
-          ...currentVariants,
-          {
-            id: crypto.randomUUID(),
-            name: '',
-            sku: '',
-            stock: 0,
-            price_modifier: 0,
-          },
-        ],
-      };
-    });
+    setFormData(prev => ({
+      ...prev,
+      variants: [
+        ...(prev.variants || []),
+        {
+          id: crypto.randomUUID(),
+          name: '',
+          sku: '',
+          stock: 0,
+          price_modifier: 0,
+        },
+      ],
+    }));
   };
+
 
   const removeVariant = (id: string) => {
     setFormData(prev => ({
