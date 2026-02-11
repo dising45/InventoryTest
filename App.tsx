@@ -225,13 +225,13 @@ export default function App() {
           <Box className="mr-2" /> InventoryPro
         </div>
         <nav className="px-4 space-y-2">
-          <NavButton view="dashboard" icon={LayoutDashboard} label="Dashboard" />
-          <NavButton view="inventory" icon={Package} label="Inventory" />
-          <NavButton view="sales" icon={ShoppingCart} label="Sales" />
-          <NavButton view="customers" icon={Users} label="Customers" />
-          <NavButton view="suppliers" icon={Truck} label="Suppliers" />
-          <NavButton view="expenses" icon={Wallet} label="Expenses" />
-          <NavButton view="pl" icon={BarChart3} label="Profit & Loss" />
+          <NavButton view="dashboard" icon={LayoutDashboard} label="Dashboard" currentView={currentView} setCurrentView={setCurrentView} />
+          <NavButton view="inventory" icon={Package} label="Inventory" currentView={currentView} setCurrentView={setCurrentView} />
+          <NavButton view="sales" icon={ShoppingCart} label="Sales" currentView={currentView} setCurrentView={setCurrentView} />
+          <NavButton view="customers" icon={Users} label="Customers" currentView={currentView} setCurrentView={setCurrentView} />
+          <NavButton view="suppliers" icon={Truck} label="Suppliers" currentView={currentView} setCurrentView={setCurrentView} />
+          <NavButton view="expenses" icon={Wallet} label="Expenses" currentView={currentView} setCurrentView={setCurrentView} />
+          <NavButton view="pl" icon={BarChart3} label="Profit & Loss" currentView={currentView} setCurrentView={setCurrentView} />
         </nav>
       </aside>
 
@@ -358,13 +358,24 @@ const NavButton = ({
   view,
   icon: Icon,
   label,
+  currentView,
+  setCurrentView,
 }: {
   view: ViewState
   icon: any
   label: string
+  currentView: ViewState
+  setCurrentView: (v: ViewState) => void
 }) => (
-  <button className="flex items-center w-full px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50">
+  <button
+    onClick={() => setCurrentView(view)}
+    className={`flex items-center w-full px-4 py-3 rounded-lg transition ${currentView === view
+        ? 'bg-indigo-50 text-indigo-600'
+        : 'text-gray-600 hover:bg-gray-50'
+      }`}
+  >
     <Icon className="w-5 h-5 mr-3" />
     {label}
   </button>
 )
+

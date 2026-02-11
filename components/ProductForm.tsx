@@ -51,20 +51,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
   };
 
   const addVariant = () => {
+    const newVariant: Variant = {
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+      name: '',
+      sku: '',
+      stock: 0,
+      price_modifier: 0,
+    };
+
     setFormData(prev => ({
       ...prev,
-      variants: [
-        ...(prev.variants || []),
-        {
-          id: crypto.randomUUID(),
-          name: '',
-          sku: '',
-          stock: 0,
-          price_modifier: 0,
-        },
-      ],
+      variants: [...(prev.variants || []), newVariant],
     }));
   };
+
 
 
   const removeVariant = (id: string) => {
