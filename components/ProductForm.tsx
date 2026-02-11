@@ -21,12 +21,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
     ...initialData,
   });
 
-  // Ensure variants is initialized
-  useEffect(() => {
-    if (initialData) {
-      setFormData({ ...initialData });
-    }
-  }, [initialData]);
+  // // Ensure variants is initialized
+  // useEffect(() => {
+  //   if (initialData) {
+  //     setFormData(prev => ({
+  //       ...prev,
+  //       ...initialData,
+  //       variants: initialData.variants || [],
+  //     }));
+  //   }
+  // }, [initialData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -39,7 +43,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
   const handleVariantChange = (id: string, field: keyof Variant, value: any) => {
     setFormData(prev => ({
       ...prev,
-      variants: prev.variants?.map(v => 
+      variants: prev.variants?.map(v =>
         v.id === id ? { ...v, [field]: value } : v
       )
     }));
@@ -79,7 +83,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
   return (
     <div className="max-w-4xl mx-auto animate-in slide-in-from-bottom-4 duration-300">
       <div className="mb-6 flex items-center justify-between">
-        <button 
+        <button
           onClick={onCancel}
           className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
         >
@@ -151,20 +155,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
                 className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
               />
             </div>
-            
+
             <div className="md:col-span-2">
-               <label className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={formData.has_variants}
-                    onChange={(e) => setFormData(prev => ({ ...prev, has_variants: e.target.checked }))}
-                    className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-gray-900">This product has variants</span>
-                    <p className="text-xs text-gray-500">Enable if you have different sizes, colors, etc.</p>
-                  </div>
-               </label>
+              <label className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={formData.has_variants}
+                  onChange={(e) => setFormData(prev => ({ ...prev, has_variants: e.target.checked }))}
+                  className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-900">This product has variants</span>
+                  <p className="text-xs text-gray-500">Enable if you have different sizes, colors, etc.</p>
+                </div>
+              </label>
             </div>
 
             {!formData.has_variants && (
@@ -197,7 +201,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
                 <Plus className="w-4 h-4 mr-1" /> Add Variant
               </button>
             </div>
-            
+
             {(!formData.variants || formData.variants.length === 0) ? (
               <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
                 No variants added yet. Click "Add Variant" to start.
@@ -246,7 +250,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
                             className="w-20 bg-transparent border-b border-gray-300 focus:border-indigo-500 outline-none px-1 py-1"
                           />
                         </td>
-                         <td className="px-4 py-2">
+                        <td className="px-4 py-2">
                           <input
                             type="number"
                             min="0"
@@ -278,9 +282,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
           <button
             type="submit"
             disabled={loading}
-            className={`flex items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-100 transition-all ${
-              loading ? 'opacity-70 cursor-not-allowed' : ''
-            }`}
+            className={`flex items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-100 transition-all ${loading ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
           >
             <Save className="w-5 h-5 mr-2" />
             {loading ? 'Saving...' : 'Save Product'}
