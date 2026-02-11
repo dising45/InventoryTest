@@ -44,7 +44,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
   const [quantity, setQuantity] = useState(1)
   const [unitPrice, setUnitPrice] = useState(0)
 
-  /* -------- Discount / Tax (UI only) -------- */
+  /* -------- Discount / Tax -------- */
   const [discountType, setDiscountType] = useState<'flat' | 'percent'>('flat')
   const [discountValue, setDiscountValue] = useState(0)
 
@@ -89,6 +89,40 @@ const SalesForm: React.FC<SalesFormProps> = ({
         (selectedVariant?.price_modifier || 0)
     )
   }, [selectedProduct, selectedVariant])
+
+  /* ---------------- EDIT ITEM (FIX) ---------------- */
+  const updateItem = (
+    index: number,
+    field: 'quantity' | 'unit_price',
+    value: number
+  ) => {
+    setItems(prev =>
+      prev.map((item, i) => {
+        if (i !== index) return item
+
+        if (field === 'quantity') {
+          const product = products.find(p => p.id === item.product_id)
+          let maxStock = product?.stock ?? 0
+
+          if (item.variant_id && product?.has_variants) {
+            maxStock =
+              product.variants.find(v => v.id === item.variant_id)?.stock ??
+              0
+          }
+
+          return {
+            ...item,
+            quantity: Math.max(1, Math.min(value, maxStock)),
+          }
+        }
+
+        return {
+          ...item,
+          unit_price: Math.max(0, value),
+        }
+      })
+    )
+  }
 
   /* ---------------- ADD ITEM ---------------- */
   const addItem = () => {
@@ -259,7 +293,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
           </button>
         </Card>
 
-        {/* ORDER ITEMS */}
+        {/* ORDER ITEMS (EDITABLE FIX) */}
         <Card>
           <h3 className="font-semibold mb-2 flex items-center">
             <ShoppingBag className="w-4 h-4 mr-2" /> Order Summary
@@ -268,17 +302,33 @@ const SalesForm: React.FC<SalesFormProps> = ({
           {items.map((item, i) => (
             <div
               key={i}
-              className="flex justify-between items-center border-b py-2"
+              className="border-b py-2 space-y-1"
             >
-              <div>
-                <p className="text-sm font-medium">{item.product_name}</p>
-                <p className="text-xs text-gray-500">
-                  {item.quantity} × ₹{item.unit_price}
-                </p>
+              <p className="text-sm font-medium">{item.product_name}</p>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  value={item.quantity}
+                  onChange={e =>
+                    updateItem(i, 'quantity', +e.target.value)
+                  }
+                  className="w-16 border rounded px-2 py-1 text-sm"
+                />
+                <span>×</span>
+                <input
+                  type="number"
+                  value={item.unit_price}
+                  onChange={e =>
+                    updateItem(i, 'unit_price', +e.target.value)
+                  }
+                  className="w-24 border rounded px-2 py-1 text-sm"
+                />
+                <button onClick={() => removeItem(i)}>
+                  <Trash2 className="w-4 h-4 text-red-500" />
+                </button>
               </div>
-              <button onClick={() => removeItem(i)}>
-                <Trash2 className="w-4 h-4 text-red-500" />
-              </button>
             </div>
           ))}
         </Card>
