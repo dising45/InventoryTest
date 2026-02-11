@@ -24,6 +24,40 @@ interface ProductFormProps {
   onCancel: () => void
 }
 
+const compressImage = (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    new Compressor(file, {
+      quality: 0.6,          // stronger compression
+      maxWidth: 1200,        // resize width
+      maxHeight: 1200,
+      convertSize: 500000,   // force convert if >500kb
+      success(result) {
+        const compressedFile = new File(
+          [result],
+          file.name,
+          { type: 'image/jpeg' }  // force jpeg
+        )
+
+        console.log(
+          'Original size:',
+          (file.size / 1024 / 1024).toFixed(2),
+          'MB'
+        )
+        console.log(
+          'Compressed size:',
+          (compressedFile.size / 1024 / 1024).toFixed(2),
+          'MB'
+        )
+
+        resolve(compressedFile)
+      },
+      error(err) {
+        reject(err)
+      },
+    })
+  })
+}
+
 /* ================= UI HELPER COMPONENTS ================= */
 
 const Label = ({ children }: { children: React.ReactNode }) => (
@@ -117,19 +151,30 @@ const ProductForm: React.FC<ProductFormProps> = ({
     setLoading(true)
 
     try {
-      // 🔥 Compress image before upload
       const compressedFile: File = await new Promise((resolve, reject) => {
         new Compressor(file, {
-          quality: 0.8,          // 80% quality
-          maxWidth: 1000,        // Resize large images
-          convertSize: 1000000,  // Convert PNG to JPEG if >1MB
+          quality: 0.6,              // stronger compression
+          maxWidth: 1200,
+          maxHeight: 1200,
+          mimeType: 'image/jpeg',    // 🔥 FORCE JPEG
           success(result) {
-            // result is a Blob → convert to File
             const compressed = new File(
               [result],
-              file.name,
-              { type: result.type }
+              `${Date.now()}.jpg`,   // 🔥 new filename
+              { type: 'image/jpeg' }
             )
+
+            console.log(
+              'Original:',
+              (file.size / 1024 / 1024).toFixed(2),
+              'MB'
+            )
+            console.log(
+              'Compressed:',
+              (compressed.size / 1024 / 1024).toFixed(2),
+              'MB'
+            )
+
             resolve(compressed)
           },
           error(err) {
@@ -138,10 +183,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
         })
       })
 
-      // 🚀 Upload compressed image
       const url = await imageService.uploadProductImage(compressedFile)
 
-      // Save URL in form state
       setFormData(prev => ({
         ...prev,
         image_url: url,
@@ -154,8 +197,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
       setLoading(false)
     }
   }
-
-
   // const handleVariantImageUpload = async (variantId: string, file: File) => {
   //   setLoading(true)
   //   try {
@@ -186,15 +227,17 @@ const ProductForm: React.FC<ProductFormProps> = ({
     try {
       const compressedFile: File = await new Promise((resolve, reject) => {
         new Compressor(file, {
-          quality: 0.8,
-          maxWidth: 1000,
-          convertSize: 1000000,
+          quality: 0.6,
+          maxWidth: 1200,
+          maxHeight: 1200,
+          mimeType: 'image/jpeg',
           success(result) {
             const compressed = new File(
               [result],
-              file.name,
-              { type: result.type }
+              `${Date.now()}.jpg`,
+              { type: 'image/jpeg' }
             )
+
             resolve(compressed)
           },
           error(err) {
@@ -221,6 +264,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
       setLoading(false)
     }
   }
+
 
   const addVariant = () => {
     const newVariant: Variant = {
