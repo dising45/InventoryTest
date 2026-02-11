@@ -99,9 +99,17 @@ const ProductList: React.FC<ProductListProps> = ({
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-                            {product.name.charAt(0)}
-                          </div>
+                          {product.image_url ? (
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="h-10 w-10 rounded-lg object-cover border"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+                              {product.name.charAt(0)}
+                            </div>
+                          )}
                           <div className="ml-4">
                             <div className="font-medium text-gray-900">
                               {product.name}
@@ -117,11 +125,10 @@ const ProductList: React.FC<ProductListProps> = ({
 
                       <td className="px-6 py-4">
                         <span
-                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            product.stock < LOW_STOCK_THRESHOLD
-                              ? 'bg-red-100 text-red-700'
-                              : 'bg-green-100 text-green-700'
-                          }`}
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${product.stock < LOW_STOCK_THRESHOLD
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-green-100 text-green-700'
+                            }`}
                         >
                           {product.stock}
                         </span>
@@ -172,9 +179,31 @@ const ProductList: React.FC<ProductListProps> = ({
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-semibold text-gray-900">
-                        {product.name}
-                      </h3>
+                      <div className="flex gap-3">
+                        {product.image_url ? (
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="h-14 w-14 rounded-xl object-cover border"
+                          />
+                        ) : (
+                          <div className="h-14 w-14 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+                            {product.name.charAt(0)}
+                          </div>
+                        )}
+
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            {product.name}
+                          </h3>
+                          <p className="text-xs text-gray-500">
+                            {product.has_variants
+                              ? `${product.variants?.length ?? 0} variants`
+                              : 'Standard product'}
+                          </p>
+                        </div>
+                      </div>
+
                       <p className="text-xs text-gray-500">
                         {product.has_variants
                           ? `${product.variants?.length ?? 0} variants`
@@ -183,11 +212,10 @@ const ProductList: React.FC<ProductListProps> = ({
                     </div>
 
                     <span
-                      className={`px-2 py-1 text-xs rounded-full ${
-                        lowStock
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-green-100 text-green-700'
-                      }`}
+                      className={`px-2 py-1 text-xs rounded-full ${lowStock
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-green-100 text-green-700'
+                        }`}
                     >
                       {product.stock}
                     </span>
