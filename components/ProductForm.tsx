@@ -1,15 +1,16 @@
 // ProductForm.tsx
+import Compressor from 'compressorjs'
 import React, { useState, useEffect, useRef } from 'react'
 import { Product, Variant } from '../types'
-import { 
-  Trash2, 
-  Plus, 
-  ArrowLeft, 
-  Save, 
-  Image as ImageIcon, 
-  UploadCloud, 
-  Package, 
-  Tag, 
+import {
+  Trash2,
+  Plus,
+  ArrowLeft,
+  Save,
+  Image as ImageIcon,
+  UploadCloud,
+  Package,
+  Tag,
   IndianRupee,
   Layers,
   FileText,
@@ -102,31 +103,120 @@ const ProductForm: React.FC<ProductFormProps> = ({
     }))
   }
 
-  const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.[0]) return
+  const handleProductImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      alert('Only image files allowed')
+      return
+    }
+
     setLoading(true)
+
     try {
-      const url = await imageService.uploadProductImage(e.target.files[0])
-      setFormData(prev => ({ ...prev, image_url: url }))
+      // 🔥 Compress image before upload
+      const compressedFile: File = await new Promise((resolve, reject) => {
+        new Compressor(file, {
+          quality: 0.8,          // 80% quality
+          maxWidth: 1000,        // Resize large images
+          convertSize: 1000000,  // Convert PNG to JPEG if >1MB
+          success(result) {
+            // result is a Blob → convert to File
+            const compressed = new File(
+              [result],
+              file.name,
+              { type: result.type }
+            )
+            resolve(compressed)
+          },
+          error(err) {
+            reject(err)
+          },
+        })
+      })
+
+      // 🚀 Upload compressed image
+      const url = await imageService.uploadProductImage(compressedFile)
+
+      // Save URL in form state
+      setFormData(prev => ({
+        ...prev,
+        image_url: url,
+      }))
+
     } catch (err) {
+      console.error('IMAGE UPLOAD ERROR', err)
       alert('Image upload failed')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleVariantImageUpload = async (variantId: string, file: File) => {
+
+  // const handleVariantImageUpload = async (variantId: string, file: File) => {
+  //   setLoading(true)
+  //   try {
+  //     const url = await imageService.uploadProductImage(file)
+  //     setFormData(prev => ({
+  //       ...prev,
+  //       variants: prev.variants?.map(v =>
+  //         v.id === variantId ? { ...v, image_url: url } : v
+  //       ),
+  //     }))
+  //   } catch {
+  //     alert('Variant image upload failed')
+  //   } finally {
+  //     setLoading(false)
+  //   }
+  // }
+  const handleVariantImageUpload = async (
+    variantId: string,
+    file: File
+  ) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Only image files allowed')
+      return
+    }
+
     setLoading(true)
+
     try {
-      const url = await imageService.uploadProductImage(file)
+      const compressedFile: File = await new Promise((resolve, reject) => {
+        new Compressor(file, {
+          quality: 0.8,
+          maxWidth: 1000,
+          convertSize: 1000000,
+          success(result) {
+            const compressed = new File(
+              [result],
+              file.name,
+              { type: result.type }
+            )
+            resolve(compressed)
+          },
+          error(err) {
+            reject(err)
+          },
+        })
+      })
+
+      const url = await imageService.uploadProductImage(compressedFile)
+
       setFormData(prev => ({
         ...prev,
         variants: prev.variants?.map(v =>
-          v.id === variantId ? { ...v, image_url: url } : v
-        ),
+          v.id === variantId
+            ? { ...v, image_url: url }
+            : v
+        )
       }))
-    } catch {
-      alert('Variant image upload failed')
+
+    } catch (err) {
+      console.error('VARIANT IMAGE ERROR', err)
+      alert('Upload failed')
     } finally {
       setLoading(false)
     }
@@ -180,8 +270,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
       {/* HEADER */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
-          <button 
-            onClick={onCancel} 
+          <button
+            onClick={onCancel}
             className="p-2 -ml-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -193,7 +283,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             <p className="text-sm text-gray-500">Fill in the details below to manage your inventory.</p>
           </div>
         </div>
-        
+
         <div className="flex gap-3">
           <button
             onClick={onCancel}
@@ -213,18 +303,18 @@ const ProductForm: React.FC<ProductFormProps> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* LEFT COLUMN: IMAGE & TOGGLES */}
         <div className="space-y-6">
-          
+
           {/* IMAGE UPLOAD CARD */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
             <Label>Product Image</Label>
-            <div 
+            <div
               onClick={() => fileInputRef.current?.click()}
               className={`group relative mt-2 flex flex-col items-center justify-center w-full h-64 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 overflow-hidden
-                ${formData.image_url 
-                  ? 'border-gray-200 bg-gray-50' 
+                ${formData.image_url
+                  ? 'border-gray-200 bg-gray-50'
                   : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-indigo-400'
                 }`}
             >
@@ -243,7 +333,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   <p className="text-xs text-gray-400">SVG, PNG, JPG or GIF</p>
                 </div>
               )}
-              
+
               {/* Overlay for change image */}
               {formData.image_url && (
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -263,7 +353,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
           </div>
 
           {/* VARIANTS TOGGLE */}
-          <Toggle 
+          <Toggle
             label="This product has variants"
             checked={formData.has_variants || false}
             onChange={(val) => setFormData(prev => ({ ...prev, has_variants: val }))}
@@ -273,15 +363,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
         {/* RIGHT COLUMN: FORM FIELDS */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* BASIC INFO */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-5">
             <h3 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-3">General Information</h3>
-            
+
             <div className="grid grid-cols-1 gap-5">
               <div>
                 <Label>Product Name</Label>
-                <InputField 
+                <InputField
                   required
                   type="text"
                   name="name"
@@ -313,7 +403,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
               <div>
                 <Label>Cost Price</Label>
-                <InputField 
+                <InputField
                   required
                   type="number"
                   name="cost_price"
@@ -324,7 +414,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
               </div>
               <div>
                 <Label>Selling Price</Label>
-                <InputField 
+                <InputField
                   required
                   type="number"
                   name="sell_price"
@@ -338,7 +428,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             {!formData.has_variants && (
               <div className="pt-2">
                 <Label>Stock Quantity</Label>
-                <InputField 
+                <InputField
                   type="number"
                   name="stock"
                   icon={Package}
@@ -378,7 +468,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
                 {formData.variants?.map((v, index) => (
                   <div key={v.id} className="group flex flex-col md:flex-row gap-4 p-4 rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-white hover:shadow-md transition-all duration-200">
-                    
+
                     {/* Variant Image */}
                     <div className="relative w-full md:w-20 h-20 flex-shrink-0">
                       <input
@@ -388,7 +478,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                         accept="image/*"
                         onChange={e => e.target.files && handleVariantImageUpload(v.id, e.target.files[0])}
                       />
-                      <label 
+                      <label
                         htmlFor={`variant-img-${v.id}`}
                         className="block w-full h-full rounded-lg border border-gray-200 bg-white overflow-hidden cursor-pointer hover:border-indigo-400 transition-colors"
                       >
