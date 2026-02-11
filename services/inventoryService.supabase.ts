@@ -15,7 +15,8 @@ class InventoryServiceSupabase {
           name,
           sku,
           stock,
-          price_modifier
+          price_modifier,
+          image_url
         )
       `)
       .order('updated_at', { ascending: false })
@@ -64,6 +65,7 @@ class InventoryServiceSupabase {
         sell_price: Number(product.sell_price ?? 0),
         stock: calculatedStock,
         has_variants: !!product.has_variants,
+        image_url: product.image_url ?? null,   // ✅ ADD THIS
       })
       .select()
       .single()
@@ -81,6 +83,7 @@ class InventoryServiceSupabase {
         sku: v.sku ?? null,
         stock: Number(v.stock || 0),
         price_modifier: Number(v.price_modifier || 0),
+        image_url: v.image_url ?? null,   // ✅ ADD THIS
       }))
 
       const { error: variantError } = await supabase
@@ -135,6 +138,7 @@ class InventoryServiceSupabase {
         stock: calculatedStock,
         has_variants: !!product.has_variants,
         updated_at: new Date().toISOString(),
+        image_url: product.image_url ?? null,   // ✅ ADD THIS
       })
       .eq('id', product.id)
 
@@ -154,6 +158,7 @@ class InventoryServiceSupabase {
         sku: v.sku ?? null,
         stock: Number(v.stock || 0),
         price_modifier: Number(v.price_modifier || 0),
+        image_url: v.image_url ?? null,   // ✅ ADD THIS
       }))
 
       if (variantsPayload.length > 0) {

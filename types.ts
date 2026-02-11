@@ -4,6 +4,7 @@ export interface Variant {
   sku: string;
   stock: number;
   price_modifier?: number; // Added to base sell_price
+  image_url?: string   // ✅ ADD THIS
 }
 
 export interface Product {
@@ -16,6 +17,7 @@ export interface Product {
   has_variants: boolean;
   variants: Variant[];
   updated_at: string;
+  image_url?: string   // ✅ ADD THIS
 }
 
 export interface Supplier {
