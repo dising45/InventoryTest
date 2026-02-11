@@ -50,17 +50,23 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
   };
 
   const addVariant = () => {
-    const newVariant: Variant = {
-      id: crypto.randomUUID(),
-      name: '',
-      sku: '',
-      stock: 0,
-      price_modifier: 0,
-    };
-    setFormData(prev => ({
-      ...prev,
-      variants: [...(prev.variants || []), newVariant]
-    }));
+    setFormData(prev => {
+      const currentVariants = prev.variants || [];
+
+      return {
+        ...prev,
+        variants: [
+          ...currentVariants,
+          {
+            id: crypto.randomUUID(),
+            name: '',
+            sku: '',
+            stock: 0,
+            price_modifier: 0,
+          },
+        ],
+      };
+    });
   };
 
   const removeVariant = (id: string) => {
@@ -160,8 +166,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData, onSave, onCancel
               <label className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                 <input
                   type="checkbox"
-                  checked={formData.has_variants}
-                  onChange={(e) => setFormData(prev => ({ ...prev, has_variants: e.target.checked }))}
+                  checked={!!formData.has_variants}
+                  onChange={(e) =>
+                    setFormData(prev => ({
+                      ...prev,
+                      has_variants: e.target.checked,
+                      variants: e.target.checked ? prev.variants || [] : [],
+                    }))
+                  }
                   className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
                 />
                 <div>
