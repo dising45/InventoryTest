@@ -223,7 +223,7 @@ export default function App() {
     }
   }
 
-  const handleSaveSale = async (data: { customer_id: string; items: SalesItem[]; total_amount: number }) => {
+  const handleSaveSale = async (data: { customer_id: string; items: SalesItem[]; total_amount: number; order_date: string }) => {
     try {
       if (editingSale) {
         await salesService.updateSale(editingSale.id, data)

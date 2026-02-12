@@ -28,11 +28,13 @@ interface SalesFormProps {
     customer_id: string
     items: SalesItem[]
     total_amount: number
+    order_date: string
   }) => Promise<void>
   onCancel: () => void
 }
 
 const WALK_IN_NAME = 'Walk-in Customer'
+
 
 /* ================= UI HELPERS ================= */
 const SelectWrapper = ({ icon: Icon, children }: any) => (
@@ -55,11 +57,10 @@ const SegmentedControl = ({ value, onChange, options }: any) => (
       <button
         key={opt.value}
         onClick={() => onChange(opt.value)}
-        className={`flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-all ${
-          value === opt.value
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-500 hover:text-gray-700'
-        }`}
+        className={`flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-all ${value === opt.value
+          ? 'bg-white text-gray-900 shadow-sm'
+          : 'text-gray-500 hover:text-gray-700'
+          }`}
       >
         {opt.label}
       </button>
@@ -87,7 +88,9 @@ const SalesForm: React.FC<SalesFormProps> = ({
   const [selectedVariant, setSelectedVariant] = useState<Variant>()
   const [quantity, setQuantity] = useState(1)
   const [unitPrice, setUnitPrice] = useState(0)
-
+  const [orderDate, setOrderDate] = useState(
+    new Date().toISOString().split('T')[0]
+  )
   /* -------- Discount / Tax -------- */
   const [discountType, setDiscountType] = useState<'flat' | 'percent'>('flat')
   const [discountValue, setDiscountValue] = useState(0)
@@ -99,7 +102,10 @@ const SalesForm: React.FC<SalesFormProps> = ({
   useEffect(() => {
     if (initialData) {
       setCustomerId(initialData.customer_id)
-
+      setOrderDate(
+        initialData.order_date ??
+        initialData.created_at?.split('T')[0]
+      )
       const mapped = (initialData.items || []).map(item => {
         const product = products.find(p => p.id === item.product_id)
         const variant = product?.variants.find(v => v.id === item.variant_id)
@@ -130,7 +136,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
 
     setUnitPrice(
       selectedProduct.sell_price +
-        (selectedVariant?.price_modifier || 0)
+      (selectedVariant?.price_modifier || 0)
     )
   }, [selectedProduct, selectedVariant])
 
@@ -224,7 +230,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
     subTotal - discountAmount + taxAmount
   )
 
-  const formatCurrency = (val: number) => 
+  const formatCurrency = (val: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val)
 
   const handleSubmit = async () => {
@@ -235,6 +241,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
         customer_id: customerId,
         items,
         total_amount: finalTotal,
+        order_date: orderDate,   // 🔥 add this
       })
     } finally {
       setLoading(false)
@@ -244,11 +251,11 @@ const SalesForm: React.FC<SalesFormProps> = ({
   /* ---------------- RENDER ---------------- */
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 pb-24 md:pb-0">
-      
+
       {/* HEADER */}
       <div className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 py-4 flex items-center justify-between z-30">
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={onCancel}
             className="p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
           >
@@ -261,7 +268,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
             </h2>
           </div>
         </div>
-        
+
         {/* Desktop Save Button */}
         <div className="hidden md:block">
           <button
@@ -276,14 +283,19 @@ const SalesForm: React.FC<SalesFormProps> = ({
       </div>
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+
         {/* LEFT COLUMN: INPUTS */}
         <div className="lg:col-span-7 space-y-6">
-          
+
           {/* CUSTOMER SELECTION */}
+          {/* CUSTOMER + ORDER DATE */}
           {!isQuick && (
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-              <label className="text-sm font-semibold text-gray-700 mb-3 block">Customer Details</label>
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+              <label className="text-sm font-semibold text-gray-700 block">
+                Customer Details
+              </label>
+
+              {/* Customer Select */}
               <SelectWrapper icon={User}>
                 <select
                   value={customerId}
@@ -298,14 +310,31 @@ const SalesForm: React.FC<SalesFormProps> = ({
                   ))}
                 </select>
               </SelectWrapper>
+
+              {/* Order Date */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1.5 block ml-1">
+                  Order Date
+                </label>
+
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={orderDate}
+                    onChange={e => setOrderDate(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-medium"
+                  />
+                </div>
+              </div>
             </div>
           )}
+
 
           {/* PRODUCT ENTRY CARD */}
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500" />
             <h3 className="font-bold text-gray-900 mb-4 flex items-center">
-              <Package className="w-5 h-5 mr-2 text-indigo-600" /> 
+              <Package className="w-5 h-5 mr-2 text-indigo-600" />
               Add Items
             </h3>
 
@@ -387,7 +416,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
                 disabled={!selectedProduct || (selectedProduct.has_variants && !selectedVariant)}
                 className="w-full mt-2 bg-gray-900 text-white py-3 rounded-xl font-medium hover:bg-gray-800 active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-lg shadow-gray-200"
               >
-                <Plus className="w-5 h-5 mr-2" /> 
+                <Plus className="w-5 h-5 mr-2" />
                 Add to Order
               </button>
             </div>
@@ -397,11 +426,11 @@ const SalesForm: React.FC<SalesFormProps> = ({
         {/* RIGHT COLUMN: SUMMARY */}
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full min-h-[500px]">
-            
+
             {/* Receipt Header */}
             <div className="bg-gray-50/80 p-5 border-b border-gray-100 flex justify-between items-center backdrop-blur-sm">
               <h3 className="font-bold text-gray-900 flex items-center">
-                <Receipt className="w-5 h-5 mr-2 text-indigo-600" /> 
+                <Receipt className="w-5 h-5 mr-2 text-indigo-600" />
                 Order Summary
               </h3>
               <span className="bg-white border border-gray-200 text-gray-600 px-2.5 py-0.5 rounded-full text-xs font-bold">
@@ -426,7 +455,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
                         <p className="font-semibold text-sm text-gray-900 line-clamp-1">{item.product_name}</p>
                         <p className="text-xs text-gray-500">{item.variant_name || 'Standard'}</p>
                       </div>
-                      <button 
+                      <button
                         onClick={() => removeItem(i)}
                         className="text-gray-400 hover:text-red-500 p-1 rounded-md hover:bg-red-50 transition-colors"
                       >
@@ -465,7 +494,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
 
             {/* Calculations Footer */}
             <div className="bg-gray-50 p-5 border-t border-gray-100 space-y-4">
-              
+
               {/* Subtotal */}
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Subtotal</span>
@@ -480,10 +509,10 @@ const SalesForm: React.FC<SalesFormProps> = ({
                 </div>
                 <div className="flex gap-2">
                   <div className="w-24">
-                    <SegmentedControl 
-                      value={discountType} 
+                    <SegmentedControl
+                      value={discountType}
                       onChange={setDiscountType}
-                      options={[{label: '₹', value: 'flat'}, {label: '%', value: 'percent'}]} 
+                      options={[{ label: '₹', value: 'flat' }, { label: '%', value: 'percent' }]}
                     />
                   </div>
                   <input
@@ -502,11 +531,11 @@ const SalesForm: React.FC<SalesFormProps> = ({
                   <span className="text-sm text-gray-600">Tax</span>
                 </div>
                 <div className="flex gap-2">
-                   <div className="w-24">
-                    <SegmentedControl 
-                      value={taxType} 
+                  <div className="w-24">
+                    <SegmentedControl
+                      value={taxType}
                       onChange={setTaxType}
-                      options={[{label: '₹', value: 'flat'}, {label: '%', value: 'percent'}]} 
+                      options={[{ label: '₹', value: 'flat' }, { label: '%', value: 'percent' }]}
                     />
                   </div>
                   <input

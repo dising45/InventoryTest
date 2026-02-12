@@ -54,6 +54,7 @@ export interface SalesOrder {
   id: string;
   customer_id: string;
   total_amount: number;
+  order_date?: string;
   status: 'pending' | 'completed' | 'cancelled';
   created_at: string;
   items?: SalesItem[];

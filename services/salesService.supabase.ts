@@ -30,6 +30,7 @@ export const salesService = {
     customer_id: string;
     items: SalesItem[];
     total_amount: number;
+    order_date: data.order_date;
   }) {
     const { data: order, error: orderError } = await supabase
       .from('sales_orders')
@@ -60,6 +61,7 @@ export const salesService = {
       customer_id: string;
       items: SalesItem[];
       total_amount: number;
+      order_date: data.order_date;
     }
   ) {
     // 1️⃣ Restore stock from old items
