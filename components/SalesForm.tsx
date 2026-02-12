@@ -233,20 +233,49 @@ const SalesForm: React.FC<SalesFormProps> = ({
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val)
 
+  // const handleSubmit = async () => {
+  //   if (!customerId || items.length === 0) return
+  //   setLoading(true)
+  //   try {
+  //     await onSave({
+  //       customer_id: customerId,
+  //       items,
+  //       total_amount: finalTotal,
+  //       order_date: orderDate,   // 🔥 add this
+  //     })
+  //   } finally {
+  //     setLoading(false)
+  //   }
+  // }
   const handleSubmit = async () => {
-    if (!customerId || items.length === 0) return
+    if (!customerId || items.length === 0) {
+      console.log("Blocked: missing customer or items")
+      return
+    }
+
+    console.log("Submitting order:", {
+      customer_id: customerId,
+      items,
+      total_amount: finalTotal,
+      order_date: orderDate
+    })
+
     setLoading(true)
+
     try {
       await onSave({
         customer_id: customerId,
         items,
         total_amount: finalTotal,
-        order_date: orderDate,   // 🔥 add this
+        order_date: orderDate,
       })
+    } catch (err) {
+      console.error("SAVE FAILED:", err)
     } finally {
       setLoading(false)
     }
   }
+
 
   /* ---------------- RENDER ---------------- */
   return (
