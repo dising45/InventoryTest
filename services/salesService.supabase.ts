@@ -61,7 +61,7 @@ export const salesService = {
       .eq('id', id)
 
     if (error) throw error
-  }
+  },
 
   /* =========================
      UPDATE SALE (EDIT)
