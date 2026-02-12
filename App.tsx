@@ -242,8 +242,11 @@ export default function App() {
     try {
       await salesService.deleteSale(id)
       await Promise.all([loadSales(), loadProducts()])
+      
     } catch {
-      alert('Failed to delete sale.')
+      console.error('DELETE ERROR:', err)
+      alert('Failed to delete sale.Check Console for details.')
+
     }
   }
 

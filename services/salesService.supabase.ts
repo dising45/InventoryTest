@@ -111,7 +111,54 @@ export const salesService = {
     // 5️⃣ Deduct stock
     await this.deductStock(sale.items);
   },
+  // Delete stock
+  async deleteSale(salesOrderId: string) {
+    try {
+      // 1️⃣ Fetch items
+      const { data: items, error: fetchError } = await supabase
+        .from('sales_items')
+        .select('*')
+        .eq('sales_order_id', salesOrderId)
 
+      if (fetchError) {
+        console.error('FETCH ITEMS ERROR:', fetchError)
+        throw fetchError
+      }
+
+      // 2️⃣ Restore stock
+      if (items?.length) {
+        await this.restoreStock(items as SalesItem[])
+      }
+
+      // 3️⃣ Delete items
+      const { error: deleteItemsError } = await supabase
+        .from('sales_items')
+        .delete()
+        .eq('sales_order_id', salesOrderId)
+
+      if (deleteItemsError) {
+        console.error('DELETE ITEMS ERROR:', deleteItemsError)
+        throw deleteItemsError
+      }
+
+      // 4️⃣ Delete order
+      const { error: deleteOrderError } = await supabase
+        .from('sales_orders')
+        .delete()
+        .eq('id', salesOrderId)
+
+      if (deleteOrderError) {
+        console.error('DELETE ORDER ERROR:', deleteOrderError)
+        throw deleteOrderError
+      }
+
+      return true
+
+    } catch (err) {
+      console.error('FULL DELETE FAILED:', err)
+      throw err
+    }
+  },
 
   /* =========================
      HELPERS
