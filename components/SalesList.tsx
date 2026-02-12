@@ -129,7 +129,7 @@ const SalesList: React.FC<SalesListProps> = ({
                     {/* Date */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-gray-900 font-medium">
-                        {formatDate(sale.created_at)}
+                        {formatDate(sale.order_date || sale.created_at)}
                       </div>
                       <div className="text-xs text-gray-400 font-mono mt-0.5">
                         #{sale.id.slice(0, 8)}
@@ -223,7 +223,7 @@ const SalesList: React.FC<SalesListProps> = ({
                         </h4>
                         <div className="flex items-center text-xs text-gray-500 mt-0.5">
                           <Calendar className="w-3 h-3 mr-1" />
-                          {formatDate(sale.created_at)}
+                          {formatDate(sale.order_date || sale.created_at)}
                         </div>
                       </div>
                     </div>
