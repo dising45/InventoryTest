@@ -51,7 +51,17 @@ export const salesService = {
 
     return order;
   },
+  /* =========================
+     UPDATE Status
+  ==========================*/
+  async updateStatus(id: string, status: string) {
+    const { error } = await supabase
+      .from('sales_orders')
+      .update({ status })
+      .eq('id', id)
 
+    if (error) throw error
+  }
 
   /* =========================
      UPDATE SALE (EDIT)

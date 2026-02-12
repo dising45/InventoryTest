@@ -374,6 +374,10 @@ export default function App() {
                     onEdit={s => { setEditingSale(s); setCurrentView('edit-sale'); }}
                     onDelete={handleDeleteSale}
                     onAddSale={() => { setEditingSale(undefined); setCurrentView('add-sale'); }}
+                    onStatusChange={async (id, status) => {
+                      await salesService.updateStatus(id, status)
+                      await loadSales()   // refresh list
+                    }}
                   />
                 </>
               )}

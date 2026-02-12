@@ -21,6 +21,7 @@ interface SalesListProps {
   onEdit?: (sale: SalesOrder) => void
   onDelete?: (id: string) => void
   onAddSale?: () => void
+  onStatusChange?: (id: string, status: string) => void   // ✅ ADD THIS
 }
 
 const SalesList: React.FC<SalesListProps> = ({
@@ -28,9 +29,18 @@ const SalesList: React.FC<SalesListProps> = ({
   onEdit,
   onDelete,
   onAddSale,
+  onStatusChange,   // ✅ ADD THIS
 }) => {
   const showActions = !!onEdit || !!onDelete
 
+  const STATUS_OPTIONS = [
+    'Pending',
+    'Confirmed',
+    'Shipped',
+    'Completed',
+    'Awaiting Payment',
+    'Cancelled'
+  ]
   // Helper for currency
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -68,7 +78,7 @@ const SalesList: React.FC<SalesListProps> = ({
 
   return (
     <div className="relative space-y-6 animate-in fade-in duration-500">
-      
+
       {sales.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border border-gray-200 border-dashed text-center">
           <div className="p-4 bg-indigo-50 rounded-full mb-4">
@@ -152,11 +162,26 @@ const SalesList: React.FC<SalesListProps> = ({
 
                     {/* Status */}
                     <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusStyle(sale.status)}`}>
-                        {getStatusIcon(sale.status)}
-                        {sale.status}
-                      </span>
+                      {onStatusChange ? (
+                        <select
+                          value={sale.status}
+                          onChange={(e) => onStatusChange(sale.id, e.target.value)}
+                          className={`text-xs font-medium px-2.5 py-1 rounded-full border outline-none bg-white cursor-pointer ${getStatusStyle(sale.status)}`}
+                        >
+                          {STATUS_OPTIONS.map(status => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusStyle(sale.status)}`}>
+                          {getStatusIcon(sale.status)}
+                          {sale.status}
+                        </span>
+                      )}
                     </td>
+
 
                     {/* Items */}
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
@@ -231,9 +256,27 @@ const SalesList: React.FC<SalesListProps> = ({
                       <span className="block text-sm font-bold text-gray-900">
                         {formatCurrency(sale.total_amount)}
                       </span>
-                      <span className={`inline-flex items-center mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${getStatusStyle(sale.status)}`}>
-                        {sale.status}
-                      </span>
+                      {onStatusChange ? (
+                        <select
+                          value={sale.status}
+                          onChange={(e) => {
+                            e.stopPropagation()
+                            onStatusChange(sale.id, e.target.value)
+                          }}
+                          className={`mt-1 text-[10px] font-medium px-1.5 py-0.5 rounded border bg-white ${getStatusStyle(sale.status)}`}
+                        >
+                          {STATUS_OPTIONS.map(status => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className={`inline-flex items-center mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${getStatusStyle(sale.status)}`}>
+                          {sale.status}
+                        </span>
+                      )}
+
                     </div>
                   </div>
 
