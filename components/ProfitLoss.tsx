@@ -9,7 +9,9 @@ import {
   ArrowRight,
   PieChart,
   Loader2,
-  Filter
+  Filter,
+  Check,
+  Download
 } from 'lucide-react'
 import { profitLossService } from '../services/plService.supabase'
 
@@ -22,7 +24,7 @@ const ProfitLoss: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [from, setFrom] = useState<string>('')
   const [to, setTo] = useState<string>('')
-  const [activeFilter, setActiveFilter] = useState<string>('all')
+  const [activeFilter, setActiveFilter] = useState<string>('this_month')
 
   const [totalSales, setTotalSales] = useState(0)
   const [totalExpenses, setTotalExpenses] = useState(0)
@@ -49,14 +51,12 @@ const ProfitLoss: React.FC = () => {
 
   // Initial Load
   useEffect(() => {
-    // Default to this month
     setFrom(startOfMonth())
     setTo(today())
-    setActiveFilter('this_month')
   }, [])
 
   useEffect(() => {
-    if (from) load()
+    if (from && to) load()
   }, [from, to])
 
   const load = async () => {
@@ -97,10 +97,7 @@ const ProfitLoss: React.FC = () => {
     }, {})
   }, [expenses])
 
-  // Sort expenses by amount desc
   const sortedExpenses = Object.entries(expenseByCategory).sort(([, a], [, b]) => b - a)
-  
-  // Calculate percentages for bars
   const maxExpense = sortedExpenses.length > 0 ? sortedExpenses[0][1] : 0
 
   const formatCurrency = (val: number) => 
@@ -111,52 +108,50 @@ const ProfitLoss: React.FC = () => {
     }).format(val)
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-20 md:pb-0">
       
-      {/* FILTERS BAR */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* FILTER CONTROL BAR */}
+      <div className="bg-white p-2 md:p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 sticky top-0 z-10 md:static">
         
-        {/* Quick Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
-          <Filter className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0" />
+        {/* Mobile Horizontal Scroll Filters */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0 w-full">
+          <div className="bg-gray-100 p-2 rounded-lg text-gray-500 mr-1 hidden md:block">
+            <Filter className="w-4 h-4" />
+          </div>
           <QuickBtn 
             active={activeFilter === 'today'} 
             onClick={() => handleQuickFilter('today')}
-          >
-            Today
-          </QuickBtn>
+            label="Today"
+          />
           <QuickBtn 
             active={activeFilter === 'this_month'} 
             onClick={() => handleQuickFilter('this_month')}
-          >
-            This Month
-          </QuickBtn>
+            label="This Month"
+          />
           <QuickBtn 
             active={activeFilter === 'last_month'} 
             onClick={() => handleQuickFilter('last_month')}
-          >
-            Last Month
-          </QuickBtn>
+            label="Last Month"
+          />
         </div>
 
-        {/* Date Range Picker */}
-        <div className="flex items-center gap-3 bg-gray-50 p-1.5 rounded-xl border border-gray-200">
-          <div className="relative">
-            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        {/* Date Inputs */}
+        <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-200 w-full md:w-auto">
+          <div className="relative flex-1">
             <input
               type="date"
               value={from}
               onChange={(e) => { setFrom(e.target.value); setActiveFilter('custom'); }}
-              className="pl-9 pr-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+              className="w-full pl-2 pr-1 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
             />
           </div>
-          <ArrowRight className="w-4 h-4 text-gray-400" />
-          <div className="relative">
+          <ArrowRight className="w-3 h-3 text-gray-400" />
+          <div className="relative flex-1">
             <input
               type="date"
               value={to}
               onChange={(e) => { setTo(e.target.value); setActiveFilter('custom'); }}
-              className="pl-3 pr-2 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+              className="w-full pl-2 pr-1 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
             />
           </div>
         </div>
@@ -165,47 +160,46 @@ const ProfitLoss: React.FC = () => {
       {loading ? (
         <div className="flex flex-col items-center justify-center h-64">
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-2" />
-          <p className="text-gray-500 text-sm font-medium">Calculating financial data...</p>
+          <p className="text-gray-500 text-sm font-medium">Crunching numbers...</p>
         </div>
       ) : (
         <>
-          {/* METRIC CARDS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* FINANCIAL SUMMARY CARDS (2x2 Grid on Mobile) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
             <MetricCard
-              label="Total Revenue"
+              label="Revenue"
               value={formatCurrency(totalSales)}
-              icon={<TrendingUp className="w-6 h-6" />}
+              icon={<TrendingUp className="w-5 h-5" />}
               color="emerald"
-              subtext="Income from sales"
             />
             <MetricCard
-              label="Total Expenses"
+              label="Expenses"
               value={formatCurrency(totalExpenses)}
-              icon={<TrendingDown className="w-6 h-6" />}
+              icon={<TrendingDown className="w-5 h-5" />}
               color="rose"
-              subtext="Operational costs"
             />
             <MetricCard
               label="Net Profit"
               value={formatCurrency(profit)}
-              icon={<Wallet className="w-6 h-6" />}
+              icon={<Wallet className="w-5 h-5" />}
               color={profit >= 0 ? 'indigo' : 'orange'}
-              subtext="Revenue - Expenses"
             />
-            <div className={`bg-white rounded-2xl p-6 border shadow-sm flex flex-col justify-between ${profit >= 0 ? 'border-indigo-100 bg-indigo-50/30' : 'border-red-100 bg-red-50/30'}`}>
+            
+            {/* Net Margin Card */}
+            <div className={`rounded-2xl p-4 md:p-6 border shadow-sm flex flex-col justify-between ${profit >= 0 ? 'bg-gradient-to-br from-indigo-50 to-white border-indigo-100' : 'bg-red-50 border-red-100'}`}>
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Net Margin</p>
-                  <h3 className={`text-2xl font-bold mt-1 tracking-tight ${profit >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>
+                  <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider">Net Margin</p>
+                  <h3 className={`text-xl md:text-2xl font-black mt-1 ${profit >= 0 ? 'text-indigo-700' : 'text-red-700'}`}>
                     {totalSales > 0 ? ((profit / totalSales) * 100).toFixed(1) : '0'}%
                   </h3>
                 </div>
-                <div className={`p-3 rounded-xl ${profit >= 0 ? 'bg-indigo-100 text-indigo-600' : 'bg-red-100 text-red-600'}`}>
-                  <BarChart3 className="w-6 h-6" />
+                <div className={`p-2 rounded-lg ${profit >= 0 ? 'bg-indigo-100 text-indigo-600' : 'bg-red-100 text-red-600'}`}>
+                  <BarChart3 className="w-5 h-5" />
                 </div>
               </div>
-              <div className="mt-4">
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
+              <div className="mt-3">
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
                   profit >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 }`}>
                   {profit >= 0 ? 'Profitable' : 'Loss Making'}
@@ -215,21 +209,20 @@ const ProfitLoss: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-             {/* EXPENSE BREAKDOWN */}
-            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+            
+            {/* EXPENSE BREAKDOWN CHART */}
+            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl shadow-sm p-5 md:p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-900">Expense Breakdown</h3>
-                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
-                  {sortedExpenses.length} Categories
-                </span>
+                <h3 className="text-lg font-bold text-gray-900">Expense Analysis</h3>
               </div>
 
               {sortedExpenses.length === 0 ? (
-                <div className="text-center py-12 flex flex-col items-center">
+                <div className="text-center py-16 flex flex-col items-center border-2 border-dashed border-gray-100 rounded-xl">
                   <div className="bg-gray-50 p-4 rounded-full mb-3">
                     <PieChart className="w-8 h-8 text-gray-400" />
                   </div>
-                  <p className="text-gray-500 text-sm">No expenses recorded for this period.</p>
+                  <p className="text-gray-900 font-medium">No expenses found</p>
+                  <p className="text-gray-500 text-xs mt-1">Try changing the date range</p>
                 </div>
               ) : (
                 <div className="space-y-5">
@@ -239,16 +232,16 @@ const ProfitLoss: React.FC = () => {
                     
                     return (
                       <div key={cat} className="group">
-                        <div className="flex justify-between text-sm mb-1.5">
-                          <span className="font-medium text-gray-700">{cat}</span>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="font-bold text-gray-700">{cat}</span>
                           <div className="text-right">
                             <span className="font-bold text-gray-900">{formatCurrency(amt)}</span>
-                            <span className="text-xs text-gray-400 ml-2">({totalPercentage}%)</span>
+                            <span className="text-xs text-gray-400 ml-1.5 font-medium">{totalPercentage}%</span>
                           </div>
                         </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                           <div 
-                            className="bg-indigo-500 h-2 rounded-full transition-all duration-500 group-hover:bg-indigo-600"
+                            className="bg-indigo-500 h-full rounded-full transition-all duration-700 group-hover:bg-indigo-600 shadow-sm"
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
@@ -259,35 +252,49 @@ const ProfitLoss: React.FC = () => {
               )}
             </div>
 
-            {/* SUMMARY TEXT WIDGET */}
-            <div className="bg-indigo-900 rounded-2xl p-6 text-white shadow-xl flex flex-col justify-between relative overflow-hidden">
-              {/* Decorative Circle */}
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-              <div className="absolute bottom-10 -left-10 w-32 h-32 bg-indigo-500/20 rounded-full blur-xl" />
+            {/* AI INSIGHT / SUMMARY CARD */}
+            <div className="bg-gray-900 rounded-2xl p-6 text-white shadow-xl flex flex-col relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-bl-full blur-2xl" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/20 rounded-tr-full blur-xl" />
 
-              <div className="relative z-10">
-                <h4 className="text-indigo-200 font-medium mb-1">Financial Health</h4>
-                <p className="text-2xl font-bold mb-6">
-                  {profit >= 0 ? 'Excellent Performance' : 'Attention Needed'}
+              <div className="relative z-10 flex-1">
+                <div className="flex items-center gap-2 mb-4 text-indigo-300">
+                  <Wallet className="w-5 h-5" />
+                  <span className="text-xs font-bold uppercase tracking-widest">Financial Health</span>
+                </div>
+                
+                <h4 className="text-2xl font-bold mb-1">
+                  {profit >= 0 ? 'Great Job!' : 'Review Needed'}
+                </h4>
+                <p className="text-gray-400 text-sm mb-6">
+                  {profit >= 0 
+                    ? "Your business is generating positive cash flow." 
+                    : "Expenses are exceeding revenue for this period."}
                 </p>
                 
-                <div className="space-y-4 text-indigo-100 text-sm">
-                  <p>
-                    You have generated <span className="text-white font-bold">{formatCurrency(totalSales)}</span> in revenue 
-                    {activeFilter === 'today' ? ' today' : activeFilter === 'this_month' ? ' this month' : ' in this period'}.
-                  </p>
-                  <p>
-                    Operational costs account for <span className="text-white font-bold">{totalSales > 0 ? ((totalExpenses/totalSales)*100).toFixed(0) : 0}%</span> of your revenue.
-                  </p>
+                <div className="space-y-3 p-4 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Revenue</span>
+                    <span className="font-bold">{formatCurrency(totalSales)}</span>
+                  </div>
+                  <div className="w-full bg-gray-700 h-px" />
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Cost</span>
+                    <span className="font-bold text-red-300">-{formatCurrency(totalExpenses)}</span>
+                  </div>
+                  <div className="w-full bg-gray-700 h-px" />
+                  <div className="flex justify-between text-sm">
+                    <span className="text-indigo-300 font-bold">Net</span>
+                    <span className={`font-bold ${profit >= 0 ? 'text-green-400' : 'text-orange-400'}`}>
+                      {formatCurrency(profit)}
+                    </span>
+                  </div>
                 </div>
               </div>
-
-              <div className="relative z-10 mt-6 pt-6 border-t border-indigo-700/50">
-                <div className="flex justify-between items-center">
-                   <span className="text-xs text-indigo-300">Generated on {new Date().toLocaleDateString()}</span>
-                   <Wallet className="w-5 h-5 text-indigo-300" />
-                </div>
-              </div>
+              
+              <button className="mt-6 w-full py-3 bg-white text-gray-900 rounded-xl text-sm font-bold hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">
+                <Download className="w-4 h-4" /> Download Report
+              </button>
             </div>
           </div>
         </>
@@ -303,58 +310,43 @@ const MetricCard = ({
   value,
   icon,
   color,
-  subtext,
 }: {
   label: string
   value: string
   icon: React.ReactNode
   color: 'emerald' | 'rose' | 'indigo' | 'orange'
-  subtext: string
 }) => {
   const styles = {
-    emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100' },
-    rose: { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-100' },
-    indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-100' },
-    orange: { bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-100' },
+    emerald: { bg: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
+    rose: { bg: 'bg-rose-50 text-rose-600', border: 'border-rose-100' },
+    indigo: { bg: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-100' },
+    orange: { bg: 'bg-orange-50 text-orange-600', border: 'border-orange-100' },
   }
-
   const s = styles[color]
 
   return (
-    <div className={`bg-white rounded-2xl p-6 border shadow-sm transition-all hover:shadow-md ${s.border}`}>
-      <div className="flex justify-between items-start mb-4">
-        <div className={`p-3 rounded-xl ${s.bg} ${s.text}`}>
-          {icon}
-        </div>
-        {/* Optional sparkline placeholder could go here */}
+    <div className={`bg-white rounded-2xl p-4 md:p-6 border shadow-sm transition-all ${s.border}`}>
+      <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${s.bg}`}>
+        {icon}
       </div>
       <div>
-        <p className="text-sm font-medium text-gray-500 mb-1">{label}</p>
-        <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{value}</h3>
-        <p className="text-xs text-gray-400 mt-1">{subtext}</p>
+        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest">{label}</p>
+        <h3 className="text-lg md:text-2xl font-black text-gray-900 tracking-tight mt-0.5">{value}</h3>
       </div>
     </div>
   )
 }
 
-const QuickBtn = ({
-  children,
-  onClick,
-  active
-}: {
-  children: React.ReactNode
-  onClick: () => void
-  active: boolean
-}) => (
+const QuickBtn = ({ label, onClick, active }: { label: string, onClick: () => void, active: boolean }) => (
   <button
     onClick={onClick}
-    className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap
+    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border
       ${active 
-        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
-        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200' 
+        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
       }`}
   >
-    {children}
+    {label}
   </button>
 )
 
