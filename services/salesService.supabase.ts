@@ -38,6 +38,7 @@ export const salesService = {
         customer_id: sale.customer_id,
         subtotal: sale.total_amount,
         total_amount: sale.total_amount,
+        order_date: data.order_date,
         status: 'completed',
       })
       .select()
@@ -87,6 +88,7 @@ export const salesService = {
         customer_id: sale.customer_id,
         subtotal: sale.total_amount,
         total_amount: sale.total_amount,
+        order_date: data.order_date,
       })
       .eq('id', salesOrderId);
 
