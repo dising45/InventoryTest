@@ -13,7 +13,7 @@ export const salesService = {
         items:sales_items(*),
         customer:customers(*)
       `)
-      .order('created_at', { ascending: false });
+      .order('order_date', { ascending: false });
 
     if (error) {
       console.error('Error fetching sales:', error);
@@ -30,7 +30,7 @@ export const salesService = {
     customer_id: string;
     items: SalesItem[];
     total_amount: number;
-    order_date: data.order_date;
+    order_date: string;
   }) {
     const { data: order, error: orderError } = await supabase
       .from('sales_orders')
@@ -38,7 +38,7 @@ export const salesService = {
         customer_id: sale.customer_id,
         subtotal: sale.total_amount,
         total_amount: sale.total_amount,
-        order_date: data.order_date,
+        order_date: sale.order_date,   // ✅ FIXED
         status: 'completed',
       })
       .select()
@@ -52,6 +52,7 @@ export const salesService = {
     return order;
   },
 
+
   /* =========================
      UPDATE SALE (EDIT)
      restore → replace → deduct
@@ -62,10 +63,10 @@ export const salesService = {
       customer_id: string;
       items: SalesItem[];
       total_amount: number;
-      order_date: data.order_date;
+      order_date: string;
     }
   ) {
-    // 1️⃣ Restore stock from old items
+    // 1️⃣ Restore stock
     const { data: oldItems } = await supabase
       .from('sales_items')
       .select('*')
@@ -81,14 +82,14 @@ export const salesService = {
       .delete()
       .eq('sales_order_id', salesOrderId);
 
-    // 3️⃣ Update order totals
+    // 3️⃣ Update order
     const { error: orderError } = await supabase
       .from('sales_orders')
       .update({
         customer_id: sale.customer_id,
         subtotal: sale.total_amount,
         total_amount: sale.total_amount,
-        order_date: data.order_date,
+        order_date: sale.order_date,   // ✅ FIXED
       })
       .eq('id', salesOrderId);
 
@@ -97,36 +98,10 @@ export const salesService = {
     // 4️⃣ Insert new items
     await this.insertItems(salesOrderId, sale.items);
 
-    // 5️⃣ Deduct stock again
+    // 5️⃣ Deduct stock
     await this.deductStock(sale.items);
   },
 
-  /* =========================
-     DELETE SALE
-     full restore
-  ==========================*/
-  async deleteSale(salesOrderId: string) {
-    const { data: items } = await supabase
-      .from('sales_items')
-      .select('*')
-      .eq('sales_order_id', salesOrderId);
-
-    if (items?.length) {
-      await this.restoreStock(items as SalesItem[]);
-    }
-
-    await supabase
-      .from('sales_items')
-      .delete()
-      .eq('sales_order_id', salesOrderId);
-
-    const { error } = await supabase
-      .from('sales_orders')
-      .delete()
-      .eq('id', salesOrderId);
-
-    if (error) throw error;
-  },
 
   /* =========================
      HELPERS
