@@ -164,14 +164,25 @@ export const salesService = {
      HELPERS
   ==========================*/
   async insertItems(salesOrderId: string, items: SalesItem[]) {
-    const payload = items.map(item => ({
-      sales_order_id: salesOrderId,
-      product_id: item.product_id,
-      variant_id: item.variant_id ?? null,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      line_total: item.quantity * item.unit_price,
-    }));
+    const payload = [];
+
+    for (const item of items) {
+      const { data: product } = await supabase
+        .from('products')
+        .select('cost_price')
+        .eq('id', item.product_id)
+        .single();
+
+      payload.push({
+        sales_order_id: salesOrderId,
+        product_id: item.product_id,
+        variant_id: item.variant_id ?? null,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        cost_price: Number(product?.cost_price ?? 0), // 🔥 snapshot
+        line_total: item.quantity * item.unit_price,
+      });
+    }
 
     const { error } = await supabase
       .from('sales_items')
@@ -179,6 +190,7 @@ export const salesService = {
 
     if (error) throw error;
   },
+
 
   async deductStock(items: SalesItem[]) {
     await this.applyStock(items, -1);

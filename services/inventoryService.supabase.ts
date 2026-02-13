@@ -51,9 +51,9 @@ class InventoryServiceSupabase {
     const calculatedStock =
       product.has_variants && product.variants?.length
         ? product.variants.reduce(
-            (sum: number, v: any) => sum + Number(v.stock || 0),
-            0
-          )
+          (sum: number, v: any) => sum + Number(v.stock || 0),
+          0
+        )
         : Number(product.stock || 0)
 
     const { data: productRow, error } = await supabase
@@ -118,9 +118,9 @@ class InventoryServiceSupabase {
     const calculatedStock =
       product.has_variants && product.variants?.length
         ? product.variants.reduce(
-            (sum: number, v: any) => sum + Number(v.stock || 0),
-            0
-          )
+          (sum: number, v: any) => sum + Number(v.stock || 0),
+          0
+        )
         : Number(product.stock || 0)
 
     if (calculatedStock < 0) {
@@ -152,27 +152,25 @@ class InventoryServiceSupabase {
        =============================== */
     if (product.has_variants) {
       const variantsPayload = (product.variants ?? []).map((v: any) => ({
-        id: v.id ?? undefined, // IMPORTANT for upsert
+        id: v.id ?? undefined,
         product_id: product.id,
         name: v.name,
         sku: v.sku ?? null,
         stock: Number(v.stock || 0),
         price_modifier: Number(v.price_modifier || 0),
-        image_url: v.image_url ?? null,   // ✅ ADD THIS
+        image_url: v.image_url ?? null,
       }))
 
+      // 1️⃣ UPSERT existing/new variants
       if (variantsPayload.length > 0) {
         const { error: upsertError } = await supabase
           .from('variants')
           .upsert(variantsPayload, { onConflict: 'id' })
 
-        if (upsertError) {
-          console.error('VARIANT UPSERT FAILED', upsertError)
-          throw upsertError
-        }
+        if (upsertError) throw upsertError
       }
 
-      // Remove deleted variants
+      // 2️⃣ DELETE removed variants
       const keptIds = variantsPayload
         .map(v => v.id)
         .filter(Boolean)
@@ -183,7 +181,20 @@ class InventoryServiceSupabase {
           .delete()
           .eq('product_id', product.id)
           .not('id', 'in', `(${keptIds.join(',')})`)
+      } else {
+        // 🔥 If no variants left → delete ALL for this product
+        await supabase
+          .from('variants')
+          .delete()
+          .eq('product_id', product.id)
       }
+
+    } else {
+      // 🔥 If toggled to NO VARIANTS → delete ALL
+      await supabase
+        .from('variants')
+        .delete()
+        .eq('product_id', product.id)
     }
 
     return true

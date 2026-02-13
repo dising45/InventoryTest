@@ -10,8 +10,8 @@ import {
   PieChart,
   Loader2,
   Filter,
-  Check,
-  Download
+  Download,
+  Sparkles
 } from 'lucide-react'
 import { profitLossService } from '../services/plService.supabase'
 
@@ -33,40 +33,39 @@ const ProfitLoss: React.FC = () => {
 
   /* ---------- DATE HELPERS ---------- */
   const today = () => new Date().toISOString().slice(0, 10)
-
   const startOfMonth = () => {
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10)
   }
-
   const startOfLastMonth = () => {
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth() - 1, 1).toISOString().slice(0, 10)
   }
-
   const endOfLastMonth = () => {
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth(), 0).toISOString().slice(0, 10)
   }
 
-  // Initial Load
   useEffect(() => {
     setFrom(startOfMonth())
     setTo(today())
   }, [])
 
   useEffect(() => {
-    if (from && to) load()
+    load()
   }, [from, to])
+
 
   const load = async () => {
     setLoading(true)
     try {
       const res = await profitLossService.getSummary(from || undefined, to || undefined)
-      setTotalSales(res.totalSales || 0)
+      setTotalSales(res.revenue || 0)
       setTotalExpenses(res.totalExpenses || 0)
-      setProfit((res.totalSales || 0) - (res.totalExpenses || 0))
-      setExpenses(res.expenses || [])
+      setProfit(res.netProfit || 0)
+      // Note: Logic for expenses category mapping remains as is
+      // 🔥 THIS FEEDS THE CHART
+      setExpenses(Array.isArray(res.expensesList) ? res.expensesList : [])
     } finally {
       setLoading(false)
     }
@@ -75,24 +74,20 @@ const ProfitLoss: React.FC = () => {
   const handleQuickFilter = (type: string) => {
     setActiveFilter(type)
     if (type === 'today') {
-      setFrom(today())
-      setTo(today())
+      setFrom(today()); setTo(today())
     } else if (type === 'this_month') {
-      setFrom(startOfMonth())
-      setTo(today())
+      setFrom(startOfMonth()); setTo(today())
     } else if (type === 'last_month') {
-      setFrom(startOfLastMonth())
-      setTo(endOfLastMonth())
+      setFrom(startOfLastMonth()); setTo(endOfLastMonth())
+    } else if (type === 'lifetime') {
+      setFrom(''); setTo('')
     }
   }
 
-  /* ---------- DATA PROCESSING ---------- */
   const expenseByCategory = useMemo(() => {
     return expenses.reduce<Record<string, number>>((acc, e) => {
       const amt = Number(e.amount || 0)
-      if (amt > 0) {
-        acc[e.category] = (acc[e.category] || 0) + amt
-      }
+      if (amt > 0) acc[e.category] = (acc[e.category] || 0) + amt
       return acc
     }, {})
   }, [expenses])
@@ -100,148 +95,114 @@ const ProfitLoss: React.FC = () => {
   const sortedExpenses = Object.entries(expenseByCategory).sort(([, a], [, b]) => b - a)
   const maxExpense = sortedExpenses.length > 0 ? sortedExpenses[0][1] : 0
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('en-IN', { 
-      style: 'currency', 
+  const formatCurrency = (val: number) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
       currency: 'INR',
-      maximumFractionDigits: 0 
+      maximumFractionDigits: 0
     }).format(val)
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-20 md:pb-0">
-      
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 md:pb-8">
+
       {/* FILTER CONTROL BAR */}
-      <div className="bg-white p-2 md:p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 sticky top-0 z-10 md:static">
-        
-        {/* Mobile Horizontal Scroll Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0 w-full">
-          <div className="bg-gray-100 p-2 rounded-lg text-gray-500 mr-1 hidden md:block">
+      <div className="bg-white/70 backdrop-blur-md p-3 md:p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center gap-4 sticky top-4 z-30 ring-1 ring-black/[0.03]">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full md:w-auto">
+          <div className="hidden md:flex bg-gray-100 p-2 rounded-xl text-gray-500">
             <Filter className="w-4 h-4" />
           </div>
-          <QuickBtn 
-            active={activeFilter === 'today'} 
-            onClick={() => handleQuickFilter('today')}
-            label="Today"
-          />
-          <QuickBtn 
-            active={activeFilter === 'this_month'} 
-            onClick={() => handleQuickFilter('this_month')}
-            label="This Month"
-          />
-          <QuickBtn 
-            active={activeFilter === 'last_month'} 
-            onClick={() => handleQuickFilter('last_month')}
-            label="Last Month"
-          />
+          <QuickBtn active={activeFilter === 'today'} onClick={() => handleQuickFilter('today')} label="Today" />
+          <QuickBtn active={activeFilter === 'this_month'} onClick={() => handleQuickFilter('this_month')} label="This Month" />
+          <QuickBtn active={activeFilter === 'last_month'} onClick={() => handleQuickFilter('last_month')} label="Last Month" />
+          <QuickBtn active={activeFilter === 'lifetime'} onClick={() => handleQuickFilter('lifetime')} label="All Time" />
         </div>
 
-        {/* Date Inputs */}
-        <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-200 w-full md:w-auto">
-          <div className="relative flex-1">
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => { setFrom(e.target.value); setActiveFilter('custom'); }}
-              className="w-full pl-2 pr-1 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
-            />
-          </div>
+        <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-200 w-full md:w-auto ml-auto">
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => { setFrom(e.target.value); setActiveFilter('custom'); }}
+            className="flex-1 md:w-32 bg-transparent px-2 py-1.5 text-xs font-semibold text-gray-700 outline-none"
+          />
           <ArrowRight className="w-3 h-3 text-gray-400" />
-          <div className="relative flex-1">
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => { setTo(e.target.value); setActiveFilter('custom'); }}
-              className="w-full pl-2 pr-1 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
-            />
-          </div>
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => { setTo(e.target.value); setActiveFilter('custom'); }}
+            className="flex-1 md:w-32 bg-transparent px-2 py-1.5 text-xs font-semibold text-gray-700 outline-none"
+          />
         </div>
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-2" />
-          <p className="text-gray-500 text-sm font-medium">Crunching numbers...</p>
+        <div className="flex flex-col items-center justify-center h-80">
+          <div className="relative">
+            <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
+          </div>
+          <p className="text-gray-400 text-sm font-medium mt-4 tracking-wide uppercase">Analysing Finances...</p>
         </div>
       ) : (
         <>
-          {/* FINANCIAL SUMMARY CARDS (2x2 Grid on Mobile) */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-            <MetricCard
-              label="Revenue"
-              value={formatCurrency(totalSales)}
-              icon={<TrendingUp className="w-5 h-5" />}
-              color="emerald"
-            />
-            <MetricCard
-              label="Expenses"
-              value={formatCurrency(totalExpenses)}
-              icon={<TrendingDown className="w-5 h-5" />}
-              color="rose"
-            />
-            <MetricCard
-              label="Net Profit"
-              value={formatCurrency(profit)}
-              icon={<Wallet className="w-5 h-5" />}
-              color={profit >= 0 ? 'indigo' : 'orange'}
-            />
-            
-            {/* Net Margin Card */}
-            <div className={`rounded-2xl p-4 md:p-6 border shadow-sm flex flex-col justify-between ${profit >= 0 ? 'bg-gradient-to-br from-indigo-50 to-white border-indigo-100' : 'bg-red-50 border-red-100'}`}>
-              <div className="flex justify-between items-start">
+          {/* MAIN KPIs */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <MetricCard label="Revenue" value={formatCurrency(totalSales)} icon={<TrendingUp className="w-5 h-5" />} color="emerald" subtext="Gross income" />
+            <MetricCard label="Expenses" value={formatCurrency(totalExpenses)} icon={<TrendingDown className="w-5 h-5" />} color="rose" subtext="Total outgoing" />
+            <MetricCard label="Net Profit" value={formatCurrency(profit)} icon={<Wallet className="w-5 h-5" />} color={profit >= 0 ? 'indigo' : 'orange'} subtext="Balance" />
+
+            <div className={`relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 ${profit >= 0 ? 'bg-indigo-50/50 border-indigo-100' : 'bg-rose-50/50 border-rose-100'
+              }`}>
+              <div className="flex justify-between items-start relative z-10">
                 <div>
-                  <p className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider">Net Margin</p>
-                  <h3 className={`text-xl md:text-2xl font-black mt-1 ${profit >= 0 ? 'text-indigo-700' : 'text-red-700'}`}>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Efficiency</p>
+                  <h3 className={`text-2xl font-black mt-1 tabular-nums ${profit >= 0 ? 'text-indigo-700' : 'text-rose-700'}`}>
                     {totalSales > 0 ? ((profit / totalSales) * 100).toFixed(1) : '0'}%
                   </h3>
+                  <p className="text-[10px] text-gray-500 font-medium mt-1">Profit Margin</p>
                 </div>
-                <div className={`p-2 rounded-lg ${profit >= 0 ? 'bg-indigo-100 text-indigo-600' : 'bg-red-100 text-red-600'}`}>
+                <div className={`p-2 rounded-xl shadow-sm ${profit >= 0 ? 'bg-indigo-600 text-white' : 'bg-rose-600 text-white'}`}>
                   <BarChart3 className="w-5 h-5" />
                 </div>
               </div>
-              <div className="mt-3">
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
-                  profit >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                }`}>
-                  {profit >= 0 ? 'Profitable' : 'Loss Making'}
-                </span>
+              <div className="absolute -right-2 -bottom-2 opacity-10">
+                <BarChart3 className="w-20 h-20" />
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* EXPENSE BREAKDOWN CHART */}
-            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl shadow-sm p-5 md:p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-900">Expense Analysis</h3>
+            {/* EXPENSE ANALYSIS CHART */}
+            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-3xl shadow-sm p-6 md:p-8">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-bold text-gray-900 tracking-tight">Expense Distribution</h3>
+                <div className="flex gap-2">
+                  <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Live Report</span>
+                </div>
               </div>
 
               {sortedExpenses.length === 0 ? (
-                <div className="text-center py-16 flex flex-col items-center border-2 border-dashed border-gray-100 rounded-xl">
-                  <div className="bg-gray-50 p-4 rounded-full mb-3">
-                    <PieChart className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-900 font-medium">No expenses found</p>
-                  <p className="text-gray-500 text-xs mt-1">Try changing the date range</p>
+                <div className="text-center py-20 bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-100">
+                  <PieChart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-900 font-bold">No Transaction Data</p>
+                  <p className="text-gray-400 text-xs mt-1">Change your filters to see breakdown</p>
                 </div>
               ) : (
-                <div className="space-y-5">
+                <div className="space-y-6">
                   {sortedExpenses.map(([cat, amt]) => {
                     const percentage = maxExpense > 0 ? (amt / maxExpense) * 100 : 0
                     const totalPercentage = totalExpenses > 0 ? ((amt / totalExpenses) * 100).toFixed(1) : '0'
-                    
                     return (
                       <div key={cat} className="group">
-                        <div className="flex justify-between text-sm mb-2">
-                          <span className="font-bold text-gray-700">{cat}</span>
+                        <div className="flex justify-between items-end mb-2">
+                          <span className="font-bold text-gray-700 text-sm group-hover:text-indigo-600 transition-colors">{cat}</span>
                           <div className="text-right">
-                            <span className="font-bold text-gray-900">{formatCurrency(amt)}</span>
-                            <span className="text-xs text-gray-400 ml-1.5 font-medium">{totalPercentage}%</span>
+                            <span className="font-black text-gray-900 tabular-nums">{formatCurrency(amt)}</span>
+                            <span className="text-[10px] text-gray-400 ml-2 font-black tracking-tighter uppercase">{totalPercentage}%</span>
                           </div>
                         </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                          <div 
-                            className="bg-indigo-500 h-full rounded-full transition-all duration-700 group-hover:bg-indigo-600 shadow-sm"
+                        <div className="w-full bg-gray-100/50 rounded-full h-2.5 overflow-hidden ring-1 ring-gray-200/20">
+                          <div
+                            className="bg-indigo-600 h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(79,70,229,0.3)]"
                             style={{ width: `${percentage}%` }}
                           />
                         </div>
@@ -252,48 +213,39 @@ const ProfitLoss: React.FC = () => {
               )}
             </div>
 
-            {/* AI INSIGHT / SUMMARY CARD */}
-            <div className="bg-gray-900 rounded-2xl p-6 text-white shadow-xl flex flex-col relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-bl-full blur-2xl" />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-500/20 rounded-tr-full blur-xl" />
+            {/* AI/SUMMARY CARD */}
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-8 text-white shadow-2xl flex flex-col relative overflow-hidden ring-1 ring-white/10">
+              <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl" />
 
               <div className="relative z-10 flex-1">
-                <div className="flex items-center gap-2 mb-4 text-indigo-300">
-                  <Wallet className="w-5 h-5" />
-                  <span className="text-xs font-bold uppercase tracking-widest">Financial Health</span>
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full border border-white/10 mb-6">
+                  <Sparkles className="w-3 h-3 text-indigo-300" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-100">Business Health</span>
                 </div>
-                
-                <h4 className="text-2xl font-bold mb-1">
-                  {profit >= 0 ? 'Great Job!' : 'Review Needed'}
+
+                <h4 className="text-3xl font-bold mb-2 tracking-tight">
+                  {profit >= 0 ? 'Surplus Peak' : 'Deficit Alert'}
                 </h4>
-                <p className="text-gray-400 text-sm mb-6">
-                  {profit >= 0 
-                    ? "Your business is generating positive cash flow." 
-                    : "Expenses are exceeding revenue for this period."}
+                <p className="text-indigo-200/60 text-sm mb-8 leading-relaxed">
+                  {profit >= 0
+                    ? "Your operational efficiency is high. Consider reinvesting the surplus into inventory."
+                    : "Outgoing costs are currently higher than sales. Audit your top 3 expense categories."}
                 </p>
-                
-                <div className="space-y-3 p-4 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Revenue</span>
-                    <span className="font-bold">{formatCurrency(totalSales)}</span>
-                  </div>
-                  <div className="w-full bg-gray-700 h-px" />
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Cost</span>
-                    <span className="font-bold text-red-300">-{formatCurrency(totalExpenses)}</span>
-                  </div>
-                  <div className="w-full bg-gray-700 h-px" />
-                  <div className="flex justify-between text-sm">
-                    <span className="text-indigo-300 font-bold">Net</span>
-                    <span className={`font-bold ${profit >= 0 ? 'text-green-400' : 'text-orange-400'}`}>
+
+                <div className="space-y-4">
+                  <SummaryRow label="Gross Revenue" value={formatCurrency(totalSales)} />
+                  <SummaryRow label="Operational Costs" value={`-${formatCurrency(totalExpenses)}`} isRed />
+                  <div className="pt-4 border-t border-white/10 flex justify-between items-center">
+                    <span className="text-xs font-bold text-indigo-300 uppercase tracking-widest">Net Cashflow</span>
+                    <span className={`text-xl font-black tabular-nums ${profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {formatCurrency(profit)}
                     </span>
                   </div>
                 </div>
               </div>
-              
-              <button className="mt-6 w-full py-3 bg-white text-gray-900 rounded-xl text-sm font-bold hover:bg-gray-100 transition-colors flex items-center justify-center gap-2">
-                <Download className="w-4 h-4" /> Download Report
+
+              <button className="mt-8 group w-full py-4 bg-white text-slate-900 rounded-2xl text-sm font-black hover:bg-indigo-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-xl">
+                <Download className="w-4 h-4 transition-transform group-hover:-translate-y-1" /> Export Statement
               </button>
             </div>
           </div>
@@ -303,47 +255,44 @@ const ProfitLoss: React.FC = () => {
   )
 }
 
-/* ---------- UI HELPERS ---------- */
+/* ---------- INTERNAL UI COMPONENTS ---------- */
 
-const MetricCard = ({
-  label,
-  value,
-  icon,
-  color,
-}: {
-  label: string
-  value: string
-  icon: React.ReactNode
-  color: 'emerald' | 'rose' | 'indigo' | 'orange'
-}) => {
-  const styles = {
-    emerald: { bg: 'bg-emerald-50 text-emerald-600', border: 'border-emerald-100' },
-    rose: { bg: 'bg-rose-50 text-rose-600', border: 'border-rose-100' },
-    indigo: { bg: 'bg-indigo-50 text-indigo-600', border: 'border-indigo-100' },
-    orange: { bg: 'bg-orange-50 text-orange-600', border: 'border-orange-100' },
+const MetricCard = ({ label, value, icon, color, subtext }: any) => {
+  const styles: any = {
+    emerald: "bg-emerald-50 text-emerald-600 border-emerald-100 shadow-emerald-100/20",
+    rose: "bg-rose-50 text-rose-600 border-rose-100 shadow-rose-100/20",
+    indigo: "bg-indigo-50 text-indigo-600 border-indigo-100 shadow-indigo-100/20",
+    orange: "bg-orange-50 text-orange-600 border-orange-100 shadow-orange-100/20",
   }
-  const s = styles[color]
 
   return (
-    <div className={`bg-white rounded-2xl p-4 md:p-6 border shadow-sm transition-all ${s.border}`}>
-      <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${s.bg}`}>
+    <div className={`group bg-white rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 ${styles[color].split(' ')[2]}`}>
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 duration-300 ${styles[color].split(' ')[0]} ${styles[color].split(' ')[1]}`}>
         {icon}
       </div>
       <div>
-        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest">{label}</p>
-        <h3 className="text-lg md:text-2xl font-black text-gray-900 tracking-tight mt-0.5">{value}</h3>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{label}</p>
+        <h3 className="text-2xl font-black text-gray-900 tracking-tight tabular-nums">{value}</h3>
+        <p className="text-[10px] text-gray-400 font-medium mt-1">{subtext}</p>
       </div>
     </div>
   )
 }
 
-const QuickBtn = ({ label, onClick, active }: { label: string, onClick: () => void, active: boolean }) => (
+const SummaryRow = ({ label, value, isRed }: any) => (
+  <div className="flex justify-between items-center group">
+    <span className="text-xs font-medium text-indigo-100/50 group-hover:text-indigo-100 transition-colors">{label}</span>
+    <span className={`text-sm font-bold tabular-nums ${isRed ? 'text-rose-400' : 'text-white'}`}>{value}</span>
+  </div>
+)
+
+const QuickBtn = ({ label, onClick, active }: any) => (
   <button
     onClick={onClick}
-    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border
-      ${active 
-        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200' 
-        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+    className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider whitespace-nowrap transition-all duration-200
+      ${active
+        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 ring-2 ring-indigo-600 ring-offset-2'
+        : 'bg-white text-gray-500 border border-gray-200 hover:border-indigo-200 hover:text-indigo-600'
       }`}
   >
     {label}

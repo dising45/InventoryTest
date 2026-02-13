@@ -2,23 +2,45 @@ import { supabase } from './supabaseClient';
 
 export const profitLossService = {
   async getSummary(from?: string, to?: string) {
-    /* ---------- SALES ---------- */
+
+    /* ---------- SALES WITH ITEMS ---------- */
     let salesQuery = supabase
       .from('sales_orders')
-      .select('total_amount');
+      .select(`
+        total_amount,
+        order_date,
+        sales_items (
+          quantity,
+          cost_price,
+          unit_price
+        )
+      `);
 
-    if (from) salesQuery = salesQuery.gte('created_at', from);
-    if (to) salesQuery = salesQuery.lte('created_at', to);
+    if (from) salesQuery = salesQuery.gte('order_date', from);
+    if (to) salesQuery = salesQuery.lte('order_date', to);
 
     const { data: sales } = await salesQuery;
 
-    const totalSales =
+    const totalRevenue =
       sales?.reduce((sum, s) => sum + Number(s.total_amount || 0), 0) ?? 0;
+
+    const totalCOGS =
+      sales?.reduce((sum, sale) => {
+        const itemsCOGS =
+          sale.sales_items?.reduce(
+            (iSum: number, item: any) =>
+              iSum + Number(item.cost_price) * Number(item.quantity),
+            0
+          ) ?? 0;
+        return sum + itemsCOGS;
+      }, 0) ?? 0;
+
+    const grossProfit = totalRevenue - totalCOGS;
 
     /* ---------- EXPENSES ---------- */
     let expenseQuery = supabase
       .from('expenses')
-      .select('amount, category');
+      .select('amount, category, expense_date');
 
     if (from) expenseQuery = expenseQuery.gte('expense_date', from);
     if (to) expenseQuery = expenseQuery.lte('expense_date', to);
@@ -28,11 +50,23 @@ export const profitLossService = {
     const totalExpenses =
       expenses?.reduce((sum, e) => sum + Number(e.amount || 0), 0) ?? 0;
 
+    const netProfit = grossProfit - totalExpenses;
+
+    const netMargin =
+      totalRevenue > 0
+        ? (netProfit / totalRevenue) * 100
+        : 0;
+
     return {
-      totalSales,
+      revenue: totalRevenue,
+      cogs: totalCOGS,
+      grossProfit,
       totalExpenses,
-      profit: totalSales - totalExpenses,
-      expenses: expenses ?? [],
+      expensesList: expenses ?? [],
+      netProfit,
+      netMargin,
     };
+
+
   },
 };

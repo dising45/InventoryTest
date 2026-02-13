@@ -11,22 +11,32 @@ export const dashboardService = {
       .toISOString()
       .slice(0, 10);
 
-    /* ---------- SALES ---------- */
+    /* ---------- SALES MTD ---------- */
     const { data: salesMTD } = await supabase
       .from('sales_orders')
-      .select('total_amount')
-      .gte('created_at', monthStart);
-
-    const { data: salesToday } = await supabase
-      .from('sales_orders')
-      .select('total_amount')
-      .gte('created_at', today);
+      .select(`
+    total_amount,
+    order_date,
+    sales_items (
+      quantity,
+      cost_price
+    )
+  `)
+      .gte('order_date', monthStart);
 
     const totalSalesMTD =
       salesMTD?.reduce((s, r) => s + Number(r.total_amount), 0) ?? 0;
 
-    const totalSalesToday =
-      salesToday?.reduce((s, r) => s + Number(r.total_amount), 0) ?? 0;
+    const totalCOGS_MTD =
+      salesMTD?.reduce((sum, sale) => {
+        const itemsCOGS =
+          sale.sales_items?.reduce(
+            (iSum: number, item: any) =>
+              iSum + Number(item.cost_price) * Number(item.quantity),
+            0
+          ) ?? 0;
+        return sum + itemsCOGS;
+      }, 0) ?? 0;
 
     /* ---------- EXPENSES ---------- */
     const { data: expensesMTD } = await supabase
@@ -36,6 +46,16 @@ export const dashboardService = {
 
     const totalExpensesMTD =
       expensesMTD?.reduce((s, r) => s + Number(r.amount), 0) ?? 0;
+
+    /* ---------- PROFIT ---------- */
+    const grossProfitMTD = totalSalesMTD - totalCOGS_MTD;
+    const netProfitMTD = grossProfitMTD - totalExpensesMTD;
+
+    const profitMargin =
+      totalSalesMTD > 0
+        ? (netProfitMTD / totalSalesMTD) * 100
+        : 0;
+
 
     /* ---------- INVENTORY ---------- */
     /* ---------- INVENTORY ---------- */
@@ -69,7 +89,8 @@ export const dashboardService = {
       salesMTD: totalSalesMTD,
       salesToday: totalSalesToday,
       expensesMTD: totalExpensesMTD,
-      profitMTD,
+      // profitMTD,
+      netProfitMTD,
       profitMargin,
       inventoryValue,
       lowStockCount,
