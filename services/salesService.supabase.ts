@@ -36,9 +36,13 @@ export const salesService = {
       .from('sales_orders')
       .insert({
         customer_id: sale.customer_id,
-        subtotal: sale.total_amount,
+        subtotal: sale.subtotal,
+        discount: sale.discount ?? 0,
+        discount_type: sale.discount_type ?? 'flat',
+        tax: sale.tax ?? 0,
+        tax_type: sale.tax_type ?? 'percentage',
         total_amount: sale.total_amount,
-        order_date: sale.order_date,   // ✅ FIXED
+        order_date: sale.order_date,
         status: 'completed',
       })
       .select()
@@ -100,6 +104,10 @@ export const salesService = {
         subtotal: sale.total_amount,
         total_amount: sale.total_amount,
         order_date: sale.order_date,   // ✅ FIXED
+        discount: sale.discount,
+        discount_type: sale.discount_type,
+        tax: sale.tax,
+        tax_type: sale.tax_type,
       })
       .eq('id', salesOrderId);
 

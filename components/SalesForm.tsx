@@ -29,6 +29,10 @@ interface SalesFormProps {
     items: SalesItem[]
     total_amount: number
     order_date: string
+    discount: number
+    discount_type: 'flat' | 'percent'
+    tax: number
+    tax_type: 'flat' | 'percent'
   }) => Promise<void>
   onCancel: () => void
 }
@@ -118,6 +122,12 @@ const SalesForm: React.FC<SalesFormProps> = ({
       })
 
       setItems(mapped)
+      // 🔥 RESTORE DISCOUNT + TAX
+      setDiscountType(initialData.discount_type ?? 'flat')
+      setDiscountValue(initialData.discount ?? 0)
+
+      setTaxType(initialData.tax_type ?? 'percent')
+      setTaxValue(initialData.tax ?? 0)
       return
     }
 
@@ -268,6 +278,11 @@ const SalesForm: React.FC<SalesFormProps> = ({
         items,
         total_amount: finalTotal,
         order_date: orderDate,
+        // 🔥 ADD THESE
+        discount: discountValue,
+        discount_type: discountType,
+        tax: taxValue,
+        tax_type: taxType,
       })
     } catch (err) {
       console.error("SAVE FAILED:", err)

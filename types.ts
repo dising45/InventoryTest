@@ -59,6 +59,10 @@ export interface SalesOrder {
   created_at: string;
   items?: SalesItem[];
   customer?: Customer;
+  discount?: number;
+  discount_type?: 'flat' | 'percentage';
+  tax?: number;
+  tax_type?: 'flat' | 'percentage';
 }
 
 export type ViewState = 'dashboard' | 'inventory' | 'add-product' | 'edit-product' | 'customers' | 'add-customer' | 'suppliers' | 'add-supplier' | 'sales' | 'add-sale' | 'edit-sale' | 'purchase-orders' | 'add-po'| 'pl';

@@ -5,18 +5,61 @@ class ExpenseServiceSupabase {
   /* ===============================
      GET ALL EXPENSES
      =============================== */
-  async getExpenses(): Promise<Expense[]> {
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('*')
-      .order('expense_date', { ascending: false })
+  // async getExpenses(): Promise<Expense[]> {
+  //   const { data, error } = await supabase
+  //     .from('expenses')
+  //     .select('*')
+  //     .order('expense_date', { ascending: false })
+
+  //   if (error) {
+  //     console.error('GET EXPENSES FAILED', error)
+  //     throw error
+  //   }
+
+  //   return (data ?? []) as Expense[]
+  // }
+  async getExpenses(options?: {
+    from?: string
+    to?: string
+    vendor?: string
+    category?: string
+    search?: string
+    sortBy?: 'expense_date' | 'amount' | 'vendor' | 'category'
+    sortOrder?: 'asc' | 'desc'
+  }) {
+    let query = supabase.from('expenses').select('*')
+
+    if (options?.from)
+      query = query.gte('expense_date', options.from)
+
+    if (options?.to)
+      query = query.lte('expense_date', options.to)
+
+    if (options?.vendor)
+      query = query.eq('vendor', options.vendor)
+
+    if (options?.category)
+      query = query.eq('category', options.category)
+
+    if (options?.search)
+      query = query.ilike('description', `%${options.search}%`)
+
+    if (options?.sortBy) {
+      query = query.order(options.sortBy, {
+        ascending: options.sortOrder === 'asc',
+      })
+    } else {
+      query = query.order('expense_date', { ascending: false })
+    }
+
+    const { data, error } = await query
 
     if (error) {
       console.error('GET EXPENSES FAILED', error)
       throw error
     }
 
-    return (data ?? []) as Expense[]
+    return data ?? []
   }
 
   /* ===============================
