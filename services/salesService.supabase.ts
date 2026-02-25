@@ -10,7 +10,7 @@ export const salesService = {
       .from('sales_orders')
       .select(`
         *,
-        items:sales_items(*),
+        items:sales_items(*, cost_price),
         customer:customers(*)
       `)
       .order('order_date', { ascending: false });
