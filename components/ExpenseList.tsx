@@ -82,12 +82,93 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
 
   const vendors = [...new Set(expenses.map(e => e.vendor).filter(Boolean))]
   const categories = [...new Set(expenses.map(e => e.category).filter(Boolean))]
+  /* ================= SUMMARY CALCULATIONS ================= */
 
+  const totalExpenseAmount = filteredExpenses.reduce(
+    (sum, e) => sum + Number(e.amount || 0),
+    0
+  )
+
+  const totalTransactions = filteredExpenses.length
+
+  const categoryTotals = filteredExpenses.reduce<Record<string, number>>(
+    (acc, e) => {
+      acc[e.category] = (acc[e.category] || 0) + Number(e.amount || 0)
+      return acc
+    },
+    {}
+  )
+
+  const topCategory =
+    Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
+
+  const vendorTotals = filteredExpenses.reduce<Record<string, number>>(
+    (acc, e) => {
+      if (!e.vendor) return acc
+      acc[e.vendor] = (acc[e.vendor] || 0) + Number(e.amount || 0)
+      return acc
+    },
+    {}
+  )
+
+  const topVendor =
+    Object.entries(vendorTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
   /* ================= RENDER ================= */
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      {/* ================= EXPENSE SUMMARY ================= */}
 
+      {/* Desktop Summary */}
+      <div className="hidden md:grid grid-cols-4 gap-4">
+        <SummaryCard label="Total Expenses" value={formatCurrency(totalExpenseAmount)} color="red" />
+        <SummaryCard label="Transactions" value={totalTransactions} color="gray" />
+        <SummaryCard label="Top Category" value={topCategory} color="indigo" />
+        <SummaryCard label="Top Vendor" value={topVendor} color="emerald" />
+      </div>
+
+      {/* Mobile Summary */}
+      <div className="md:hidden">
+        <div className="bg-gradient-to-br from-rose-600 to-rose-700 text-white rounded-3xl p-6 shadow-xl">
+
+          <p className="text-[11px] uppercase tracking-widest opacity-70 font-bold">
+            Expense Overview
+          </p>
+
+          <div className="mt-3">
+            <h2 className="text-3xl font-black tabular-nums">
+              {formatCurrency(totalExpenseAmount)}
+            </h2>
+            <p className="text-rose-100 text-xs mt-1">
+              Total Expenses
+            </p>
+          </div>
+
+          <div className="mt-5 grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-xs opacity-70">Transactions</p>
+              <p className="text-lg font-bold tabular-nums">
+                {totalTransactions}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs opacity-70">Top Category</p>
+              <p className="text-sm font-bold truncate">
+                {topCategory}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs opacity-70">Top Vendor</p>
+              <p className="text-sm font-bold truncate">
+                {topVendor}
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
       {/* ================= FILTER BAR ================= */}
       <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4">
 
@@ -242,5 +323,34 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
     </div>
   )
 }
+/* ================= SUMMARY CARD ================= */
 
+const SummaryCard = ({
+  label,
+  value,
+  color
+}: {
+  label: string
+  value: string | number
+  color: 'red' | 'gray' | 'indigo' | 'emerald'
+}) => {
+
+  const styles: Record<string, string> = {
+    red: "bg-rose-50 border-rose-100 text-rose-700",
+    gray: "bg-gray-50 border-gray-200 text-gray-700",
+    indigo: "bg-indigo-50 border-indigo-100 text-indigo-700",
+    emerald: "bg-emerald-50 border-emerald-100 text-emerald-700"
+  }
+
+  return (
+    <div className={`rounded-2xl p-5 border shadow-sm ${styles[color]}`}>
+      <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">
+        {label}
+      </p>
+      <h3 className="text-xl font-black mt-2 tabular-nums truncate">
+        {value}
+      </h3>
+    </div>
+  )
+}
 export default ExpenseList
