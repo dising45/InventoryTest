@@ -1,5 +1,5 @@
 // SalesList.tsx
-import React from 'react'
+import React, { useState, useMemo } from 'react'
 import { SalesOrder } from '../types'
 import {
   Calendar,
@@ -13,7 +13,10 @@ import {
   XCircle,
   Package,
   ChevronDown,
-  Download
+  Download,
+  Search,
+  X,
+  Filter,
 } from 'lucide-react'
 import { exportCSV } from '../utils/exportCSV'
 
@@ -33,6 +36,42 @@ const SalesList: React.FC<SalesListProps> = ({
   onStatusChange,
 }) => {
   const showActions = !!onEdit || !!onDelete
+
+  /* ================= FILTER STATE ================= */
+  const [searchQuery, setSearchQuery] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+
+  const hasActiveFilters = searchQuery || dateFrom || dateTo || statusFilter
+
+  // Filter sales
+  const filteredSales = useMemo(() => {
+    return sales.filter(sale => {
+      // Search by customer name or order ID
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        const matchName = sale.customer?.name?.toLowerCase().includes(q)
+        const matchId = sale.id.toLowerCase().includes(q)
+        if (!matchName && !matchId) return false
+      }
+      // Date range
+      const saleDate = sale.order_date || sale.created_at?.split('T')[0]
+      if (dateFrom && saleDate < dateFrom) return false
+      if (dateTo && saleDate > dateTo) return false
+      // Status
+      if (statusFilter && sale.status.toLowerCase() !== statusFilter.toLowerCase()) return false
+      return true
+    })
+  }, [sales, searchQuery, dateFrom, dateTo, statusFilter])
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setDateFrom('')
+    setDateTo('')
+    setStatusFilter('')
+  }
 
   const STATUS_OPTIONS = [
     'Pending',
@@ -224,20 +263,99 @@ const SalesList: React.FC<SalesListProps> = ({
         </div>
       </div>
 
-      {/* ================= YOUR EXISTING TABLE / LIST ================= */}
+      {/* ================= SEARCH & FILTERS ================= */}
+      <div className="mb-4 space-y-3">
+        {/* Search + Filter Toggle Row */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search by customer or order ID..."
+              className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`px-3 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all ${
+              showFilters || hasActiveFilters
+                ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <Filter className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Filters</span>
+            {hasActiveFilters && (
+              <span className="w-2 h-2 rounded-full bg-indigo-500" />
+            )}
+          </button>
+        </div>
+
+        {/* Expanded Filter Panel */}
+        {showFilters && (
+          <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-wrap gap-3 items-end animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex-1 min-w-[140px]">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">From</label>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none" />
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">To</label>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none" />
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Status</label>
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none appearance-none">
+                <option value="">All Statuses</option>
+                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            {hasActiveFilters && (
+              <button onClick={clearFilters} className="px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                Clear All
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Active filter count */}
+        {hasActiveFilters && !showFilters && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">
+              Showing {filteredSales.length} of {sales.length} orders
+            </span>
+            <button onClick={clearFilters} className="text-xs font-bold text-indigo-600 hover:text-indigo-700">
+              Clear filters
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ================= SALES TABLE / LIST ================= */}
 
       <div className="relative space-y-6 animate-in fade-in duration-500 pb-20 md:pb-0">
 
-        {sales.length === 0 ? (
+        {filteredSales.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border border-gray-200 border-dashed text-center">
             <div className="p-4 bg-indigo-50 rounded-full mb-4">
               <Receipt className="h-8 w-8 text-indigo-600" />
             </div>
             <h3 className="text-lg font-bold text-gray-900 tracking-tight">
-              No sales records yet
+              {hasActiveFilters ? 'No matching orders' : 'No sales records yet'}
             </h3>
             <p className="mt-2 text-sm text-gray-500 max-w-xs mx-auto">
-              Start tracking your business revenue by recording your first sale.
+              {hasActiveFilters
+                ? 'Try adjusting your filters or search term.'
+                : 'Start tracking your business revenue by recording your first sale.'}
             </p>
             {onAddSale && (
               <button
@@ -280,7 +398,7 @@ const SalesList: React.FC<SalesListProps> = ({
                 </thead>
 
                 <tbody className="divide-y divide-gray-100 bg-white">
-                  {sales.map((sale) => (
+                  {filteredSales.map((sale) => (
                     <tr
                       key={sale.id}
                       className="group hover:bg-gray-50/50 transition-colors duration-200"
@@ -384,7 +502,7 @@ const SalesList: React.FC<SalesListProps> = ({
 
             {/* ===================== MOBILE CARDS ===================== */}
             <div className="md:hidden space-y-4">
-              {sales.map((sale) => {
+              {filteredSales.map((sale) => {
                 const itemCount = sale.items?.reduce((acc, item) => acc + item.quantity, 0) || 0
 
                 return (
@@ -466,16 +584,6 @@ const SalesList: React.FC<SalesListProps> = ({
           </>
         )}
 
-        {/* ===================== FLOATING ACTION BUTTON (MOBILE) ===================== */}
-        {onAddSale && (
-          <button
-            onClick={onAddSale}
-            className="md:hidden fixed bottom-24 right-5 z-40 flex items-center justify-center w-14 h-14 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 active:scale-90 transition-all duration-200"
-            aria-label="Add Sale"
-          >
-            <Plus className="w-7 h-7" />
-          </button>
-        )}
       </div>
     </>
   )

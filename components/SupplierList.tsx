@@ -147,70 +147,53 @@ const SupplierList: React.FC<SupplierListProps> = ({ suppliers, onEdit, onDelete
               </table>
             </div>
 
-            {/* MOBILE VIEW */}
+            {/* MOBILE VIEW — Compact List Rows */}
             <div className="md:hidden divide-y divide-gray-100">
               {filteredSuppliers.map((supplier) => (
                 <div 
                   key={supplier.id} 
-                  className="p-5 active:bg-gray-50 transition-colors"
+                  className="px-4 py-3 flex items-center gap-3 active:bg-gray-50 transition-colors"
                   onClick={() => onEdit(supplier)}
                 >
-                  <div className="flex justify-between items-start mb-4">
-                     <div className="flex items-center">
-                         <div className="flex-shrink-0 h-12 w-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-xl">
-                              {supplier.name.charAt(0).toUpperCase()}
-                         </div>
-                         <div className="ml-4">
-                            <h3 className="text-base font-bold text-gray-900">{supplier.name}</h3>
-                            <div className="flex items-center text-xs text-emerald-600 font-medium mt-0.5">
-                              <Building2 className="w-3 h-3 mr-1" />
-                              Vendor
-                            </div>
-                         </div>
-                     </div>
-                     <div className="flex gap-1">
-                       <button 
-                         onClick={(e) => { e.stopPropagation(); onEdit(supplier); }}
-                         className="p-2 text-gray-400 active:text-emerald-600 active:bg-emerald-50 rounded-lg"
-                       >
-                          <Edit2 className="w-5 h-5" />
-                       </button>
-                       <button 
-                         onClick={(e) => { e.stopPropagation(); onDelete(supplier.id); }}
-                         className="p-2 text-gray-400 active:text-red-600 active:bg-red-50 rounded-lg"
-                       >
-                          <Trash2 className="w-5 h-5" />
-                       </button>
-                     </div>
+                  {/* Avatar */}
+                  <div className="flex-shrink-0 h-9 w-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-sm">
+                    {supplier.name.charAt(0).toUpperCase()}
                   </div>
-                  
-                  <div className="grid grid-cols-1 gap-3 mt-2">
-                      {supplier.contact_person && (
-                        <div className="flex items-center text-xs text-gray-600 font-medium px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
-                          <User className="w-3.5 h-3.5 mr-2.5 text-emerald-400" />
-                          {supplier.contact_person}
-                        </div>
-                      )}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {supplier.email && (
-                          <div className="flex items-center text-xs text-gray-500 p-2 bg-white rounded-lg border border-gray-100 shadow-sm">
-                            <Mail className="w-3.5 h-3.5 mr-2.5 text-emerald-400" />
-                            {supplier.email}
-                          </div>
-                        )}
-                        {supplier.phone && (
-                          <div className="flex items-center text-xs text-gray-500 p-2 bg-white rounded-lg border border-gray-100 shadow-sm">
-                            <Phone className="w-3.5 h-3.5 mr-2.5 text-emerald-400" />
-                            {supplier.phone}
-                          </div>
-                        )}
-                      </div>
-                      {supplier.address && (
-                        <div className="flex items-center text-xs text-gray-500 p-2 bg-white rounded-lg border border-gray-100 shadow-sm">
-                          <MapPin className="w-3.5 h-3.5 mr-2.5 text-emerald-400 flex-shrink-0" />
-                          <span className="truncate">{supplier.address}</span>
-                        </div>
-                      )}
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-gray-900 truncate">{supplier.name}</h3>
+                    <p className="text-[11px] text-gray-400 truncate mt-0.5">
+                      {[supplier.contact_person, supplier.phone, supplier.address].filter(Boolean).join(' · ') || 'No details'}
+                    </p>
+                  </div>
+
+                  {/* Quick contact icons */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {supplier.email && (
+                      <a
+                        href={`mailto:${supplier.email}`}
+                        onClick={e => e.stopPropagation()}
+                        className="p-1.5 text-gray-400 hover:text-emerald-600 rounded-lg"
+                      >
+                        <Mail className="w-4 h-4" />
+                      </a>
+                    )}
+                    {supplier.phone && (
+                      <a
+                        href={`tel:${supplier.phone}`}
+                        onClick={e => e.stopPropagation()}
+                        className="p-1.5 text-gray-400 hover:text-emerald-600 rounded-lg"
+                      >
+                        <Phone className="w-4 h-4" />
+                      </a>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDelete(supplier.id); }}
+                      className="p-1.5 text-gray-300 hover:text-red-500 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))}

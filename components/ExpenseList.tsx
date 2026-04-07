@@ -344,43 +344,50 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
             </table>
           </div>
 
-          {/* ================= MOBILE CARDS ================= */}
-          <div className="md:hidden space-y-4 pb-20">
-            {filteredExpenses.map(e => (
-              <div key={e.id} className="bg-white rounded-xl p-4 border shadow-sm">
-                <div className="flex justify-between mb-2">
-                  <div>
-                    <p className="text-sm font-semibold">{e.category}</p>
-                    <p className="text-xs text-gray-500">{formatDate(e.expense_date)}</p>
+          {/* ================= MOBILE — Compact List Rows ================= */}
+          <div className="md:hidden bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden pb-20">
+            <div className="divide-y divide-gray-100">
+              {filteredExpenses.map(e => (
+                <div
+                  key={e.id}
+                  className="px-4 py-3 flex items-center gap-3 active:bg-gray-50 transition-colors"
+                  onClick={() => onEdit?.(e)}
+                >
+                  {/* Category icon */}
+                  <div className="flex-shrink-0 h-9 w-9 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500">
+                    <Tag className="w-4 h-4" />
                   </div>
-                  <p className="text-sm font-bold">{formatCurrency(e.amount)}</p>
-                </div>
 
-                <p className="text-xs text-gray-500">{e.vendor || '-'}</p>
-                <p className="text-xs text-gray-400 mt-1">{e.description || '-'}</p>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-gray-900 truncate">{e.category}</h3>
+                      {e.vendor && (
+                        <span className="text-[10px] text-gray-400 font-medium truncate">· {e.vendor}</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-400 truncate mt-0.5">
+                      {formatDate(e.expense_date)}{e.description ? ` · ${e.description}` : ''}
+                    </p>
+                  </div>
 
-                {(onEdit || onDelete) && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
-                    {onEdit && (
-                      <button
-                        onClick={() => onEdit(e)}
-                        className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg active:bg-indigo-100 transition-colors"
-                      >
-                        Edit
-                      </button>
-                    )}
+                  {/* Amount + Delete */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-sm font-black text-gray-900 tabular-nums">
+                      {formatCurrency(e.amount)}
+                    </span>
                     {onDelete && (
                       <button
-                        onClick={() => onDelete(e.id)}
-                        className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg active:bg-red-100 transition-colors"
+                        onClick={(ev) => { ev.stopPropagation(); onDelete(e.id); }}
+                        className="p-1.5 text-gray-300 hover:text-red-500 rounded-lg"
                       >
-                        Delete
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     )}
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
         </>
       )}

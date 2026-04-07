@@ -11,7 +11,10 @@ import {
   Package,
   MoreHorizontal,
   ImageOff,
-  Filter
+  Filter,
+  ArrowUpDown,
+  ChevronDown,
+  X,
 } from 'lucide-react'
 
 interface ProductListProps {
@@ -22,21 +25,52 @@ interface ProductListProps {
 
 const LOW_STOCK_THRESHOLD = 10
 
+type SortOption = 'name-asc' | 'name-desc' | 'price-asc' | 'price-desc' | 'stock-asc' | 'stock-desc' | 'newest' | 'oldest'
+
+const SORT_LABELS: Record<SortOption, string> = {
+  'name-asc': 'Name A→Z',
+  'name-desc': 'Name Z→A',
+  'price-asc': 'Price: Low → High',
+  'price-desc': 'Price: High → Low',
+  'stock-asc': 'Stock: Low → High',
+  'stock-desc': 'Stock: High → Low',
+  'newest': 'Newest First',
+  'oldest': 'Oldest First',
+}
+
 const ProductList: React.FC<ProductListProps> = ({
   products,
   onEdit,
   onDelete,
 }) => {
   const [searchTerm, setSearchTerm] = useState('')
+  const [sortBy, setSortBy] = useState<SortOption>('newest')
 
   const filteredProducts = useMemo(() => {
     const term = searchTerm.toLowerCase()
-    return products.filter(
+    let result = products.filter(
       p =>
         p.name.toLowerCase().includes(term) ||
         (p.description && p.description.toLowerCase().includes(term))
     )
-  }, [products, searchTerm])
+
+    // Sort
+    result = [...result].sort((a, b) => {
+      switch (sortBy) {
+        case 'name-asc': return a.name.localeCompare(b.name)
+        case 'name-desc': return b.name.localeCompare(a.name)
+        case 'price-asc': return a.sell_price - b.sell_price
+        case 'price-desc': return b.sell_price - a.sell_price
+        case 'stock-asc': return (a.stock ?? 0) - (b.stock ?? 0)
+        case 'stock-desc': return (b.stock ?? 0) - (a.stock ?? 0)
+        case 'newest': return (b.created_at || '').localeCompare(a.created_at || '')
+        case 'oldest': return (a.created_at || '').localeCompare(b.created_at || '')
+        default: return 0
+      }
+    })
+
+    return result
+  }, [products, searchTerm, sortBy])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -49,25 +83,65 @@ const ProductList: React.FC<ProductListProps> = ({
   return (
     <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500 pb-20 md:pb-0">
       
-      {/* SEARCH BAR (Sticky on Mobile) */}
+      {/* SEARCH + SORT BAR */}
       <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm pb-2 pt-1 md:static md:bg-transparent md:p-0">
-        <div className="relative group max-w-md mx-auto md:mx-0 shadow-sm md:shadow-none">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+        <div className="flex gap-2 items-center">
+          {/* Search Input */}
+          <div className="relative group flex-1 max-w-md shadow-sm md:shadow-none">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-11 pr-10 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 
+              focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200 sm:text-sm shadow-sm"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
-          <input
-            type="text"
-            className="block w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 
-            focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200 sm:text-sm shadow-sm"
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-          {/* Optional Filter Icon for Mobile */}
-          <button className="md:hidden absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
-             <Filter className="w-5 h-5" />
-          </button>
+
+          {/* Sort Dropdown */}
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as SortOption)}
+              className="appearance-none pl-9 pr-8 py-3 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none cursor-pointer transition-all shadow-sm hover:bg-gray-50"
+            >
+              {(Object.keys(SORT_LABELS) as SortOption[]).map(key => (
+                <option key={key} value={key}>{SORT_LABELS[key]}</option>
+              ))}
+            </select>
+            <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+          </div>
         </div>
+
+        {/* Result count */}
+        {(searchTerm || sortBy !== 'newest') && (
+          <div className="flex items-center gap-2 mt-2 px-1">
+            <span className="text-xs text-gray-500">
+              {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
+              {searchTerm && ` matching "${searchTerm}"`}
+            </span>
+            {(searchTerm || sortBy !== 'newest') && (
+              <button
+                onClick={() => { setSearchTerm(''); setSortBy('newest') }}
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-700"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* EMPTY STATE */}

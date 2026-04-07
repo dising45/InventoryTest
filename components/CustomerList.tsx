@@ -142,61 +142,53 @@ const CustomerList: React.FC<CustomerListProps> = ({ customers, onEdit, onDelete
               </table>
             </div>
 
-            {/* MOBILE VIEW */}
+            {/* MOBILE VIEW — Compact List Rows */}
             <div className="md:hidden divide-y divide-gray-100">
               {filteredCustomers.map((customer) => (
                 <div 
                   key={customer.id} 
-                  className="p-5 active:bg-gray-50 transition-colors"
+                  className="px-4 py-3 flex items-center gap-3 active:bg-gray-50 transition-colors"
                   onClick={() => onEdit(customer)}
                 >
-                  <div className="flex justify-between items-start mb-4">
-                     <div className="flex items-center">
-                         <div className="flex-shrink-0 h-12 w-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xl">
-                              {customer.name.charAt(0).toUpperCase()}
-                         </div>
-                         <div className="ml-4">
-                            <h3 className="text-base font-bold text-gray-900">{customer.name}</h3>
-                            <span className="inline-flex mt-1 items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600 border border-gray-200 uppercase tracking-tighter">
-                              Client
-                            </span>
-                         </div>
-                     </div>
-                     <div className="flex gap-1">
-                       <button 
-                         onClick={(e) => { e.stopPropagation(); onEdit(customer); }}
-                         className="p-2 text-gray-400 active:text-indigo-600 active:bg-indigo-50 rounded-lg"
-                       >
-                          <Edit2 className="w-5 h-5" />
-                       </button>
-                       <button 
-                         onClick={(e) => { e.stopPropagation(); onDelete(customer.id); }}
-                         className="p-2 text-gray-400 active:text-red-600 active:bg-red-50 rounded-lg"
-                       >
-                          <Trash2 className="w-5 h-5" />
-                       </button>
-                     </div>
+                  {/* Avatar */}
+                  <div className="flex-shrink-0 h-9 w-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
+                    {customer.name.charAt(0).toUpperCase()}
                   </div>
-                  
-                  <div className="grid grid-cols-1 gap-3 mt-2">
-                      {customer.email && (
-                        <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-100">
-                          <Mail className="w-3.5 h-3.5 mr-2.5 text-indigo-400" />
-                          {customer.email}
-                        </div>
-                      )}
-                      {customer.phone && (
-                        <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-100">
-                          <Phone className="w-3.5 h-3.5 mr-2.5 text-indigo-400" />
-                          {customer.phone}
-                        </div>
-                      )}
-                      {customer.address && (
-                        <div className="flex items-center text-xs text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-100">
-                          <MapPin className="w-3.5 h-3.5 mr-2.5 text-indigo-400 flex-shrink-0" />
-                          <span className="truncate">{customer.address}</span>
-                        </div>
-                      )}
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-gray-900 truncate">{customer.name}</h3>
+                    <p className="text-[11px] text-gray-400 truncate mt-0.5">
+                      {[customer.phone, customer.email, customer.address].filter(Boolean).join(' · ') || 'No details'}
+                    </p>
+                  </div>
+
+                  {/* Quick contact icons */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {customer.email && (
+                      <a
+                        href={`mailto:${customer.email}`}
+                        onClick={e => e.stopPropagation()}
+                        className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-lg"
+                      >
+                        <Mail className="w-4 h-4" />
+                      </a>
+                    )}
+                    {customer.phone && (
+                      <a
+                        href={`tel:${customer.phone}`}
+                        onClick={e => e.stopPropagation()}
+                        className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-lg"
+                      >
+                        <Phone className="w-4 h-4" />
+                      </a>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDelete(customer.id); }}
+                      className="p-1.5 text-gray-300 hover:text-red-500 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))}

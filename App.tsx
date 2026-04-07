@@ -217,7 +217,7 @@ export default function App() {
                 <div className="animate-in fade-in zoom-in-95 duration-300">
                   {/* DASHBOARD */}
                   {currentView === 'dashboard' && (
-                    <Dashboard products={products} />
+                    <Dashboard products={products} setCurrentView={setCurrentView} />
                   )}
 
                   {/* INVENTORY */}
