@@ -31,6 +31,22 @@ class CustomerServiceSupabase {
     return data as Customer
   }
 
+  async updateCustomer(id: string, customer: Partial<Omit<Customer, 'id'>>): Promise<Customer> {
+    const { data, error } = await supabase
+      .from('customers')
+      .update(customer)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('UPDATE CUSTOMER ERROR', error)
+      throw error
+    }
+
+    return data as Customer
+  }
+
   async deleteCustomer(id: string): Promise<void> {
     const { error } = await supabase
       .from('customers')

@@ -1,0 +1,354 @@
+-- =========================
+-- public.customers
+-- =========================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'customers'
+  ) THEN
+    CREATE TABLE public.customers (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      name text NOT NULL,
+      phone text,
+      email text,
+      address text,
+      created_at timestamptz DEFAULT now()
+    );
+  END IF;
+END $$;
+
+-- =========================
+-- public.suppliers
+-- =========================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'suppliers'
+  ) THEN
+    CREATE TABLE public.suppliers (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      name text NOT NULL,
+      contact_person text,
+      phone text,
+      email text,
+      address text,
+      created_at timestamptz DEFAULT now()
+    );
+  END IF;
+END $$;
+
+-- =========================
+-- public.products
+-- =========================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'products'
+  ) THEN
+    CREATE TABLE public.products (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      name text NOT NULL,
+      description text,
+      sell_price numeric DEFAULT 0,
+      stock integer DEFAULT 0 CHECK (stock >= 0),
+      has_variants boolean DEFAULT false,
+      created_at timestamptz DEFAULT now(),
+      updated_at timestamptz DEFAULT now(),
+      cost_price numeric DEFAULT 0,
+      image_url text
+    );
+  END IF;
+END $$;
+
+-- =========================
+-- public.variants
+-- =========================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'variants'
+  ) THEN
+    CREATE TABLE public.variants (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      product_id uuid NOT NULL,
+      name text NOT NULL,
+      sku text,
+      stock integer DEFAULT 0 CHECK (stock >= 0),
+      price_modifier numeric DEFAULT 0,
+      created_at timestamptz DEFAULT now(),
+      image_url text
+    );
+  END IF;
+END $$;
+
+-- =========================
+-- public.sales_orders
+-- =========================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'sales_orders'
+  ) THEN
+    CREATE TABLE public.sales_orders (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      customer_id uuid,
+      subtotal numeric DEFAULT 0,
+      total_amount numeric DEFAULT 0,
+      status text DEFAULT 'completed',
+      created_at timestamptz DEFAULT now(),
+      order_date date DEFAULT CURRENT_DATE,
+      discount numeric DEFAULT 0,
+      discount_type text DEFAULT 'flat',
+      tax numeric DEFAULT 0,
+      tax_type text DEFAULT 'percentage'
+    );
+  END IF;
+END $$;
+
+-- =========================
+-- public.sales_items
+-- =========================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'sales_items'
+  ) THEN
+    CREATE TABLE public.sales_items (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      sales_order_id uuid NOT NULL,
+      product_id uuid NOT NULL,
+      variant_id uuid,
+      quantity integer NOT NULL CHECK (quantity > 0),
+      unit_price numeric,
+      line_total numeric,
+      created_at timestamptz DEFAULT now(),
+      cost_price numeric DEFAULT 0
+    );
+  END IF;
+END $$;
+
+-- =========================
+-- public.purchase_orders
+-- =========================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'purchase_orders'
+  ) THEN
+    CREATE TABLE public.purchase_orders (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      supplier_id uuid,
+      po_number text UNIQUE,
+      total_amount numeric,
+      notes text,
+      created_at timestamptz DEFAULT now()
+    );
+  END IF;
+END $$;
+
+-- =========================
+-- public.purchase_items
+-- =========================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'purchase_items'
+  ) THEN
+    CREATE TABLE public.purchase_items (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      purchase_order_id uuid NOT NULL,
+      product_id uuid,
+      variant_id uuid,
+      quantity integer NOT NULL CHECK (quantity > 0),
+      line_total numeric,
+      unit_cost numeric DEFAULT 0
+    );
+  END IF;
+END $$;
+
+-- =========================
+-- public.expenses
+-- =========================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'expenses'
+  ) THEN
+    CREATE TABLE public.expenses (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      expense_date date NOT NULL,
+      category text NOT NULL,
+      description text,
+      amount numeric NOT NULL CHECK (amount >= 0::numeric),
+      payment_mode text,
+      reference text,
+      created_at timestamptz DEFAULT now(),
+      vendor text
+    );
+  END IF;
+END $$;
+
+-- =========================
+-- Idempotent foreign keys
+-- =========================
+-- variants.product_id -> products.id
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    WHERE c.conname = 'variants_product_id_fkey'
+      AND t.relname = 'variants'
+  ) THEN
+    ALTER TABLE public.variants
+      ADD CONSTRAINT variants_product_id_fkey
+      FOREIGN KEY (product_id) REFERENCES public.products(id);
+  END IF;
+END $$;
+
+-- sales_orders.customer_id -> customers.id
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    WHERE c.conname = 'sales_orders_customer_id_fkey'
+      AND t.relname = 'sales_orders'
+  ) THEN
+    ALTER TABLE public.sales_orders
+      ADD CONSTRAINT sales_orders_customer_id_fkey
+      FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+  END IF;
+END $$;
+
+-- sales_items.sales_order_id -> sales_orders.id
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    WHERE c.conname = 'sales_items_sales_order_id_fkey'
+      AND t.relname = 'sales_items'
+  ) THEN
+    ALTER TABLE public.sales_items
+      ADD CONSTRAINT sales_items_sales_order_id_fkey
+      FOREIGN KEY (sales_order_id) REFERENCES public.sales_orders(id);
+  END IF;
+END $$;
+
+-- sales_items.product_id -> products.id
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    WHERE c.conname = 'sales_items_product_id_fkey'
+      AND t.relname = 'sales_items'
+  ) THEN
+    ALTER TABLE public.sales_items
+      ADD CONSTRAINT sales_items_product_id_fkey
+      FOREIGN KEY (product_id) REFERENCES public.products(id);
+  END IF;
+END $$;
+
+-- sales_items.variant_id -> variants.id
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    WHERE c.conname = 'sales_items_variant_id_fkey'
+      AND t.relname = 'sales_items'
+  ) THEN
+    ALTER TABLE public.sales_items
+      ADD CONSTRAINT sales_items_variant_id_fkey
+      FOREIGN KEY (variant_id) REFERENCES public.variants(id);
+  END IF;
+END $$;
+
+-- purchase_orders.supplier_id -> suppliers.id
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    WHERE c.conname = 'purchase_orders_supplier_id_fkey'
+      AND t.relname = 'purchase_orders'
+  ) THEN
+    ALTER TABLE public.purchase_orders
+      ADD CONSTRAINT purchase_orders_supplier_id_fkey
+      FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id);
+  END IF;
+END $$;
+
+-- purchase_items.purchase_order_id -> purchase_orders.id
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    WHERE c.conname = 'purchase_items_purchase_order_id_fkey'
+      AND t.relname = 'purchase_items'
+  ) THEN
+    ALTER TABLE public.purchase_items
+      ADD CONSTRAINT purchase_items_purchase_order_id_fkey
+      FOREIGN KEY (purchase_order_id) REFERENCES public.purchase_orders(id);
+  END IF;
+END $$;
+
+-- purchase_items.product_id -> products.id
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    WHERE c.conname = 'purchase_items_product_id_fkey'
+      AND t.relname = 'purchase_items'
+  ) THEN
+    ALTER TABLE public.purchase_items
+      ADD CONSTRAINT purchase_items_product_id_fkey
+      FOREIGN KEY (product_id) REFERENCES public.products(id);
+  END IF;
+END $$;
+
+-- purchase_items.variant_id -> variants.id
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    WHERE c.conname = 'purchase_items_variant_id_fkey'
+      AND t.relname = 'purchase_items'
+  ) THEN
+    ALTER TABLE public.purchase_items
+      ADD CONSTRAINT purchase_items_variant_id_fkey
+      FOREIGN KEY (variant_id) REFERENCES public.variants(id);
+  END IF;
+END $$;

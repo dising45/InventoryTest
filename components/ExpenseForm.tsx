@@ -13,6 +13,16 @@ import {
 } from 'lucide-react'
 
 interface ExpenseFormProps {
+  initialData?: {
+    id?: string
+    expense_date: string
+    category: string
+    description?: string
+    amount: number
+    payment_mode?: string
+    reference?: string
+    vendor?: string
+  }
   onSave: (data: {
     expense_date: string
     category: string
@@ -45,19 +55,21 @@ const InputField = ({ label, icon: Icon, ...props }: any) => (
 
 /* ================= MAIN COMPONENT ================= */
 const ExpenseForm: React.FC<ExpenseFormProps> = ({
+  initialData,
   onSave,
   onCancel,
 }) => {
   const [loading, setLoading] = useState(false)
+  const isEditing = !!initialData?.id
 
   const [form, setForm] = useState({
-    expense_date: new Date().toISOString().slice(0, 10),
-    category: '',
-    description: '',
-    amount: 0,
-    payment_mode: '',
-    reference: '',
-    vendor: '',
+    expense_date: initialData?.expense_date || new Date().toISOString().slice(0, 10),
+    category: initialData?.category || '',
+    description: initialData?.description || '',
+    amount: initialData?.amount || 0,
+    payment_mode: initialData?.payment_mode || '',
+    reference: initialData?.reference || '',
+    vendor: initialData?.vendor || '',
   })
 
   const handleChange = (
@@ -92,7 +104,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
           Back to List
         </button>
         <h2 className="font-bold text-xl text-gray-900 tracking-tight">
-          Record New Expense
+          {isEditing ? 'Edit Expense' : 'Record New Expense'}
         </h2>
       </div>
 
@@ -210,7 +222,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                  Save Expense Record
+                   {isEditing ? 'Update Expense' : 'Save Expense Record'}
                 </>
               )}
             </button>

@@ -15,13 +15,13 @@ export const dashboardService = {
     const { data: salesMTD } = await supabase
       .from('sales_orders')
       .select(`
-    total_amount,
-    order_date,
-    sales_items (
-      quantity,
-      cost_price
-    )
-  `)
+        total_amount,
+        order_date,
+        sales_items (
+          quantity,
+          cost_price
+        )
+      `)
       .gte('order_date', monthStart);
 
     const totalSalesMTD =
@@ -30,13 +30,19 @@ export const dashboardService = {
     const totalCOGS_MTD =
       salesMTD?.reduce((sum, sale) => {
         const itemsCOGS =
-          sale.sales_items?.reduce(
+          (sale.sales_items as any[])?.reduce(
             (iSum: number, item: any) =>
               iSum + Number(item.cost_price) * Number(item.quantity),
             0
           ) ?? 0;
         return sum + itemsCOGS;
       }, 0) ?? 0;
+
+    /* ---------- SALES TODAY ---------- */
+    const totalSalesToday =
+      salesMTD
+        ?.filter((r) => r.order_date === today)
+        .reduce((s, r) => s + Number(r.total_amount), 0) ?? 0;
 
     /* ---------- EXPENSES ---------- */
     const { data: expensesMTD } = await supabase
@@ -56,8 +62,6 @@ export const dashboardService = {
         ? (netProfitMTD / totalSalesMTD) * 100
         : 0;
 
-
-    /* ---------- INVENTORY ---------- */
     /* ---------- INVENTORY ---------- */
     const { data: products, error: productError } = await supabase
       .from('products')
@@ -77,20 +81,13 @@ export const dashboardService = {
     const lowStockCount =
       products?.filter((p) => Number(p.stock) <= 5).length ?? 0;
 
-
-    /* ---------- PROFIT ---------- */
-    const profitMTD = totalSalesMTD - totalExpensesMTD;
-    const profitMargin =
-      totalSalesMTD > 0
-        ? (profitMTD / totalSalesMTD) * 100
-        : 0;
-
     return {
       salesMTD: totalSalesMTD,
       salesToday: totalSalesToday,
       expensesMTD: totalExpensesMTD,
-      // profitMTD,
       netProfitMTD,
+      grossProfitMTD,
+      totalCOGS_MTD,
       profitMargin,
       inventoryValue,
       lowStockCount,

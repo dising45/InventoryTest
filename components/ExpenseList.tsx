@@ -6,19 +6,24 @@ import {
   Calendar,
   Tag,
   Trash2,
+  Edit2,
   FileText,
   TrendingDown,
   Building2,
-  Search
+  Search,
+  Download
 } from 'lucide-react'
+import { exportCSV } from '../utils/exportCSV'
 
 interface ExpenseListProps {
   expenses: Expense[]
+  onEdit?: (expense: Expense) => void
   onDelete?: (id: string) => void
 }
 
 const ExpenseList: React.FC<ExpenseListProps> = ({
   expenses,
+  onEdit,
   onDelete,
 }) => {
 
@@ -80,8 +85,8 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
     return data
   }, [expenses, search, vendorFilter, categoryFilter, sortBy, sortOrder])
 
-  const vendors = [...new Set(expenses.map(e => e.vendor).filter(Boolean))]
-  const categories = [...new Set(expenses.map(e => e.category).filter(Boolean))]
+  const vendors = [...new Set(expenses.map(e => e.vendor).filter((v): v is string => !!v))]
+  const categories = [...new Set(expenses.map(e => e.category).filter((c): c is string => !!c))]
   /* ================= SUMMARY CALCULATIONS ================= */
 
   const totalExpenseAmount = filteredExpenses.reduce(
@@ -100,7 +105,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
   )
 
   const topCategory =
-    Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
+    Object.entries(categoryTotals).sort((a, b) => (b[1] as number) - (a[1] as number))[0]?.[0] || '-'
 
   const vendorTotals = filteredExpenses.reduce<Record<string, number>>(
     (acc, e) => {
@@ -112,7 +117,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
   )
 
   const topVendor =
-    Object.entries(vendorTotals).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
+    Object.entries(vendorTotals).sort((a, b) => (b[1] as number) - (a[1] as number))[0]?.[0] || '-'
   /* ================= RENDER ================= */
 
   return (
@@ -169,6 +174,39 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
 
         </div>
       </div>
+      {/* ================= DOWNLOAD BUTTON ================= */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => {
+            exportCSV({
+              filename: 'Expense_Report',
+              headers: [
+                { key: 'date', label: 'Date' },
+                { key: 'category', label: 'Category' },
+                { key: 'vendor', label: 'Vendor' },
+                { key: 'description', label: 'Description' },
+                { key: 'payment_mode', label: 'Payment Mode' },
+                { key: 'reference', label: 'Reference' },
+                { key: 'amount', label: 'Amount (₹)' },
+              ],
+              data: filteredExpenses.map(e => ({
+                date: e.expense_date,
+                category: e.category,
+                vendor: e.vendor || '',
+                description: e.description || '',
+                payment_mode: e.payment_mode || '',
+                reference: e.reference || '',
+                amount: Number(e.amount || 0).toFixed(2),
+              })),
+            })
+          }}
+          className="inline-flex items-center px-3 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+        >
+          <Download className="w-3.5 h-3.5 mr-1.5" />
+          Download CSV
+        </button>
+      </div>
+
       {/* ================= FILTER BAR ================= */}
       <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4">
 
@@ -248,7 +286,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
                   <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Amount</th>
-                  {onDelete && <th className="px-6 py-4" />}
+                  {(onEdit || onDelete) && <th className="px-6 py-4" />}
                 </tr>
               </thead>
 
@@ -276,14 +314,28 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                       {formatCurrency(e.amount)}
                     </td>
 
-                    {onDelete && (
+                    {(onEdit || onDelete) && (
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => onDelete(e.id)}
-                          className="opacity-0 group-hover:opacity-100 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {onEdit && (
+                            <button
+                              onClick={() => onEdit(e)}
+                              className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                              title="Edit Expense"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button
+                              onClick={() => onDelete(e.id)}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                              title="Delete Expense"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -307,13 +359,25 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                 <p className="text-xs text-gray-500">{e.vendor || '-'}</p>
                 <p className="text-xs text-gray-400 mt-1">{e.description || '-'}</p>
 
-                {onDelete && (
-                  <button
-                    onClick={() => onDelete(e.id)}
-                    className="mt-3 text-red-500 text-xs"
-                  >
-                    Delete
-                  </button>
+                {(onEdit || onDelete) && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
+                    {onEdit && (
+                      <button
+                        onClick={() => onEdit(e)}
+                        className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg active:bg-indigo-100 transition-colors"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(e.id)}
+                        className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg active:bg-red-100 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

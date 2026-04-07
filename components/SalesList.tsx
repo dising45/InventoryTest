@@ -12,8 +12,10 @@ import {
   Clock,
   XCircle,
   Package,
-  ChevronDown
+  ChevronDown,
+  Download
 } from 'lucide-react'
+import { exportCSV } from '../utils/exportCSV'
 
 interface SalesListProps {
   sales: SalesOrder[]
@@ -121,6 +123,37 @@ const SalesList: React.FC<SalesListProps> = ({
 
   return (
     <>
+      {/* ================= DOWNLOAD BUTTON ================= */}
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={() => {
+            exportCSV({
+              filename: 'Sales_Report',
+              headers: [
+                { key: 'date', label: 'Date' },
+                { key: 'order_id', label: 'Order ID' },
+                { key: 'customer', label: 'Customer' },
+                { key: 'items_count', label: 'Items' },
+                { key: 'status', label: 'Status' },
+                { key: 'total_amount', label: 'Amount (₹)' },
+              ],
+              data: sales.map(s => ({
+                date: s.order_date || s.created_at,
+                order_id: s.id.slice(0, 8).toUpperCase(),
+                customer: s.customer?.name || 'Unknown',
+                items_count: s.items?.reduce((acc, item) => acc + item.quantity, 0) || 0,
+                status: s.status,
+                total_amount: Number(s.total_amount || 0).toFixed(2),
+              })),
+            })
+          }}
+          className="inline-flex items-center px-3 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+        >
+          <Download className="w-3.5 h-3.5 mr-1.5" />
+          Download CSV
+        </button>
+      </div>
+
       {/* ================= SALES SUMMARY ================= */}
 
       {/* Desktop KPI Grid */}

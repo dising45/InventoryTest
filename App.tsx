@@ -1,21 +1,23 @@
-// App.tsx
-import React, { useState, useEffect } from 'react'
-import {
-  ViewState,
-  Product,
-  Customer,
-  Supplier,
-  SalesOrder,
-  SalesItem,
-  Expense,
-} from './types'
+// App.tsx — Refactored with extracted UI components and custom hooks
+import { useState } from 'react'
+import type { ViewState, SalesItem } from './types'
 
-import { inventoryService } from './services/inventoryService.supabase'
-import { customerService } from './services/customerService.supabase'
-import { supplierService } from './services/supplierService.supabase'
+// Custom hooks
+import { useProducts } from './hooks/useProducts'
+import { useCustomers } from './hooks/useCustomers'
+import { useSuppliers } from './hooks/useSuppliers'
+import { useSales } from './hooks/useSales'
+import { useExpenses } from './hooks/useExpenses'
+
+// Services (only needed for salesService.updateStatus)
 import { salesService } from './services/salesService.supabase'
-import { expenseService } from './services/expenseService.supabase'
 
+// Extracted UI components
+import { PageHeader, PrimaryButton, FloatingActionButton, NavButton } from './components/ui'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import MobileBottomNav from './components/MobileBottomNav'
+
+// Page components
 import Dashboard from './components/Dashboard'
 import ProductList from './components/ProductList'
 import ProductForm from './components/ProductForm'
@@ -40,114 +42,7 @@ import {
   BarChart3,
   Wallet,
   Loader2,
-  Menu // Kept for future use if needed
 } from 'lucide-react'
-
-/* =======================
-   UI COMPONENTS
-======================= */
-
-const PrimaryButton = ({ onClick, children, className = "" }: any) => (
-  <button
-    onClick={onClick}
-    className={`group relative inline-flex items-center justify-center px-4 py-2 
-    text-sm font-bold text-white transition-all duration-200 
-    bg-indigo-600 rounded-xl shadow-md hover:bg-indigo-700 
-    hover:shadow-lg hover:-translate-y-0.5 active:scale-95 focus:outline-none focus:ring-2 
-    focus:ring-offset-2 focus:ring-indigo-600 ${className}`}
-  >
-    {children}
-  </button>
-)
-
-const PageHeader = ({ title, action }: { title: string, action?: React.ReactNode }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sticky top-0 bg-gray-50/95 backdrop-blur-sm z-10 py-2 sm:static sm:bg-transparent">
-    <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">{title}</h1>
-    {action && <div className="hidden sm:block">{action}</div>}
-  </div>
-)
-
-/* =======================
-   MOBILE BOTTOM NAV
-======================= */
-const MobileBottomNav = ({
-  currentView,
-  setCurrentView,
-}: {
-  currentView: ViewState
-  setCurrentView: (v: ViewState) => void
-}) => {
-  const items = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Home' },
-    { id: 'inventory', icon: Package, label: 'Stock' },
-    { id: 'sales', icon: ShoppingCart, label: 'Sales' },
-    { id: 'expenses', icon: Wallet, label: 'Exp' },
-    { id: 'pl', icon: BarChart3, label: 'P&L' },
-  ]
-
-  return (
-    <nav className="fixed bottom-0 inset-x-0 bg-white/90 backdrop-blur-lg border-t border-gray-200/50 pb-safe md:hidden z-50">
-      <div className="flex justify-around items-center h-16 px-1">
-        {items.map(({ id, icon: Icon, label }) => {
-          const isActive = currentView === id
-          return (
-            <button
-              key={id}
-              onClick={() => setCurrentView(id as ViewState)}
-              className={`relative flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 active:scale-90 ${isActive ? 'text-indigo-600' : 'text-gray-400'
-                }`}
-            >
-              {isActive && (
-                <span className="absolute top-0 w-8 h-1 bg-indigo-600 rounded-b-full shadow-[0_2px_8px_rgba(79,70,229,0.3)]" />
-              )}
-              <Icon className={`w-6 h-6 mb-1 transition-transform duration-200 ${isActive ? 'scale-110 -translate-y-0.5' : ''}`} strokeWidth={isActive ? 2.5 : 2} />
-              <span className={`text-[10px] font-bold tracking-tight transition-colors ${isActive ? 'text-indigo-700' : 'text-gray-500'}`}>{label}</span>
-            </button>
-          )
-        })}
-      </div>
-    </nav>
-  )
-}
-
-/* =======================
-   DESKTOP NAV BUTTON
-======================= */
-const NavButton = ({
-  view,
-  icon: Icon,
-  label,
-  currentView,
-  setCurrentView,
-}: {
-  view: ViewState
-  icon: any
-  label: string
-  currentView: ViewState
-  setCurrentView: (v: ViewState) => void
-}) => {
-  const isActive = currentView === view
-  return (
-    <button
-      onClick={() => setCurrentView(view)}
-      className={`relative flex items-center w-full px-4 py-3 rounded-xl transition-all duration-200 group
-      ${isActive
-          ? 'bg-indigo-50 text-indigo-700 shadow-sm font-semibold'
-          : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 font-medium'
-        }`}
-    >
-      <Icon
-        className={`w-5 h-5 mr-3.5 transition-colors duration-200 ${isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'
-          }`}
-        strokeWidth={isActive ? 2.5 : 2}
-      />
-      <span className="text-sm">{label}</span>
-      {isActive && (
-        <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-indigo-600 shadow-sm" />
-      )}
-    </button>
-  )
-}
 
 /* =======================
    MAIN APP COMPONENT
@@ -155,56 +50,26 @@ const NavButton = ({
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard')
 
-  // State
-  const [products, setProducts] = useState<Product[]>([])
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [sales, setSales] = useState<SalesOrder[]>([])
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  // Data hooks
+  const { products, loading: productsLoading, reload: reloadProducts, saveProduct, deleteProduct: removeProduct } = useProducts()
+  const { customers, loading: customersLoading, reload: reloadCustomers, saveCustomer, deleteCustomer: removeCustomer } = useCustomers()
+  const { suppliers, loading: suppliersLoading, reload: reloadSuppliers, saveSupplier, deleteSupplier: removeSupplier } = useSuppliers()
+  const { sales, loading: salesLoading, reload: reloadSales, saveSale, deleteSale: removeSale } = useSales()
+  const { expenses, loading: expensesLoading, reload: reloadExpenses, saveExpense, deleteExpense: removeExpense } = useExpenses()
 
-  // Editing State
-  const [editingProduct, setEditingProduct] = useState<Product | undefined>()
-  const [editingSale, setEditingSale] = useState<SalesOrder | undefined>()
-  const [editingCustomer, setEditingCustomer] = useState<Customer | undefined>()
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | undefined>()
+  // Editing state
+  const [editingProduct, setEditingProduct] = useState<typeof products[0] | undefined>()
+  const [editingSale, setEditingSale] = useState<typeof sales[0] | undefined>()
+  const [editingCustomer, setEditingCustomer] = useState<typeof customers[0] | undefined>()
+  const [editingSupplier, setEditingSupplier] = useState<typeof suppliers[0] | undefined>()
+  const [editingExpense, setEditingExpense] = useState<typeof expenses[0] | undefined>()
 
-  const [isLoading, setIsLoading] = useState(true)
-
-  /* -------------------- INITIAL LOAD -------------------- */
-  useEffect(() => {
-    loadAll()
-  }, [])
-
-  const loadAll = async () => {
-    setIsLoading(true)
-    try {
-      await Promise.all([
-        loadProducts(),
-        loadCustomers(),
-        loadSuppliers(),
-        loadSales(),
-        loadExpenses(),
-      ])
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const loadProducts = async () => setProducts(await inventoryService.getProducts())
-  const loadCustomers = async () => setCustomers(await customerService.getCustomers())
-  const loadSuppliers = async () => setSuppliers(await supplierService.getSuppliers())
-  const loadSales = async () => setSales(await salesService.getSales())
-  const loadExpenses = async () => setExpenses(await expenseService.getExpenses())
+  const isLoading = productsLoading || customersLoading || suppliersLoading || salesLoading || expensesLoading
 
   /* -------------------- HANDLERS -------------------- */
   const handleSaveProduct = async (data: any) => {
     try {
-      if (editingProduct) {
-        await inventoryService.updateProduct({ ...data, id: editingProduct.id })
-      } else {
-        await inventoryService.addProduct(data)
-      }
-      await loadProducts()
+      await saveProduct(editingProduct ? { ...data, id: editingProduct.id } : data)
       setEditingProduct(undefined)
       setCurrentView('inventory')
     } catch {
@@ -215,8 +80,7 @@ export default function App() {
   const handleDeleteProduct = async (id: string) => {
     if (!confirm('Delete this product?')) return
     try {
-      await inventoryService.deleteProduct(id)
-      await loadProducts()
+      await removeProduct(id)
     } catch {
       alert('Failed to delete product.')
     }
@@ -224,15 +88,11 @@ export default function App() {
 
   const handleSaveSale = async (data: { customer_id: string; items: SalesItem[]; total_amount: number; order_date: string }) => {
     try {
-      if (editingSale) {
-        await salesService.updateSale(editingSale.id, data)
-        setEditingSale(undefined)
-      } else {
-        await salesService.createSale(data)
-      }
-      await Promise.all([loadSales(), loadProducts()])
+      await saveSale(data, editingSale?.id)
+      await reloadProducts() // stock changed
+      setEditingSale(undefined)
       setCurrentView('sales')
-    } catch (e) {
+    } catch {
       alert('Unable to save sale.')
     }
   }
@@ -240,20 +100,18 @@ export default function App() {
   const handleDeleteSale = async (id: string) => {
     if (!confirm('Delete this sale? Stock will be restored.')) return
     try {
-      await salesService.deleteSale(id)
-      await Promise.all([loadSales(), loadProducts()])
-      
-    } catch {
+      await removeSale(id)
+      await reloadProducts() // stock restored
+    } catch (err) {
       console.error('DELETE ERROR:', err)
-      alert('Failed to delete sale.Check Console for details.')
-
+      alert('Failed to delete sale. Check Console for details.')
     }
   }
 
   const handleSaveExpense = async (data: any) => {
     try {
-      await expenseService.addExpense(data)
-      await loadExpenses()
+      await saveExpense(data, editingExpense?.id)
+      setEditingExpense(undefined)
       setCurrentView('expenses')
     } catch {
       alert('Failed to save expense.')
@@ -263,8 +121,7 @@ export default function App() {
   const handleDeleteExpense = async (id: string) => {
     if (!confirm('Delete expense?')) return
     try {
-      await expenseService.deleteExpense(id)
-      await loadExpenses()
+      await removeExpense(id)
     } catch {
       alert('Failed to delete expense.')
     }
@@ -274,7 +131,7 @@ export default function App() {
   const hideMobileNav = [
     'add-product', 'edit-product',
     'add-sale', 'edit-sale',
-    'add-expense',
+    'add-expense', 'edit-expense',
     'add-customer', 'edit-customer',
     'add-supplier', 'edit-supplier'
   ].includes(currentView)
@@ -291,7 +148,6 @@ export default function App() {
 
   /* -------------------- RENDER -------------------- */
   return (
-    // h-[100dvh] ensures it fits exactly on mobile screens without address bar jank
     <div className="h-[100dvh] w-full bg-gray-50 flex overflow-hidden font-sans text-gray-900 selection:bg-indigo-100 selection:text-indigo-900">
       
       {/* DESKTOP SIDEBAR */}
@@ -357,204 +213,187 @@ export default function App() {
                 <p className="text-sm font-medium text-gray-400 animate-pulse">Loading workspace...</p>
               </div>
             ) : (
-              <div className="animate-in fade-in zoom-in-95 duration-300">
-                {/* DASHBOARD */}
-                {currentView === 'dashboard' && (
-                  <Dashboard products={products} />
-                )}
+              <ErrorBoundary>
+                <div className="animate-in fade-in zoom-in-95 duration-300">
+                  {/* DASHBOARD */}
+                  {currentView === 'dashboard' && (
+                    <Dashboard products={products} />
+                  )}
 
-                {/* INVENTORY */}
-                {currentView === 'inventory' && (
-                  <>
-                    <PageHeader
-                      title="Inventory"
-                      action={
-                        <PrimaryButton onClick={() => { setEditingProduct(undefined); setCurrentView('add-product'); }}>
-                          <Plus className="w-4 h-4 mr-2" /> Add Product
-                        </PrimaryButton>
-                      }
-                    />
-                    {/* Mobile Floating Action Button */}
-                    <button 
-                      onClick={() => { setEditingProduct(undefined); setCurrentView('add-product'); }}
-                      className="md:hidden fixed bottom-24 right-5 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-xl shadow-indigo-600/30 flex items-center justify-center z-40 active:scale-90 transition-transform"
-                    >
-                      <Plus className="w-6 h-6" />
-                    </button>
-                    <ProductList
-                      products={products}
-                      onEdit={p => { setEditingProduct(p); setCurrentView('edit-product'); }}
-                      onDelete={handleDeleteProduct}
-                    />
-                  </>
-                )}
-
-                {(currentView === 'add-product' || currentView === 'edit-product') && (
-                  <div className="max-w-3xl mx-auto">
-                    <ProductForm
-                      initialData={editingProduct}
-                      onSave={handleSaveProduct}
-                      onCancel={() => setCurrentView('inventory')}
-                    />
-                  </div>
-                )}
-
-                {/* SALES */}
-                {currentView === 'sales' && (
-                  <>
-                    <PageHeader
-                      title="Sales Orders"
-                      action={
-                        <PrimaryButton onClick={() => { setEditingSale(undefined); setCurrentView('add-sale'); }}>
-                          <Plus className="w-4 h-4 mr-2" /> New Sale
-                        </PrimaryButton>
-                      }
-                    />
-                    <button 
-                      onClick={() => { setEditingSale(undefined); setCurrentView('add-sale'); }}
-                      className="md:hidden fixed bottom-24 right-5 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-xl shadow-indigo-600/30 flex items-center justify-center z-40 active:scale-90 transition-transform"
-                    >
-                      <Plus className="w-6 h-6" />
-                    </button>
-                    <SalesList
-                      sales={sales}
-                      onEdit={s => { setEditingSale(s); setCurrentView('edit-sale'); }}
-                      onDelete={handleDeleteSale}
-                      onAddSale={() => { setEditingSale(undefined); setCurrentView('add-sale'); }}
-                      onStatusChange={async (id, status) => {
-                         await salesService.updateStatus(id, status)
-                         await loadSales()
-                      }}
-                    />
-                  </>
-                )}
-
-                {(currentView === 'add-sale' || currentView === 'edit-sale') && (
-                  <div className="max-w-4xl mx-auto">
-                    <SalesForm
-                      customers={customers}
-                      products={products}
-                      initialData={editingSale}
-                      onSave={handleSaveSale}
-                      onCancel={() => { setEditingSale(undefined); setCurrentView('sales'); }}
-                    />
-                  </div>
-                )}
-
-                {/* CUSTOMERS */}
-                {currentView === 'customers' && (
-                  <>
-                    <PageHeader
-                      title="Customers"
-                      action={
-                        <PrimaryButton onClick={() => setCurrentView('add-customer')}>
-                          <Plus className="w-4 h-4 mr-2" /> Add Customer
-                        </PrimaryButton>
-                      }
-                    />
-                    <button onClick={() => setCurrentView('add-customer')} className="md:hidden fixed bottom-24 right-5 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-xl shadow-indigo-600/30 flex items-center justify-center z-40 active:scale-90 transition-transform"><Plus className="w-6 h-6" /></button>
-                    <CustomerList
-                      customers={customers}
-                      onEdit={(c) => { setEditingCustomer(c); setCurrentView('edit-customer'); }}
-                      onDelete={async (id) => { await customerService.deleteCustomer(id); await loadCustomers(); }}
-                    />
-                  </>
-                )}
-
-                {(currentView === 'add-customer' || currentView === 'edit-customer') && (
-                  <div className="max-w-2xl mx-auto">
-                    <CustomerForm
-                      initialData={editingCustomer}
-                      onSave={async (data) => {
-                        if (editingCustomer) {
-                          await customerService.updateCustomer(editingCustomer.id, data)
-                        } else {
-                          await customerService.addCustomer(data)
+                  {/* INVENTORY */}
+                  {currentView === 'inventory' && (
+                    <>
+                      <PageHeader
+                        title="Inventory"
+                        action={
+                          <PrimaryButton onClick={() => { setEditingProduct(undefined); setCurrentView('add-product'); }}>
+                            <Plus className="w-4 h-4 mr-2" /> Add Product
+                          </PrimaryButton>
                         }
-                        await loadCustomers()
-                        setEditingCustomer(undefined)
-                        setCurrentView('customers')
-                      }}
-                      onCancel={() => { setEditingCustomer(undefined); setCurrentView('customers'); }}
-                    />
-                  </div>
-                )}
+                      />
+                      <FloatingActionButton onClick={() => { setEditingProduct(undefined); setCurrentView('add-product'); }} />
+                      <ProductList
+                        products={products}
+                        onEdit={p => { setEditingProduct(p); setCurrentView('edit-product'); }}
+                        onDelete={handleDeleteProduct}
+                      />
+                    </>
+                  )}
 
-                {/* SUPPLIERS */}
-                {currentView === 'suppliers' && (
-                  <>
-                    <PageHeader
-                      title="Suppliers"
-                      action={
-                        <PrimaryButton onClick={() => setCurrentView('add-supplier')}>
-                          <Plus className="w-4 h-4 mr-2" /> Add Supplier
-                        </PrimaryButton>
-                      }
-                    />
-                    <button onClick={() => setCurrentView('add-supplier')} className="md:hidden fixed bottom-24 right-5 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-xl shadow-indigo-600/30 flex items-center justify-center z-40 active:scale-90 transition-transform"><Plus className="w-6 h-6" /></button>
-                    <SupplierList
-                      suppliers={suppliers}
-                      onEdit={(s) => { setEditingSupplier(s); setCurrentView('edit-supplier'); }}
-                      onDelete={async (id) => { await supplierService.deleteSupplier(id); await loadSuppliers(); }}
-                    />
-                  </>
-                )}
+                  {(currentView === 'add-product' || currentView === 'edit-product') && (
+                    <div className="max-w-3xl mx-auto">
+                      <ProductForm
+                        initialData={editingProduct}
+                        onSave={handleSaveProduct}
+                        onCancel={() => setCurrentView('inventory')}
+                      />
+                    </div>
+                  )}
 
-                {(currentView === 'add-supplier' || currentView === 'edit-supplier') && (
-                  <div className="max-w-2xl mx-auto">
-                    <SupplierForm
-                      initialData={editingSupplier}
-                      onSave={async (data) => {
-                        if (editingSupplier) {
-                          await supplierService.updateSupplier(editingSupplier.id, data)
-                        } else {
-                          await supplierService.addSupplier(data)
+                  {/* SALES */}
+                  {currentView === 'sales' && (
+                    <>
+                      <PageHeader
+                        title="Sales Orders"
+                        action={
+                          <PrimaryButton onClick={() => { setEditingSale(undefined); setCurrentView('add-sale'); }}>
+                            <Plus className="w-4 h-4 mr-2" /> New Sale
+                          </PrimaryButton>
                         }
-                        await loadSuppliers()
-                        setEditingSupplier(undefined)
-                        setCurrentView('suppliers')
-                      }}
-                      onCancel={() => { setEditingSupplier(undefined); setCurrentView('suppliers'); }}
-                    />
-                  </div>
-                )}
+                      />
+                      <FloatingActionButton onClick={() => { setEditingSale(undefined); setCurrentView('add-sale'); }} />
+                      <SalesList
+                        sales={sales}
+                        onEdit={s => { setEditingSale(s); setCurrentView('edit-sale'); }}
+                        onDelete={handleDeleteSale}
+                        onAddSale={() => { setEditingSale(undefined); setCurrentView('add-sale'); }}
+                        onStatusChange={async (id, status) => {
+                           await salesService.updateStatus(id, status)
+                           await reloadSales()
+                        }}
+                      />
+                    </>
+                  )}
 
-                {/* EXPENSES */}
-                {currentView === 'expenses' && (
-                  <>
-                    <PageHeader
-                      title="Expenses"
-                      action={
-                        <PrimaryButton onClick={() => setCurrentView('add-expense')}>
-                          <Plus className="w-4 h-4 mr-2" /> Add Expense
-                        </PrimaryButton>
-                      }
-                    />
-                    <button onClick={() => setCurrentView('add-expense')} className="md:hidden fixed bottom-24 right-5 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-xl shadow-indigo-600/30 flex items-center justify-center z-40 active:scale-90 transition-transform"><Plus className="w-6 h-6" /></button>
-                    <ExpenseList
-                      expenses={expenses}
-                      onDelete={handleDeleteExpense}
-                    />
-                  </>
-                )}
+                  {(currentView === 'add-sale' || currentView === 'edit-sale') && (
+                    <div className="max-w-4xl mx-auto">
+                      <SalesForm
+                        customers={customers}
+                        products={products}
+                        initialData={editingSale}
+                        onSave={handleSaveSale}
+                        onCancel={() => { setEditingSale(undefined); setCurrentView('sales'); }}
+                      />
+                    </div>
+                  )}
 
-                {currentView === 'add-expense' && (
-                  <div className="max-w-2xl mx-auto">
-                    <ExpenseForm
-                      onSave={handleSaveExpense}
-                      onCancel={() => setCurrentView('expenses')}
-                    />
-                  </div>
-                )}
+                  {/* CUSTOMERS */}
+                  {currentView === 'customers' && (
+                    <>
+                      <PageHeader
+                        title="Customers"
+                        action={
+                          <PrimaryButton onClick={() => setCurrentView('add-customer')}>
+                            <Plus className="w-4 h-4 mr-2" /> Add Customer
+                          </PrimaryButton>
+                        }
+                      />
+                      <FloatingActionButton onClick={() => setCurrentView('add-customer')} />
+                      <CustomerList
+                        customers={customers}
+                        onEdit={(c) => { setEditingCustomer(c); setCurrentView('edit-customer'); }}
+                        onDelete={async (id) => { await removeCustomer(id); }}
+                      />
+                    </>
+                  )}
 
-                {/* P&L */}
-                {currentView === 'pl' && (
-                  <>
-                    <PageHeader title="Profit & Loss" />
-                    <ProfitLoss />
-                  </>
-                )}
-              </div>
+                  {(currentView === 'add-customer' || currentView === 'edit-customer') && (
+                    <div className="max-w-2xl mx-auto">
+                      <CustomerForm
+                        initialData={editingCustomer}
+                        onSave={async (data) => {
+                          await saveCustomer(data, editingCustomer?.id)
+                          setEditingCustomer(undefined)
+                          setCurrentView('customers')
+                        }}
+                        onCancel={() => { setEditingCustomer(undefined); setCurrentView('customers'); }}
+                      />
+                    </div>
+                  )}
+
+                  {/* SUPPLIERS */}
+                  {currentView === 'suppliers' && (
+                    <>
+                      <PageHeader
+                        title="Suppliers"
+                        action={
+                          <PrimaryButton onClick={() => setCurrentView('add-supplier')}>
+                            <Plus className="w-4 h-4 mr-2" /> Add Supplier
+                          </PrimaryButton>
+                        }
+                      />
+                      <FloatingActionButton onClick={() => setCurrentView('add-supplier')} />
+                      <SupplierList
+                        suppliers={suppliers}
+                        onEdit={(s) => { setEditingSupplier(s); setCurrentView('edit-supplier'); }}
+                        onDelete={async (id) => { await removeSupplier(id); }}
+                      />
+                    </>
+                  )}
+
+                  {(currentView === 'add-supplier' || currentView === 'edit-supplier') && (
+                    <div className="max-w-2xl mx-auto">
+                      <SupplierForm
+                        initialData={editingSupplier}
+                        onSave={async (data) => {
+                          await saveSupplier(data, editingSupplier?.id)
+                          setEditingSupplier(undefined)
+                          setCurrentView('suppliers')
+                        }}
+                        onCancel={() => { setEditingSupplier(undefined); setCurrentView('suppliers'); }}
+                      />
+                    </div>
+                  )}
+
+                  {/* EXPENSES */}
+                  {currentView === 'expenses' && (
+                    <>
+                      <PageHeader
+                        title="Expenses"
+                        action={
+                          <PrimaryButton onClick={() => setCurrentView('add-expense')}>
+                            <Plus className="w-4 h-4 mr-2" /> Add Expense
+                          </PrimaryButton>
+                        }
+                      />
+                      <FloatingActionButton onClick={() => setCurrentView('add-expense')} />
+                      <ExpenseList
+                        expenses={expenses}
+                        onEdit={(exp) => { setEditingExpense(exp); setCurrentView('edit-expense'); }}
+                        onDelete={handleDeleteExpense}
+                      />
+                    </>
+                  )}
+
+                  {(currentView === 'add-expense' || currentView === 'edit-expense') && (
+                    <div className="max-w-2xl mx-auto">
+                      <ExpenseForm
+                        initialData={editingExpense}
+                        onSave={handleSaveExpense}
+                        onCancel={() => { setEditingExpense(undefined); setCurrentView('expenses'); }}
+                      />
+                    </div>
+                  )}
+
+                  {/* P&L */}
+                  {currentView === 'pl' && (
+                    <>
+                      <PageHeader title="Profit & Loss" />
+                      <ProfitLoss />
+                    </>
+                  )}
+                </div>
+              </ErrorBoundary>
             )}
           </div>
         </div>

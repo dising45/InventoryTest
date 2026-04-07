@@ -14,6 +14,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import { profitLossService } from '../services/plService.supabase'
+import { exportCSV } from '../utils/exportCSV'
 
 interface Expense {
   amount: number
@@ -92,7 +93,7 @@ const ProfitLoss: React.FC = () => {
     }, {})
   }, [expenses])
 
-  const sortedExpenses = Object.entries(expenseByCategory).sort(([, a], [, b]) => b - a)
+  const sortedExpenses = Object.entries(expenseByCategory).sort(([, a], [, b]) => (b as number) - (a as number)) as [string, number][]
   const maxExpense = sortedExpenses.length > 0 ? sortedExpenses[0][1] : 0
 
   const formatCurrency = (val: number) =>
@@ -244,7 +245,30 @@ const ProfitLoss: React.FC = () => {
                 </div>
               </div>
 
-              <button className="mt-8 group w-full py-4 bg-white text-slate-900 rounded-2xl text-sm font-black hover:bg-indigo-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-xl">
+              <button
+                onClick={() => {
+                  const rows = [
+                    { item: 'Gross Revenue', amount: totalSales.toFixed(2) },
+                    { item: 'Total Expenses', amount: (-totalExpenses).toFixed(2) },
+                    { item: 'Net Profit', amount: profit.toFixed(2) },
+                    { item: 'Profit Margin %', amount: totalSales > 0 ? ((profit / totalSales) * 100).toFixed(1) : '0' },
+                    { item: '---', amount: '---' },
+                    ...sortedExpenses.map(([cat, amt]) => ({
+                      item: `Expense: ${cat}`,
+                      amount: amt.toFixed(2),
+                    })),
+                  ]
+                  exportCSV({
+                    filename: `PL_Statement_${from || 'all'}_to_${to || 'all'}`,
+                    headers: [
+                      { key: 'item', label: 'Line Item' },
+                      { key: 'amount', label: 'Amount (₹)' },
+                    ],
+                    data: rows,
+                  })
+                }}
+                className="mt-8 group w-full py-4 bg-white text-slate-900 rounded-2xl text-sm font-black hover:bg-indigo-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-xl"
+              >
                 <Download className="w-4 h-4 transition-transform group-hover:-translate-y-1" /> Export Statement
               </button>
             </div>

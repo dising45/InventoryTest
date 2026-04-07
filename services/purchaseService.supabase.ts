@@ -204,4 +204,15 @@ export const purchaseService = {
       }
     }
   },
+
+  /* ===============================
+     DELETE PURCHASE ORDER
+     =============================== */
+  async deletePO(poId: string) {
+    // Delete PO items first (cascade may handle this, but be explicit)
+    await supabase.from('purchase_order_items').delete().eq('purchase_order_id', poId);
+
+    const { error } = await supabase.from('purchase_orders').delete().eq('id', poId);
+    if (error) throw error;
+  },
 };

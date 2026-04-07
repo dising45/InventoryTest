@@ -31,12 +31,17 @@ export const salesService = {
     items: SalesItem[];
     total_amount: number;
     order_date: string;
+    subtotal?: number;
+    discount?: number;
+    discount_type?: 'flat' | 'percentage';
+    tax?: number;
+    tax_type?: 'flat' | 'percentage';
   }) {
     const { data: order, error: orderError } = await supabase
       .from('sales_orders')
       .insert({
         customer_id: sale.customer_id,
-        subtotal: sale.subtotal,
+        subtotal: sale.subtotal ?? sale.total_amount,
         discount: sale.discount ?? 0,
         discount_type: sale.discount_type ?? 'flat',
         tax: sale.tax ?? 0,
@@ -78,6 +83,11 @@ export const salesService = {
       items: SalesItem[];
       total_amount: number;
       order_date: string;
+      subtotal?: number;
+      discount?: number;
+      discount_type?: 'flat' | 'percentage';
+      tax?: number;
+      tax_type?: 'flat' | 'percentage';
     }
   ) {
     // 1️⃣ Restore stock
@@ -101,13 +111,13 @@ export const salesService = {
       .from('sales_orders')
       .update({
         customer_id: sale.customer_id,
-        subtotal: sale.total_amount,
+        subtotal: sale.subtotal ?? sale.total_amount,
         total_amount: sale.total_amount,
-        order_date: sale.order_date,   // ✅ FIXED
-        discount: sale.discount,
-        discount_type: sale.discount_type,
-        tax: sale.tax,
-        tax_type: sale.tax_type,
+        order_date: sale.order_date,
+        discount: sale.discount ?? 0,
+        discount_type: sale.discount_type ?? 'flat',
+        tax: sale.tax ?? 0,
+        tax_type: sale.tax_type ?? 'percentage',
       })
       .eq('id', salesOrderId);
 

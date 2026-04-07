@@ -46,6 +46,8 @@ export interface SalesItem {
   variant_id?: string;
   quantity: number;
   unit_price: number;
+  cost_price?: number;
+  line_total?: number;
   product_name?: string; // For display
   variant_name?: string; // For display
 }
@@ -53,6 +55,7 @@ export interface SalesItem {
 export interface SalesOrder {
   id: string;
   customer_id: string;
+  subtotal?: number;
   total_amount: number;
   order_date?: string;
   status: 'pending' | 'completed' | 'cancelled';
@@ -65,7 +68,15 @@ export interface SalesOrder {
   tax_type?: 'flat' | 'percentage';
 }
 
-export type ViewState = 'dashboard' | 'inventory' | 'add-product' | 'edit-product' | 'customers' | 'add-customer' | 'suppliers' | 'add-supplier' | 'sales' | 'add-sale' | 'edit-sale' | 'purchase-orders' | 'add-po'| 'pl';
+export type ViewState =
+  | 'dashboard'
+  | 'inventory' | 'add-product' | 'edit-product'
+  | 'customers' | 'add-customer' | 'edit-customer'
+  | 'suppliers' | 'add-supplier' | 'edit-supplier'
+  | 'sales' | 'add-sale' | 'edit-sale'
+  | 'expenses' | 'add-expense' | 'edit-expense'
+  | 'purchase-orders' | 'add-po'
+  | 'pl';
 
 export interface InventoryStats {
   totalProducts: number;
@@ -77,7 +88,9 @@ export interface PurchaseOrder {
   id: string;
   supplier_id: string;
   supplier?: Supplier;
+  po_number?: string;
   total_amount: number;
+  notes?: string;
   created_at: string;
   items: PurchaseItem[];
 }
@@ -89,6 +102,7 @@ export interface PurchaseItem {
   variant_id?: string | null;
   quantity: number;
   unit_cost: number;
+  line_total?: number;
   product_name?: string;
   variant_name?: string;
 }

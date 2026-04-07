@@ -99,6 +99,41 @@ class ExpenseServiceSupabase {
   }
 
   /* ===============================
+     UPDATE EXPENSE
+     =============================== */
+  async updateExpense(id: string, expense: {
+    expense_date: string
+    category: string
+    description?: string
+    amount: number
+    payment_mode?: string
+    reference?: string
+    vendor?: string
+  }) {
+    const { data, error } = await supabase
+      .from('expenses')
+      .update({
+        expense_date: expense.expense_date,
+        category: expense.category,
+        description: expense.description ?? null,
+        amount: Number(expense.amount),
+        payment_mode: expense.payment_mode ?? null,
+        reference: expense.reference ?? null,
+        vendor: expense.vendor ?? null,
+      })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('UPDATE EXPENSE FAILED', error)
+      throw error
+    }
+
+    return data
+  }
+
+  /* ===============================
      DELETE EXPENSE
      =============================== */
   async deleteExpense(id: string) {

@@ -1,0 +1,151 @@
+-- public.customers
+CREATE TABLE IF NOT EXISTS public.customers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  phone text,
+  email text,
+  address text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- public.suppliers
+CREATE TABLE IF NOT EXISTS public.suppliers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  contact_person text,
+  phone text,
+  email text,
+  address text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- public.products
+CREATE TABLE IF NOT EXISTS public.products (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text,
+  sell_price numeric DEFAULT 0,
+  stock integer DEFAULT 0 CHECK (stock >= 0),
+  has_variants boolean DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  cost_price numeric DEFAULT 0,
+  image_url text
+);
+
+-- public.variants
+CREATE TABLE IF NOT EXISTS public.variants (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id uuid NOT NULL,
+  name text NOT NULL,
+  sku text,
+  stock integer DEFAULT 0 CHECK (stock >= 0),
+  price_modifier numeric DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  image_url text
+);
+
+-- public.sales_orders
+CREATE TABLE IF NOT EXISTS public.sales_orders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id uuid,
+  subtotal numeric DEFAULT 0,
+  total_amount numeric DEFAULT 0,
+  status text DEFAULT 'completed',
+  created_at timestamptz DEFAULT now(),
+  order_date date DEFAULT CURRENT_DATE,
+  discount numeric DEFAULT 0,
+  discount_type text DEFAULT 'flat',
+  tax numeric DEFAULT 0,
+  tax_type text DEFAULT 'percentage'
+);
+
+-- public.sales_items
+CREATE TABLE IF NOT EXISTS public.sales_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sales_order_id uuid NOT NULL,
+  product_id uuid NOT NULL,
+  variant_id uuid,
+  quantity integer NOT NULL CHECK (quantity > 0),
+  unit_price numeric,
+  line_total numeric,
+  created_at timestamptz DEFAULT now(),
+  cost_price numeric DEFAULT 0
+);
+
+-- public.purchase_orders
+CREATE TABLE IF NOT EXISTS public.purchase_orders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  supplier_id uuid,
+  po_number text UNIQUE,
+  total_amount numeric,
+  notes text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- public.purchase_items
+CREATE TABLE IF NOT EXISTS public.purchase_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  purchase_order_id uuid NOT NULL,
+  product_id uuid,
+  variant_id uuid,
+  quantity integer NOT NULL CHECK (quantity > 0),
+  line_total numeric,
+  unit_cost numeric DEFAULT 0
+);
+
+-- public.expenses
+CREATE TABLE IF NOT EXISTS public.expenses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  expense_date date NOT NULL,
+  category text NOT NULL,
+  description text,
+  amount numeric NOT NULL CHECK (amount >= 0),
+  payment_mode text,
+  reference text,
+  created_at timestamptz DEFAULT now(),
+  vendor text
+);
+
+-- Foreign keys
+
+-- public. variants -> products
+ALTER TABLE public.variants
+  ADD CONSTRAINT variants_product_id_fkey
+  FOREIGN KEY (product_id) REFERENCES public.products(id);
+
+-- public. sales_orders -> customers
+ALTER TABLE public.sales_orders
+  ADD CONSTRAINT sales_orders_customer_id_fkey
+  FOREIGN KEY (customer_id) REFERENCES public.customers(id);
+
+-- public. sales_items -> sales_orders/products/variants
+ALTER TABLE public.sales_items
+  ADD CONSTRAINT sales_items_sales_order_id_fkey
+  FOREIGN KEY (sales_order_id) REFERENCES public.sales_orders(id);
+
+ALTER TABLE public.sales_items
+  ADD CONSTRAINT sales_items_product_id_fkey
+  FOREIGN KEY (product_id) REFERENCES public.products(id);
+
+ALTER TABLE public.sales_items
+  ADD CONSTRAINT sales_items_variant_id_fkey
+  FOREIGN KEY (variant_id) REFERENCES public.variants(id);
+
+-- public. purchase_orders -> suppliers
+ALTER TABLE public.purchase_orders
+  ADD CONSTRAINT purchase_orders_supplier_id_fkey
+  FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id);
+
+-- public. purchase_items -> purchase_orders/products/variants
+ALTER TABLE public.purchase_items
+  ADD CONSTRAINT purchase_items_purchase_order_id_fkey
+  FOREIGN KEY (purchase_order_id) REFERENCES public.purchase_orders(id);
+
+ALTER TABLE public.purchase_items
+  ADD CONSTRAINT purchase_items_product_id_fkey
+  FOREIGN KEY (product_id) REFERENCES public.products(id);
+
+ALTER TABLE public.purchase_items
+  ADD CONSTRAINT purchase_items_variant_id_fkey
+  FOREIGN KEY (variant_id) REFERENCES public.variants(id);

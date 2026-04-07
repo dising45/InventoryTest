@@ -31,6 +31,22 @@ class SupplierServiceSupabase {
     return data as Supplier
   }
 
+  async updateSupplier(id: string, supplier: Partial<Omit<Supplier, 'id'>>): Promise<Supplier> {
+    const { data, error } = await supabase
+      .from('suppliers')
+      .update(supplier)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('UPDATE SUPPLIER ERROR', error)
+      throw error
+    }
+
+    return data as Supplier
+  }
+
   async deleteSupplier(id: string): Promise<void> {
     const { error } = await supabase
       .from('suppliers')
