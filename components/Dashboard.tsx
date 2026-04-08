@@ -19,6 +19,8 @@ import {
   BarChart3,
   Clock,
   Receipt,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 
 interface DashboardProps {
@@ -28,10 +30,25 @@ interface DashboardProps {
 
 const LOW_STOCK_THRESHOLD = 10
 
+const PRIVACY_KEY = 'naitree_privacy_mode'
+
 const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
   const [kpis, setKpis] = useState<any>(null)
   const [recentSales, setRecentSales] = useState<SalesOrder[]>([])
   const [loading, setLoading] = useState(true)
+  const [privacyMode, setPrivacyMode] = useState(() => {
+    try { return localStorage.getItem(PRIVACY_KEY) === 'true' } catch { return false }
+  })
+
+  const togglePrivacy = () => {
+    setPrivacyMode(prev => {
+      const next = !prev
+      try { localStorage.setItem(PRIVACY_KEY, String(next)) } catch {}
+      return next
+    })
+  }
+
+  const mask = (val: string | number) => privacyMode ? '••••••' : val
 
   useEffect(() => {
     const load = async () => {
@@ -82,6 +99,26 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
   return (
     <div className="flex flex-col h-full space-y-4 md:space-y-6 animate-in fade-in duration-500">
 
+      {/* ================= PRIVACY TOGGLE ================= */}
+      <div className="flex items-center justify-end -mb-2 md:-mb-3">
+        <button
+          onClick={togglePrivacy}
+          className={`group flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200 ${
+            privacyMode
+              ? 'bg-gray-900 text-white shadow-lg shadow-gray-300'
+              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+          }`}
+          title={privacyMode ? 'Show values' : 'Hide values'}
+        >
+          {privacyMode ? (
+            <EyeOff className="w-3.5 h-3.5" />
+          ) : (
+            <Eye className="w-3.5 h-3.5" />
+          )}
+          <span className="hidden sm:inline">{privacyMode ? 'Privacy On' : 'Privacy'}</span>
+        </button>
+      </div>
+
       {/* ================= BUSINESS KPI CARDS ================= */}
       {loading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
@@ -95,28 +132,31 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
           <KpiCard
-            title="Today's Sales"
-            value={fmtCompact(kpis?.salesToday ?? 0)}
-            desktopValue={fmt(kpis?.salesToday ?? 0)}
+            title={kpis?.hasMTDData ? "Today's Sales" : "Total Revenue"}
+            value={mask(fmtCompact(kpis?.hasMTDData ? (kpis?.salesToday ?? 0) : (kpis?.salesAllTime ?? 0)))}
+            desktopValue={mask(fmt(kpis?.hasMTDData ? (kpis?.salesToday ?? 0) : (kpis?.salesAllTime ?? 0))) as string}
             icon={ShoppingCart}
             color="indigo"
-            subtitle="Revenue today"
+            subtitle={kpis?.hasMTDData ? "Revenue today" : "All time"}
           />
           <KpiCard
-            title="This Month"
-            value={fmtCompact(kpis?.salesMTD ?? 0)}
-            desktopValue={fmt(kpis?.salesMTD ?? 0)}
+            title={kpis?.hasMTDData ? "This Month" : "Total Sales"}
+            value={mask(fmtCompact(kpis?.hasMTDData ? (kpis?.salesMTD ?? 0) : (kpis?.salesAllTime ?? 0)))}
+            desktopValue={mask(fmt(kpis?.hasMTDData ? (kpis?.salesMTD ?? 0) : (kpis?.salesAllTime ?? 0))) as string}
             icon={TrendingUp}
             color="emerald"
-            subtitle="MTD Revenue"
+            subtitle={kpis?.hasMTDData ? "MTD Revenue" : "All time revenue"}
           />
           <KpiCard
             title="Net Profit"
-            value={fmtCompact(kpis?.netProfitMTD ?? 0)}
-            desktopValue={fmt(kpis?.netProfitMTD ?? 0)}
+            value={mask(fmtCompact(kpis?.hasMTDData ? (kpis?.netProfitMTD ?? 0) : (kpis?.netProfitAllTime ?? 0)))}
+            desktopValue={mask(fmt(kpis?.hasMTDData ? (kpis?.netProfitMTD ?? 0) : (kpis?.netProfitAllTime ?? 0))) as string}
             icon={BarChart3}
-            color={(kpis?.netProfitMTD ?? 0) >= 0 ? 'emerald' : 'red'}
-            subtitle={`${(kpis?.profitMargin ?? 0).toFixed(1)}% margin`}
+            color={privacyMode ? 'indigo' : ((kpis?.hasMTDData ? (kpis?.netProfitMTD ?? 0) : (kpis?.netProfitAllTime ?? 0)) >= 0 ? 'emerald' : 'red')}
+            subtitle={privacyMode ? '••••••' : (kpis?.hasMTDData
+              ? `${(kpis?.profitMargin ?? 0).toFixed(1)}% margin · MTD`
+              : `${(kpis?.profitMarginAllTime ?? 0).toFixed(1)}% margin · All time`
+            )}
           />
           <KpiCard
             title="Low Stock"
@@ -210,7 +250,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
                       </div>
                     </div>
                     <span className="text-sm font-black text-gray-900 tabular-nums shrink-0">
-                      {fmt(sale.total_amount)}
+                      {privacyMode ? '••••••' : fmt(sale.total_amount)}
                     </span>
                   </div>
                 ))}

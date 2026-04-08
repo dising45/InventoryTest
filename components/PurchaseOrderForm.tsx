@@ -6,6 +6,7 @@ import PurchaseItemRow, {
 import { purchaseService } from '../services/purchaseService.supabase';
 import { inventoryService } from '../services/inventoryService.supabase';
 import { Plus, Save } from 'lucide-react';
+import { useToast } from './ui';
 
 interface Props {
   suppliers: Supplier[];
@@ -23,6 +24,7 @@ const PurchaseOrderForm: React.FC<Props> = ({
   const [supplierId, setSupplierId] = useState('');
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [saving, setSaving] = useState(false);
+  const toast = useToast();
 
   /* ---------------- Add / Update Rows ---------------- */
   const updateItem = (index: number, updated: PurchaseItem) => {
@@ -61,7 +63,7 @@ const PurchaseOrderForm: React.FC<Props> = ({
   /* ---------------- Save PO ---------------- */
   const handleSave = async () => {
     if (!supplierId || items.length === 0) {
-      alert('Supplier and at least one item required');
+      toast.warning('Supplier and at least one item required');
       return;
     }
 
@@ -80,7 +82,7 @@ const PurchaseOrderForm: React.FC<Props> = ({
       onSuccess();
     } catch (e) {
       console.error(e);
-      alert('Failed to create PO');
+      toast.error('Failed to create PO');
     } finally {
       setSaving(false);
     }

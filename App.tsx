@@ -13,7 +13,7 @@ import { useExpenses } from './hooks/useExpenses'
 import { salesService } from './services/salesService.supabase'
 
 // Extracted UI components
-import { PageHeader, PrimaryButton, FloatingActionButton, NavButton } from './components/ui'
+import { PageHeader, PrimaryButton, FloatingActionButton, NavButton, ToastProvider, useToast, ConfirmModal } from './components/ui'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import MobileBottomNav from './components/MobileBottomNav'
 
@@ -45,10 +45,25 @@ import {
 } from 'lucide-react'
 
 /* =======================
-   MAIN APP COMPONENT
+   CONFIRM STATE TYPE
 ======================= */
-export default function App() {
+interface ConfirmState {
+  open: boolean
+  title: string
+  message: string
+  confirmLabel?: string
+  onConfirm: () => void
+}
+
+const emptyConfirm: ConfirmState = { open: false, title: '', message: '', onConfirm: () => {} }
+
+/* =======================
+   MAIN APP (INNER)
+======================= */
+function AppInner() {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard')
+  const [confirmState, setConfirmState] = useState<ConfirmState>(emptyConfirm)
+  const toast = useToast()
 
   // Data hooks
   const { products, loading: productsLoading, reload: reloadProducts, saveProduct, deleteProduct: removeProduct } = useProducts()
@@ -66,24 +81,33 @@ export default function App() {
 
   const isLoading = productsLoading || customersLoading || suppliersLoading || salesLoading || expensesLoading
 
+  /* -------------------- CONFIRM HELPER -------------------- */
+  const showConfirm = (title: string, message: string, onConfirm: () => void, confirmLabel?: string) => {
+    setConfirmState({ open: true, title, message, onConfirm, confirmLabel })
+  }
+
   /* -------------------- HANDLERS -------------------- */
   const handleSaveProduct = async (data: any) => {
     try {
       await saveProduct(editingProduct ? { ...data, id: editingProduct.id } : data)
       setEditingProduct(undefined)
       setCurrentView('inventory')
+      toast.success('Product saved successfully')
     } catch {
-      alert('Failed to save product.')
+      toast.error('Failed to save product')
     }
   }
 
   const handleDeleteProduct = async (id: string) => {
-    if (!confirm('Delete this product?')) return
-    try {
-      await removeProduct(id)
-    } catch {
-      alert('Failed to delete product.')
-    }
+    showConfirm('Delete Product', 'This product will be permanently removed. This cannot be undone.', async () => {
+      try {
+        await removeProduct(id)
+        toast.success('Product deleted')
+      } catch {
+        toast.error('Failed to delete product')
+      }
+      setConfirmState(emptyConfirm)
+    }, 'Delete')
   }
 
   const handleSaveSale = async (data: { customer_id: string; items: SalesItem[]; total_amount: number; order_date: string }) => {
@@ -92,20 +116,24 @@ export default function App() {
       await reloadProducts() // stock changed
       setEditingSale(undefined)
       setCurrentView('sales')
+      toast.success(editingSale ? 'Sale updated' : 'Sale created successfully')
     } catch {
-      alert('Unable to save sale.')
+      toast.error('Unable to save sale')
     }
   }
 
   const handleDeleteSale = async (id: string) => {
-    if (!confirm('Delete this sale? Stock will be restored.')) return
-    try {
-      await removeSale(id)
-      await reloadProducts() // stock restored
-    } catch (err) {
-      console.error('DELETE ERROR:', err)
-      alert('Failed to delete sale. Check Console for details.')
-    }
+    showConfirm('Delete Sale', 'This sale will be deleted and stock will be restored. This cannot be undone.', async () => {
+      try {
+        await removeSale(id)
+        await reloadProducts() // stock restored
+        toast.success('Sale deleted, stock restored')
+      } catch (err) {
+        console.error('DELETE ERROR:', err)
+        toast.error('Failed to delete sale')
+      }
+      setConfirmState(emptyConfirm)
+    }, 'Delete')
   }
 
   const handleSaveExpense = async (data: any) => {
@@ -113,18 +141,22 @@ export default function App() {
       await saveExpense(data, editingExpense?.id)
       setEditingExpense(undefined)
       setCurrentView('expenses')
+      toast.success('Expense saved successfully')
     } catch {
-      alert('Failed to save expense.')
+      toast.error('Failed to save expense')
     }
   }
 
   const handleDeleteExpense = async (id: string) => {
-    if (!confirm('Delete expense?')) return
-    try {
-      await removeExpense(id)
-    } catch {
-      alert('Failed to delete expense.')
-    }
+    showConfirm('Delete Expense', 'This expense will be permanently removed.', async () => {
+      try {
+        await removeExpense(id)
+        toast.success('Expense deleted')
+      } catch {
+        toast.error('Failed to delete expense')
+      }
+      setConfirmState(emptyConfirm)
+    }, 'Delete')
   }
 
   /* -------------------- VIEW HELPERS -------------------- */
@@ -150,6 +182,16 @@ export default function App() {
   return (
     <div className="h-[100dvh] w-full bg-gray-50 flex overflow-hidden font-sans text-gray-900 selection:bg-indigo-100 selection:text-indigo-900">
       
+      {/* CONFIRM MODAL */}
+      <ConfirmModal
+        open={confirmState.open}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel || 'Confirm'}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState(emptyConfirm)}
+      />
+
       {/* DESKTOP SIDEBAR */}
       <aside className="hidden md:flex flex-col w-72 bg-white border-r border-gray-200 h-full shrink-0 z-20">
         <div className="p-6">
@@ -409,5 +451,16 @@ export default function App() {
         )}
       </main>
     </div>
+  )
+}
+
+/* =======================
+   ROOT WITH TOAST PROVIDER
+======================= */
+export default function App() {
+  return (
+    <ToastProvider>
+      <AppInner />
+    </ToastProvider>
   )
 }

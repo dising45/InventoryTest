@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { purchaseService } from '../services/purchaseService.supabase';
+import { useToast, ConfirmModal } from './ui';
 
 interface Props {
   purchaseOrders: any[];
@@ -13,6 +14,8 @@ const PurchaseOrderList: React.FC<Props> = ({
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const toast = useToast();
 
   const filtered = purchaseOrders.filter(po =>
     po.items?.some((i: any) =>
@@ -22,14 +25,28 @@ const PurchaseOrderList: React.FC<Props> = ({
     )
   );
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete PO? Stock will be rolled back.')) return;
-    await purchaseService.deletePO(id);
-    onRefresh();
+  const handleDeleteConfirmed = async () => {
+    if (!deleteId) return;
+    try {
+      await purchaseService.deletePO(deleteId);
+      toast.success('Purchase order deleted, stock rolled back');
+      onRefresh();
+    } catch {
+      toast.error('Failed to delete purchase order');
+    }
+    setDeleteId(null);
   };
 
   return (
     <div className="space-y-4">
+      <ConfirmModal
+        open={!!deleteId}
+        title="Delete Purchase Order"
+        message="Stock will be rolled back. This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setDeleteId(null)}
+      />
       {/* Search */}
       <input
         placeholder="Search by product name…"
@@ -70,7 +87,7 @@ const PurchaseOrderList: React.FC<Props> = ({
               </button>
 
               <button
-                onClick={() => handleDelete(po.id)}
+                onClick={() => setDeleteId(po.id)}
                 className="text-red-600"
               >
                 <Trash2 />

@@ -20,6 +20,7 @@ import {
   Loader2
 } from 'lucide-react'
 import ProductPicker from './ui/ProductPicker'
+import { useToast } from './ui'
 
 interface SalesFormProps {
   customers: Customer[]
@@ -85,6 +86,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
   onCancel,
 }) => {
   const isQuick = mode === 'quick'
+  const toast = useToast()
 
   const [loading, setLoading] = useState(false)
   const [customerId, setCustomerId] = useState('')
@@ -196,7 +198,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
       : selectedProduct.stock
 
     if (quantity > maxStock) {
-      alert(`Only ${maxStock} items available`)
+      toast.warning(`Only ${maxStock} items available`)
       return
     }
 

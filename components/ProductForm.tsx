@@ -18,6 +18,7 @@ import {
   Info
 } from 'lucide-react'
 import { imageService } from '../services/imageService.supabase'
+import { useToast } from './ui'
 
 interface ProductFormProps {
   initialData?: Product
@@ -79,6 +80,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
 }) => {
   const [loading, setLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const toast = useToast()
 
   const [formData, setFormData] = useState<Partial<Product>>({
     name: '',
@@ -118,7 +120,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
     if (!file) return
 
     if (!file.type.startsWith('image/')) {
-      alert('Only image files allowed')
+      toast.warning('Only image files allowed')
       return
     }
 
@@ -141,7 +143,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
       setFormData(prev => ({ ...prev, image_url: url }))
     } catch (err) {
       console.error('IMAGE UPLOAD ERROR', err)
-      alert('Image upload failed')
+      toast.error('Image upload failed')
     } finally {
       setLoading(false)
     }
@@ -149,7 +151,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   const handleVariantImageUpload = async (variantId: string, file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Only image files allowed')
+      toast.warning('Only image files allowed')
       return
     }
     setLoading(true)
@@ -172,7 +174,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
         variants: prev.variants?.map(v => v.id === variantId ? { ...v, image_url: url } : v)
       }))
     } catch (err) {
-      alert('Upload failed')
+      toast.error('Upload failed')
     } finally {
       setLoading(false)
     }
