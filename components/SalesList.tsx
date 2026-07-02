@@ -547,10 +547,11 @@ const SalesList: React.FC<SalesListProps> = ({
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-gray-50 flex items-center justify-between">
+                    <div className="pt-3 border-t border-gray-50 flex flex-col gap-3">
 
-                      {/* Status Dropdown (Mobile) */}
-                      <div className="relative" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-between">
+                        {/* Status Dropdown (Mobile) */}
+                        <div className="relative" onClick={(e) => e.stopPropagation()}>
                         {onStatusChange ? (
                           <div className={`flex items-center px-2 py-1 rounded-lg border ${getStatusStyle(sale.status)}`}>
                             <select
@@ -569,22 +570,22 @@ const SalesList: React.FC<SalesListProps> = ({
                             {sale.status}
                           </span>
                         )}
-                      </div>
+                        </div>
 
-                      <div className="flex items-center gap-3">
                         <span className="text-xs text-gray-400 font-medium">
                           {itemCount} Items
                         </span>
+                      </div>
+
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         {onInvoice && (
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onInvoice(sale)
-                            }}
-                            className="p-2 bg-emerald-50 text-emerald-600 rounded-lg active:bg-emerald-100"
+                            onClick={() => onInvoice(sale)}
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-xl text-xs font-bold active:bg-emerald-100 transition-colors"
                             title="View Invoice"
                           >
                             <Receipt className="w-4 h-4" />
+                            Invoice
                           </button>
                         )}
                         {onDelete && (
@@ -593,7 +594,7 @@ const SalesList: React.FC<SalesListProps> = ({
                               e.stopPropagation()
                               onDelete(sale.id)
                             }}
-                            className="p-2 bg-red-50 text-red-600 rounded-lg active:bg-red-100"
+                            className="inline-flex items-center justify-center p-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl active:bg-red-100 transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>

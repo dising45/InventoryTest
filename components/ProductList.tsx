@@ -176,9 +176,9 @@ const ProductList: React.FC<ProductListProps> = ({
                   <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Stock Level
                   </th>
-                  <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Price
-                  </th>
+                    <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Prices
+                    </th>
                   <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">
                     Margin
                   </th>
@@ -253,9 +253,16 @@ const ProductList: React.FC<ProductListProps> = ({
                         </div>
                       </td>
 
-                      {/* Sell Price */}
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900 tabular-nums">
-                        {formatCurrency(product.sell_price)}
+                      {/* Sell Prices */}
+                      <td className="px-6 py-4 whitespace-nowrap text-right tabular-nums">
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-2 py-1 text-xs font-black text-indigo-700 border border-indigo-100">
+                            B2C {formatCurrency(product.sell_price)}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-gray-50 px-2 py-1 text-xs font-black text-gray-700 border border-gray-200">
+                            B2B {formatCurrency(Number(product.b2b_sell_price ?? product.cost_price + 100))}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Margin */}
@@ -338,9 +345,14 @@ const ProductList: React.FC<ProductListProps> = ({
                             {product.has_variants ? `${product.variants?.length} Options` : 'Standard'}
                           </p>
                         </div>
-                        <span className="text-sm font-black text-indigo-600 whitespace-nowrap">
-                          {formatCurrency(product.sell_price)}
-                        </span>
+                        <div className="text-right shrink-0">
+                          <span className="block text-xs font-black text-indigo-600 whitespace-nowrap">
+                            B2C {formatCurrency(product.sell_price)}
+                          </span>
+                          <span className="block text-[11px] font-bold text-gray-500 whitespace-nowrap mt-0.5">
+                            B2B {formatCurrency(Number(product.b2b_sell_price ?? product.cost_price + 100))}
+                          </span>
+                        </div>
                       </div>
                       
                       {/* Bottom Row */}

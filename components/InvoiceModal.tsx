@@ -12,6 +12,7 @@ const BUSINESS_TAGLINE = 'Tax Invoice'
 const BUSINESS_PHONE = ''
 const BUSINESS_EMAIL = ''
 const BUSINESS_ADDRESS = ''
+const FOOTER_MESSAGE = 'Thank you for supporting small businesses and weavers.'
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-IN', {
@@ -294,7 +295,7 @@ const getInvoiceHtml = (sale: SalesOrder) => {
     </div>
 
     <div class="footer">
-      Thank you for your business.
+      ${FOOTER_MESSAGE}
     </div>
   </div>
   <script>
@@ -456,7 +457,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
             </div>
 
             <p className="text-center text-xs text-gray-400 mt-10 pt-4 border-t border-gray-100">
-              Thank you for your business.
+              {FOOTER_MESSAGE}
             </p>
           </div>
         </div>

@@ -359,6 +359,34 @@ const SalesForm: React.FC<SalesFormProps> = ({
         {/* LEFT COLUMN: INPUTS */}
         <div className="lg:col-span-7 space-y-6">
 
+          {/* ORDER PRICING TYPE */}
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 space-y-2">
+            <label className="text-sm font-semibold text-gray-700 block">
+              Pricing Type
+            </label>
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-100 p-1">
+              {(['B2C', 'B2B'] as OrderType[]).map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setOrderType(type)}
+                  className={`py-2.5 rounded-lg text-sm font-bold transition-all ${
+                    orderType === type
+                      ? type === 'B2B'
+                        ? 'bg-gray-900 text-white shadow-sm'
+                        : 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  {type === 'B2C' ? 'B2C Retail' : 'B2B Wholesale'}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-400 ml-1">
+              Selected product prices will use {orderType === 'B2B' ? 'B2B wholesale' : 'B2C retail'} rates. You can still edit each line price.
+            </p>
+          </div>
+
           {/* CUSTOMER SELECTION */}
           {/* CUSTOMER + ORDER DATE */}
           {!isQuick && (
@@ -447,34 +475,6 @@ const SalesForm: React.FC<SalesFormProps> = ({
                     </div>
                   </div>
                 )}
-              </div>
-
-              {/* Order Type */}
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1.5 block ml-1">
-                  Order Type
-                </label>
-                <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-100 p-1">
-                  {(['B2C', 'B2B'] as OrderType[]).map(type => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setOrderType(type)}
-                      className={`py-2 rounded-lg text-sm font-bold transition-all ${
-                        orderType === type
-                          ? type === 'B2B'
-                            ? 'bg-gray-900 text-white shadow-sm'
-                            : 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-gray-500 hover:text-gray-800'
-                      }`}
-                    >
-                      {type === 'B2C' ? 'B2C Retail' : 'B2B Wholesale'}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[11px] text-gray-400 mt-1 ml-1">
-                  B2B uses the product's B2B selling price. Prices can still be edited per line.
-                </p>
               </div>
 
               {/* Order Date */}
