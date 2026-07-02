@@ -26,6 +26,7 @@ interface SalesListProps {
   onDelete?: (id: string) => void
   onAddSale?: () => void
   onStatusChange?: (id: string, status: string) => void
+  onInvoice?: (sale: SalesOrder) => void
 }
 
 const SalesList: React.FC<SalesListProps> = ({
@@ -34,8 +35,9 @@ const SalesList: React.FC<SalesListProps> = ({
   onDelete,
   onAddSale,
   onStatusChange,
+  onInvoice,
 }) => {
-  const showActions = !!onEdit || !!onDelete
+  const showActions = !!onEdit || !!onDelete || !!onInvoice
 
   /* ================= FILTER STATE ================= */
   const [searchQuery, setSearchQuery] = useState('')
@@ -473,6 +475,15 @@ const SalesList: React.FC<SalesListProps> = ({
                       {showActions && (
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            {onInvoice && (
+                              <button
+                                onClick={() => onInvoice(sale)}
+                                className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                title="View Invoice"
+                              >
+                                <Receipt className="w-4 h-4" />
+                              </button>
+                            )}
                             {onEdit && (
                               <button
                                 onClick={() => onEdit(sale)}
@@ -564,6 +575,18 @@ const SalesList: React.FC<SalesListProps> = ({
                         <span className="text-xs text-gray-400 font-medium">
                           {itemCount} Items
                         </span>
+                        {onInvoice && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onInvoice(sale)
+                            }}
+                            className="p-2 bg-emerald-50 text-emerald-600 rounded-lg active:bg-emerald-100"
+                            title="View Invoice"
+                          >
+                            <Receipt className="w-4 h-4" />
+                          </button>
+                        )}
                         {onDelete && (
                           <button
                             onClick={(e) => {

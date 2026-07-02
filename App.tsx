@@ -1,6 +1,6 @@
 // App.tsx — Refactored with extracted UI components and custom hooks
 import { useState } from 'react'
-import type { ViewState, SalesItem } from './types'
+import type { ViewState, SalesItem, SalesOrder } from './types'
 
 // Custom hooks
 import { useProducts } from './hooks/useProducts'
@@ -30,6 +30,7 @@ import SalesForm from './components/SalesForm'
 import ExpenseList from './components/ExpenseList'
 import ExpenseForm from './components/ExpenseForm'
 import ProfitLoss from './components/ProfitLoss'
+import InvoiceModal from './components/InvoiceModal'
 
 import {
   LayoutDashboard,
@@ -63,6 +64,7 @@ const emptyConfirm: ConfirmState = { open: false, title: '', message: '', onConf
 function AppInner() {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard')
   const [confirmState, setConfirmState] = useState<ConfirmState>(emptyConfirm)
+  const [invoiceSale, setInvoiceSale] = useState<SalesOrder | null>(null)
   const toast = useToast()
 
   // Data hooks
@@ -110,7 +112,7 @@ function AppInner() {
     }, 'Delete')
   }
 
-  const handleSaveSale = async (data: { customer_id: string; items: SalesItem[]; total_amount: number; order_date: string }) => {
+  const handleSaveSale = async (data: any) => {
     try {
       await saveSale(data, editingSale?.id)
       await reloadProducts() // stock changed
@@ -181,6 +183,12 @@ function AppInner() {
   /* -------------------- RENDER -------------------- */
   return (
     <div className="h-[100dvh] w-full bg-gray-50 flex overflow-hidden font-sans text-gray-900 selection:bg-indigo-100 selection:text-indigo-900">
+      
+      {/* INVOICE MODAL */}
+      <InvoiceModal
+        sale={invoiceSale}
+        onClose={() => setInvoiceSale(null)}
+      />
       
       {/* CONFIRM MODAL */}
       <ConfirmModal
@@ -308,6 +316,7 @@ function AppInner() {
                         sales={sales}
                         onEdit={s => { setEditingSale(s); setCurrentView('edit-sale'); }}
                         onDelete={handleDeleteSale}
+                        onInvoice={setInvoiceSale}
                         onAddSale={() => { setEditingSale(undefined); setCurrentView('add-sale'); }}
                         onStatusChange={async (id, status) => {
                            await salesService.updateStatus(id, status)
@@ -324,6 +333,7 @@ function AppInner() {
                         products={products}
                         initialData={editingSale}
                         onSave={handleSaveSale}
+                        onCreateCustomer={saveCustomer}
                         onCancel={() => { setEditingSale(undefined); setCurrentView('sales'); }}
                       />
                     </div>

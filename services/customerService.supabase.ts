@@ -16,7 +16,7 @@ class CustomerServiceSupabase {
     return data as Customer[]
   }
 
-  async addCustomer(customer: Omit<Customer, 'id'>): Promise<Customer> {
+  async addCustomer(customer: Omit<Customer, 'id' | 'created_at'>): Promise<Customer> {
     const { data, error } = await supabase
       .from('customers')
       .insert([customer])

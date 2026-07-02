@@ -17,13 +17,13 @@ export function useCustomers() {
 
   useEffect(() => { load() }, [load])
 
-  const saveCustomer = async (data: Omit<Customer, 'id'>, editId?: string) => {
-    if (editId) {
-      await customerService.updateCustomer(editId, data)
-    } else {
-      await customerService.addCustomer(data)
-    }
+  const saveCustomer = async (data: Omit<Customer, 'id' | 'created_at'>, editId?: string) => {
+    const savedCustomer = editId
+      ? await customerService.updateCustomer(editId, data)
+      : await customerService.addCustomer(data)
+
     await load()
+    return savedCustomer
   }
 
   const deleteCustomer = async (id: string) => {

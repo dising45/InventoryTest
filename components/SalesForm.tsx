@@ -38,6 +38,7 @@ interface SalesFormProps {
     tax_type: 'flat' | 'percent'
     order_type: OrderType
   }) => Promise<void>
+  onCreateCustomer?: (customer: Omit<Customer, 'id' | 'created_at'>) => Promise<Customer>
   onCancel: () => void
 }
 
@@ -84,6 +85,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
   initialData,
   mode = 'normal',
   onSave,
+  onCreateCustomer,
   onCancel,
 }) => {
   const isQuick = mode === 'quick'
@@ -93,6 +95,14 @@ const SalesForm: React.FC<SalesFormProps> = ({
   const [customerId, setCustomerId] = useState('')
   const [orderType, setOrderType] = useState<OrderType>('B2C')
   const [items, setItems] = useState<SalesItem[]>([])
+  const [showNewCustomer, setShowNewCustomer] = useState(false)
+  const [creatingCustomer, setCreatingCustomer] = useState(false)
+  const [newCustomer, setNewCustomer] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+  })
 
   const [selectedProduct, setSelectedProduct] = useState<Product>()
   const [selectedVariant, setSelectedVariant] = useState<Variant>()
@@ -256,6 +266,36 @@ const SalesForm: React.FC<SalesFormProps> = ({
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val)
 
+  const handleCreateCustomer = async () => {
+    if (!onCreateCustomer) return
+
+    const name = newCustomer.name.trim()
+    if (!name) {
+      toast.warning('Customer name is required')
+      return
+    }
+
+    setCreatingCustomer(true)
+    try {
+      const saved = await onCreateCustomer({
+        name,
+        phone: newCustomer.phone.trim() || undefined,
+        email: newCustomer.email.trim() || undefined,
+        address: newCustomer.address.trim() || undefined,
+      })
+
+      setCustomerId(saved.id)
+      setShowNewCustomer(false)
+      setNewCustomer({ name: '', phone: '', email: '', address: '' })
+      toast.success('Customer added and selected')
+    } catch (err) {
+      console.error('CREATE CUSTOMER ERROR:', err)
+      toast.error('Failed to add customer')
+    } finally {
+      setCreatingCustomer(false)
+    }
+  }
+
   const handleSubmit = async () => {
     if (!customerId || items.length === 0) return
 
@@ -328,20 +368,86 @@ const SalesForm: React.FC<SalesFormProps> = ({
               </label>
 
               {/* Customer Select */}
-              <SelectWrapper icon={User}>
-                <select
-                  value={customerId}
-                  onChange={e => setCustomerId(e.target.value)}
-                  className="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none appearance-none transition-all"
-                >
-                  <option value="">Select Customer</option>
-                  {customers.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.phone || 'No phone'})
-                    </option>
-                  ))}
-                </select>
-              </SelectWrapper>
+              <div className="space-y-3">
+                <SelectWrapper icon={User}>
+                  <select
+                    value={customerId}
+                    onChange={e => setCustomerId(e.target.value)}
+                    className="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none appearance-none transition-all"
+                  >
+                    <option value="">Select Customer</option>
+                    {customers.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.phone || 'No phone'})
+                      </option>
+                    ))}
+                  </select>
+                </SelectWrapper>
+
+                {onCreateCustomer && (
+                  <button
+                    type="button"
+                    onClick={() => setShowNewCustomer(v => !v)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    {showNewCustomer ? 'Hide new customer form' : 'Add new customer'}
+                  </button>
+                )}
+
+                {showNewCustomer && (
+                  <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        value={newCustomer.name}
+                        onChange={e => setNewCustomer(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Customer name *"
+                        className="w-full px-3 py-2.5 bg-white border border-indigo-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
+                      />
+                      <input
+                        type="tel"
+                        value={newCustomer.phone}
+                        onChange={e => setNewCustomer(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="Phone"
+                        className="w-full px-3 py-2.5 bg-white border border-indigo-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
+                      />
+                      <input
+                        type="email"
+                        value={newCustomer.email}
+                        onChange={e => setNewCustomer(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="Email"
+                        className="w-full px-3 py-2.5 bg-white border border-indigo-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
+                      />
+                      <input
+                        type="text"
+                        value={newCustomer.address}
+                        onChange={e => setNewCustomer(prev => ({ ...prev, address: e.target.value }))}
+                        placeholder="Address"
+                        className="w-full px-3 py-2.5 bg-white border border-indigo-100 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowNewCustomer(false)}
+                        className="px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-800"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCreateCustomer}
+                        disabled={creatingCustomer || !newCustomer.name.trim()}
+                        className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {creatingCustomer ? 'Adding...' : 'Add & Select'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Order Type */}
               <div>
