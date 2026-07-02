@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { SalesOrder, SalesItem } from '../types'
+import { SalesOrder, SalesItem, OrderType } from '../types'
 import { salesService } from '../services/salesService.supabase'
 
 export interface SalePayload {
@@ -12,6 +12,7 @@ export interface SalePayload {
   discount_type?: 'flat' | 'percentage'
   tax?: number
   tax_type?: 'flat' | 'percentage'
+  order_type?: OrderType
 }
 
 export function useSales() {

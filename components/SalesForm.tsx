@@ -1,6 +1,6 @@
 // SalesForm.tsx
 import React, { useState, useEffect } from 'react'
-import { Customer, Product, SalesItem, SalesOrder, Variant } from '../types'
+import { Customer, Product, SalesItem, SalesOrder, Variant, OrderType } from '../types'
 import {
   ArrowLeft,
   Save,
@@ -36,6 +36,7 @@ interface SalesFormProps {
     discount_type: 'flat' | 'percent'
     tax: number
     tax_type: 'flat' | 'percent'
+    order_type: OrderType
   }) => Promise<void>
   onCancel: () => void
 }
@@ -90,6 +91,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
 
   const [loading, setLoading] = useState(false)
   const [customerId, setCustomerId] = useState('')
+  const [orderType, setOrderType] = useState<OrderType>('B2C')
   const [items, setItems] = useState<SalesItem[]>([])
 
   const [selectedProduct, setSelectedProduct] = useState<Product>()
@@ -110,6 +112,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
   useEffect(() => {
     if (initialData) {
       setCustomerId(initialData.customer_id)
+      setOrderType(initialData.order_type ?? 'B2C')
       setOrderDate(
         initialData.order_date ??
         initialData.created_at?.split('T')[0]
@@ -141,6 +144,15 @@ const SalesForm: React.FC<SalesFormProps> = ({
     }
   }, [initialData, products, customers, isQuick])
 
+  const getDefaultUnitPrice = (product: Product, variant?: Variant, type: OrderType = orderType) => {
+    const basePrice =
+      type === 'B2B'
+        ? (Number(product.b2b_sell_price || 0) > 0 ? Number(product.b2b_sell_price) : Number(product.sell_price || 0))
+        : Number(product.sell_price || 0)
+
+    return basePrice + Number(variant?.price_modifier || 0)
+  }
+
   /* ---------------- PRICE AUTO ---------------- */
   useEffect(() => {
     if (!selectedProduct) {
@@ -148,11 +160,8 @@ const SalesForm: React.FC<SalesFormProps> = ({
       return
     }
 
-    setUnitPrice(
-      selectedProduct.sell_price +
-      (selectedVariant?.price_modifier || 0)
-    )
-  }, [selectedProduct, selectedVariant])
+    setUnitPrice(getDefaultUnitPrice(selectedProduct, selectedVariant))
+  }, [selectedProduct, selectedVariant, orderType])
 
   /* ---------------- EDIT ITEM ---------------- */
   const updateItem = (
@@ -261,6 +270,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
         discount_type: discountType,
         tax: taxValue,
         tax_type: taxType,
+        order_type: orderType,
       })
     } catch {
       // Error handling done by parent
@@ -333,6 +343,34 @@ const SalesForm: React.FC<SalesFormProps> = ({
                 </select>
               </SelectWrapper>
 
+              {/* Order Type */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 mb-1.5 block ml-1">
+                  Order Type
+                </label>
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-100 p-1">
+                  {(['B2C', 'B2B'] as OrderType[]).map(type => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setOrderType(type)}
+                      className={`py-2 rounded-lg text-sm font-bold transition-all ${
+                        orderType === type
+                          ? type === 'B2B'
+                            ? 'bg-gray-900 text-white shadow-sm'
+                            : 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-gray-500 hover:text-gray-800'
+                      }`}
+                    >
+                      {type === 'B2C' ? 'B2C Retail' : 'B2B Wholesale'}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1 ml-1">
+                  B2B uses the product's B2B selling price. Prices can still be edited per line.
+                </p>
+              </div>
+
               {/* Order Date */}
               <div>
                 <label className="text-xs font-semibold text-gray-500 mb-1.5 block ml-1">
@@ -367,7 +405,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
                 onSelect={(product, variant) => {
                   setSelectedProduct(product)
                   setSelectedVariant(variant)
-                  setUnitPrice(product.sell_price + (variant?.price_modifier || 0))
+                  setUnitPrice(getDefaultUnitPrice(product, variant))
                   setQuantity(1)
                 }}
               />
@@ -466,9 +504,18 @@ const SalesForm: React.FC<SalesFormProps> = ({
                 <Receipt className="w-5 h-5 mr-2 text-indigo-600" />
                 Order Summary
               </h3>
-              <span className="bg-white border border-gray-200 text-gray-600 px-2.5 py-0.5 rounded-full text-xs font-bold">
-                {items.length} items
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`border px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                  orderType === 'B2B'
+                    ? 'bg-gray-900 border-gray-900 text-white'
+                    : 'bg-white border-indigo-100 text-indigo-700'
+                }`}>
+                  {orderType}
+                </span>
+                <span className="bg-white border border-gray-200 text-gray-600 px-2.5 py-0.5 rounded-full text-xs font-bold">
+                  {items.length} items
+                </span>
+              </div>
             </div>
 
             {/* Cart Items List */}

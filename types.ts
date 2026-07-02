@@ -7,12 +7,15 @@ export interface Variant {
   image_url?: string   // ✅ ADD THIS
 }
 
+export type OrderType = 'B2C' | 'B2B';
+
 export interface Product {
   id: string;
   name: string;
   description?: string;
   cost_price: number;
   sell_price: number;
+  b2b_sell_price?: number;
   stock: number; // Total stock if variants exist, or direct stock
   has_variants: boolean;
   variants: Variant[];
@@ -66,6 +69,7 @@ export interface SalesOrder {
   discount_type?: 'flat' | 'percentage';
   tax?: number;
   tax_type?: 'flat' | 'percentage';
+  order_type?: OrderType;
 }
 
 export type ViewState =

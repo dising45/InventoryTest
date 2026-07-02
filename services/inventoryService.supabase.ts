@@ -63,6 +63,7 @@ class InventoryServiceSupabase {
         description: product.description ?? null,
         cost_price: Number(product.cost_price ?? 0),
         sell_price: Number(product.sell_price ?? 0),
+        b2b_sell_price: Number(product.b2b_sell_price ?? Number(product.cost_price ?? 0) + 100),
         stock: calculatedStock,
         has_variants: !!product.has_variants,
         image_url: product.image_url ?? null,   // ✅ ADD THIS
@@ -135,6 +136,7 @@ class InventoryServiceSupabase {
         description: product.description ?? null,
         cost_price: Number(product.cost_price ?? 0),
         sell_price: Number(product.sell_price ?? 0),
+        b2b_sell_price: Number(product.b2b_sell_price ?? Number(product.cost_price ?? 0) + 100),
         stock: calculatedStock,
         has_variants: !!product.has_variants,
         updated_at: new Date().toISOString(),

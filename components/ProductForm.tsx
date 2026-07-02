@@ -87,6 +87,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
     description: '',
     cost_price: 0,
     sell_price: 0,
+    b2b_sell_price: 100,
     stock: 0,
     has_variants: false,
     image_url: '',
@@ -98,6 +99,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
     if (initialData) {
       setFormData({
         ...initialData,
+        b2b_sell_price: initialData.b2b_sell_price ?? Number(initialData.cost_price ?? 0) + 100,
         variants: initialData.variants || [],
       })
     }
@@ -109,10 +111,31 @@ const ProductForm: React.FC<ProductFormProps> = ({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'number' ? parseFloat(value) || 0 : value,
-    }))
+    const parsedValue = type === 'number' ? parseFloat(value) || 0 : value
+
+    setFormData(prev => {
+      if (name === 'cost_price') {
+        const previousAutoB2B = Number(prev.cost_price ?? 0) + 100
+        const shouldAutoUpdateB2B =
+          !initialData &&
+          (prev.b2b_sell_price === undefined ||
+            Number(prev.b2b_sell_price) === 0 ||
+            Number(prev.b2b_sell_price) === previousAutoB2B)
+
+        return {
+          ...prev,
+          cost_price: parsedValue as number,
+          ...(shouldAutoUpdateB2B
+            ? { b2b_sell_price: Number(parsedValue) + 100 }
+            : {}),
+        }
+      }
+
+      return {
+        ...prev,
+        [name]: parsedValue,
+      }
+    })
   }
 
   const handleProductImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -346,7 +369,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-5 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
                 <InputField
                   required
                   label="Cost Price"
@@ -358,13 +381,28 @@ const ProductForm: React.FC<ProductFormProps> = ({
                 />
                 <InputField
                   required
-                  label="Selling Price"
+                  label="B2C Selling Price"
                   type="number"
                   name="sell_price"
                   icon={IndianRupee}
                   value={formData.sell_price}
                   onChange={handleChange}
                 />
+                <InputField
+                  label="B2B Selling Price"
+                  type="number"
+                  name="b2b_sell_price"
+                  icon={IndianRupee}
+                  value={formData.b2b_sell_price ?? Number(formData.cost_price ?? 0) + 100}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="flex items-start gap-2 rounded-xl bg-indigo-50 border border-indigo-100 px-4 py-3 text-xs text-indigo-700">
+                <Info className="w-4 h-4 mt-0.5 shrink-0" />
+                <p>
+                  B2B price defaults to buying price + ₹100. You can edit it anytime for special wholesale pricing.
+                </p>
               </div>
 
               {!formData.has_variants && (

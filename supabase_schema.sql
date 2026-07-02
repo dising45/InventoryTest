@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   description text,
   cost_price numeric DEFAULT 0,
   sell_price numeric DEFAULT 0,
+  b2b_sell_price numeric,
   stock integer DEFAULT 0 CHECK (stock >= 0),
   has_variants boolean DEFAULT false,
   image_url text,
@@ -67,6 +68,7 @@ CREATE TABLE IF NOT EXISTS public.sales_orders (
   tax numeric DEFAULT 0,
   tax_type text DEFAULT 'percentage',
   total_amount numeric DEFAULT 0,
+  order_type text DEFAULT 'B2C' CHECK (order_type IN ('B2C', 'B2B')),
   order_date date DEFAULT CURRENT_DATE,
   status text DEFAULT 'completed',
   created_at timestamptz DEFAULT now()
@@ -170,6 +172,7 @@ ALTER TABLE public.purchase_items
 
 CREATE INDEX IF NOT EXISTS idx_variants_product_id ON public.variants(product_id);
 CREATE INDEX IF NOT EXISTS idx_sales_orders_customer_id ON public.sales_orders(customer_id);
+CREATE INDEX IF NOT EXISTS idx_sales_orders_order_type ON public.sales_orders(order_type);
 CREATE INDEX IF NOT EXISTS idx_sales_items_sales_order_id ON public.sales_items(sales_order_id);
 CREATE INDEX IF NOT EXISTS idx_sales_items_product_id ON public.sales_items(product_id);
 CREATE INDEX IF NOT EXISTS idx_sales_items_variant_id ON public.sales_items(variant_id);

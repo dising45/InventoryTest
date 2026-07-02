@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { SalesOrder, SalesItem } from '../types';
+import { SalesOrder, SalesItem, OrderType } from '../types';
 
 export const salesService = {
   /* =========================
@@ -36,6 +36,7 @@ export const salesService = {
     discount_type?: 'flat' | 'percentage';
     tax?: number;
     tax_type?: 'flat' | 'percentage';
+    order_type?: OrderType;
   }) {
     const { data: order, error: orderError } = await supabase
       .from('sales_orders')
@@ -47,6 +48,7 @@ export const salesService = {
         tax: sale.tax ?? 0,
         tax_type: sale.tax_type ?? 'percentage',
         total_amount: sale.total_amount,
+        order_type: sale.order_type ?? 'B2C',
         order_date: sale.order_date,
         status: 'completed',
       })
@@ -88,6 +90,7 @@ export const salesService = {
       discount_type?: 'flat' | 'percentage';
       tax?: number;
       tax_type?: 'flat' | 'percentage';
+      order_type?: OrderType;
     }
   ) {
     // 1️⃣ Restore stock
@@ -118,6 +121,7 @@ export const salesService = {
         discount_type: sale.discount_type ?? 'flat',
         tax: sale.tax ?? 0,
         tax_type: sale.tax_type ?? 'percentage',
+        order_type: sale.order_type ?? 'B2C',
       })
       .eq('id', salesOrderId);
 
