@@ -1,6 +1,6 @@
 import React from 'react'
 import { SalesOrder } from '../types'
-import { Printer, X, Receipt } from 'lucide-react'
+import { Printer, X, Receipt, Share2 } from 'lucide-react'
 
 interface InvoiceModalProps {
   sale: SalesOrder | null
@@ -319,18 +319,60 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
   const total = Number(sale.total_amount ?? taxableAmount + taxAmount)
 
   const handlePrint = () => {
-    const win = window.open('', '_blank', 'width=900,height=1100')
-    if (!win) return
+    window.print()
+  }
 
-    win.document.open()
-    win.document.write(getInvoiceHtml(sale))
-    win.document.close()
+  const handleShare = async () => {
+    const invoiceText = `${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}
+Customer: ${sale.customer?.name || 'Customer'}
+Date: ${formatDate(sale.order_date || sale.created_at)}
+Total: ${formatCurrency(Number(sale.total_amount || 0))}`
+
+    if (navigator.share) {
+      await navigator.share({
+        title: `${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}`,
+        text: invoiceText,
+      })
+      return
+    }
+
+    await navigator.clipboard?.writeText(invoiceText)
   }
 
   return (
     <div className="fixed inset-0 z-[100] bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+
+          .invoice-print-area,
+          .invoice-print-area * {
+            visibility: visible !important;
+          }
+
+          .invoice-print-area {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100% !important;
+            min-height: 100% !important;
+            padding: 24px !important;
+            margin: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            background: #ffffff !important;
+            overflow: visible !important;
+          }
+
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
       <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="no-print px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
               <Receipt className="w-5 h-5 text-indigo-600" />
@@ -343,11 +385,18 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={handlePrint}
-              className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+              onClick={handleShare}
+              className="inline-flex items-center px-3 md:px-4 py-2 rounded-xl text-sm font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors"
             >
-              <Printer className="w-4 h-4 mr-2" />
-              Print / Save PDF
+              <Share2 className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Share</span>
+            </button>
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center px-3 md:px-4 py-2 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+            >
+              <Printer className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Print / Save PDF</span>
             </button>
             <button
               onClick={onClose}
@@ -359,7 +408,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
         </div>
 
         <div className="overflow-y-auto p-6 bg-gray-50">
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm">
+          <div className="invoice-print-area bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm">
             <div className="flex justify-between gap-6 border-b-2 border-gray-900 pb-5 mb-6">
               <div>
                 <h1 className="text-3xl font-black tracking-tight text-gray-900">
