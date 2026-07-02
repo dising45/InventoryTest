@@ -547,11 +547,9 @@ const SalesList: React.FC<SalesListProps> = ({
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-gray-50 flex flex-col gap-3">
-
-                      <div className="flex items-center justify-between">
-                        {/* Status Dropdown (Mobile) */}
-                        <div className="relative" onClick={(e) => e.stopPropagation()}>
+                    <div className="pt-3 border-t border-gray-50 flex items-center justify-between gap-2">
+                      {/* Status Dropdown (Mobile) */}
+                      <div className="relative min-w-0" onClick={(e) => e.stopPropagation()}>
                         {onStatusChange ? (
                           <div className={`flex items-center px-2 py-1 rounded-lg border ${getStatusStyle(sale.status)}`}>
                             <select
@@ -570,18 +568,16 @@ const SalesList: React.FC<SalesListProps> = ({
                             {sale.status}
                           </span>
                         )}
-                        </div>
-
-                        <span className="text-xs text-gray-400 font-medium">
-                          {itemCount} Items
-                        </span>
                       </div>
 
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-xs text-gray-400 font-medium whitespace-nowrap">
+                          {itemCount} Items
+                        </span>
                         {onInvoice && (
                           <button
                             onClick={() => onInvoice(sale)}
-                            className="inline-flex items-center justify-center p-2.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl active:bg-emerald-100 transition-colors"
+                            className="inline-flex items-center justify-center p-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg active:bg-emerald-100 transition-colors"
                             title="View Invoice"
                             aria-label="View Invoice"
                           >
@@ -594,7 +590,8 @@ const SalesList: React.FC<SalesListProps> = ({
                               e.stopPropagation()
                               onDelete(sale.id)
                             }}
-                            className="inline-flex items-center justify-center p-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl active:bg-red-100 transition-colors"
+                            className="inline-flex items-center justify-center p-2 bg-red-50 text-red-600 border border-red-100 rounded-lg active:bg-red-100 transition-colors"
+                            aria-label="Delete Sale"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>

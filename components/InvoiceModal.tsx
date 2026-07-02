@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { SalesOrder } from '../types'
 import { Printer, X, Receipt, Share2 } from 'lucide-react'
 
@@ -309,7 +309,72 @@ const getInvoiceHtml = (sale: SalesOrder) => {
 `
 }
 
+const inlineComputedStyles = (source: HTMLElement, target: HTMLElement) => {
+  const computed = window.getComputedStyle(source)
+  target.setAttribute('style', computed.cssText)
+
+  Array.from(source.children).forEach((child, index) => {
+    const targetChild = target.children[index]
+    if (child instanceof HTMLElement && targetChild instanceof HTMLElement) {
+      inlineComputedStyles(child, targetChild)
+    }
+  })
+}
+
+const createInvoiceImageBlob = async (element: HTMLElement): Promise<Blob> => {
+  const clone = element.cloneNode(true) as HTMLElement
+  inlineComputedStyles(element, clone)
+
+  const width = element.scrollWidth
+  const height = element.scrollHeight
+  const serialized = new XMLSerializer().serializeToString(clone)
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      <foreignObject width="100%" height="100%">
+        <div xmlns="http://www.w3.org/1999/xhtml">${serialized}</div>
+      </foreignObject>
+    </svg>
+  `
+
+  const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
+  const svgUrl = URL.createObjectURL(svgBlob)
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => resolve(img)
+      img.onerror = reject
+      img.src = svgUrl
+    })
+
+    const scale = Math.min(2, window.devicePixelRatio || 1)
+    const canvas = document.createElement('canvas')
+    canvas.width = width * scale
+    canvas.height = height * scale
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Canvas is not supported')
+
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.scale(scale, scale)
+    ctx.drawImage(image, 0, 0)
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob)
+        else reject(new Error('Could not generate invoice image'))
+      }, 'image/png', 0.95)
+    })
+  } finally {
+    URL.revokeObjectURL(svgUrl)
+  }
+}
+
 const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
+  const invoiceRef = useRef<HTMLDivElement>(null)
+
   if (!sale) return null
 
   const subtotal = getSubtotal(sale)
@@ -318,25 +383,45 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
   const taxAmount = getTaxAmount(sale, taxableAmount)
   const total = Number(sale.total_amount ?? taxableAmount + taxAmount)
 
-  const handlePrint = () => {
-    window.print()
-  }
-
   const handleShare = async () => {
-    const invoiceText = `${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}
-Customer: ${sale.customer?.name || 'Customer'}
-Date: ${formatDate(sale.order_date || sale.created_at)}
-Total: ${formatCurrency(Number(sale.total_amount || 0))}`
+    if (!invoiceRef.current) return
 
-    if (navigator.share) {
+    const blob = await createInvoiceImageBlob(invoiceRef.current)
+    const file = new File([blob], `${getInvoiceNumber(sale)}.png`, {
+      type: 'image/png',
+    })
+
+    const nav = navigator as Navigator & {
+      canShare?: (data: { files?: File[] }) => boolean
+    }
+
+    if (navigator.share && (!nav.canShare || nav.canShare({ files: [file] }))) {
       await navigator.share({
         title: `${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}`,
-        text: invoiceText,
+        text: `${BUSINESS_NAME} invoice for ${sale.customer?.name || 'Customer'}`,
+        files: [file],
       })
       return
     }
 
-    await navigator.clipboard?.writeText(invoiceText)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${getInvoiceNumber(sale)}.png`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const handlePrint = () => {
+    const isMobile = window.matchMedia('(max-width: 768px)').matches
+    if (isMobile) {
+      void handleShare()
+      return
+    }
+
+    window.print()
   }
 
   return (
@@ -408,7 +493,7 @@ Total: ${formatCurrency(Number(sale.total_amount || 0))}`
         </div>
 
         <div className="overflow-y-auto p-6 bg-gray-50">
-          <div className="invoice-print-area bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm">
+          <div ref={invoiceRef} className="invoice-print-area bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm">
             <div className="flex justify-between gap-6 border-b-2 border-gray-900 pb-5 mb-6">
               <div>
                 <h1 className="text-3xl font-black tracking-tight text-gray-900">
