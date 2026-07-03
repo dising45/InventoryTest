@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React from 'react'
 import { SalesOrder } from '../types'
 import { Printer, X, Receipt, Share2 } from 'lucide-react'
 
@@ -309,72 +309,123 @@ const getInvoiceHtml = (sale: SalesOrder) => {
 `
 }
 
-const inlineComputedStyles = (source: HTMLElement, target: HTMLElement) => {
-  const computed = window.getComputedStyle(source)
-  target.setAttribute('style', computed.cssText)
+const openInvoicePage = (sale: SalesOrder) => {
+  const isMobile = window.matchMedia('(max-width: 768px)').matches
+  const win = window.open('', isMobile ? '_self' : '_blank')
 
-  Array.from(source.children).forEach((child, index) => {
-    const targetChild = target.children[index]
-    if (child instanceof HTMLElement && targetChild instanceof HTMLElement) {
-      inlineComputedStyles(child, targetChild)
-    }
-  })
-}
-
-const createInvoiceImageBlob = async (element: HTMLElement): Promise<Blob> => {
-  const clone = element.cloneNode(true) as HTMLElement
-  inlineComputedStyles(element, clone)
-
-  const width = element.scrollWidth
-  const height = element.scrollHeight
-  const serialized = new XMLSerializer().serializeToString(clone)
-
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-      <foreignObject width="100%" height="100%">
-        <div xmlns="http://www.w3.org/1999/xhtml">${serialized}</div>
-      </foreignObject>
-    </svg>
-  `
-
-  const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' })
-  const svgUrl = URL.createObjectURL(svgBlob)
-
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image()
-      img.onload = () => resolve(img)
-      img.onerror = reject
-      img.src = svgUrl
-    })
-
-    const scale = Math.min(2, window.devicePixelRatio || 1)
-    const canvas = document.createElement('canvas')
-    canvas.width = width * scale
-    canvas.height = height * scale
-
-    const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('Canvas is not supported')
-
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.scale(scale, scale)
-    ctx.drawImage(image, 0, 0)
-
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(blob => {
-        if (blob) resolve(blob)
-        else reject(new Error('Could not generate invoice image'))
-      }, 'image/png', 0.95)
-    })
-  } finally {
-    URL.revokeObjectURL(svgUrl)
+  if (!win) {
+    throw new Error('Unable to open invoice window')
   }
+
+  const shareScript = isMobile
+    ? `
+      const shareBtn = document.getElementById('shareBtn');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const printBtn = document.getElementById('printBtn');
+      const backBtn = document.getElementById('backBtn');
+
+      const invoiceText = ${JSON.stringify(`${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}
+Customer: ${sale.customer?.name || 'Customer'}
+Date: ${formatDate(sale.order_date || sale.created_at)}
+Total: ${formatCurrency(Number(sale.total_amount || 0))}`)};
+
+      shareBtn?.addEventListener('click', async () => {
+        try {
+          if (navigator.share) {
+            await navigator.share({
+              title: ${JSON.stringify(`${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}`)},
+              text: invoiceText
+            });
+          } else if (navigator.clipboard) {
+            await navigator.clipboard.writeText(invoiceText);
+            alert('Invoice details copied to clipboard');
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      });
+
+      downloadBtn?.addEventListener('click', () => window.print());
+      printBtn?.addEventListener('click', () => window.print());
+      backBtn?.addEventListener('click', () => history.back());
+    `
+    : `
+      document.getElementById('printBtn')?.addEventListener('click', () => window.print());
+      document.getElementById('shareBtn')?.addEventListener('click', async () => {
+        try {
+          if (navigator.share) {
+            await navigator.share({
+              title: ${JSON.stringify(`${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}`)},
+              text: ${JSON.stringify(`${BUSINESS_NAME} invoice for ${sale.customer?.name || 'Customer'}`)}
+            });
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      });
+      document.getElementById('downloadBtn')?.addEventListener('click', () => window.print());
+      document.getElementById('backBtn')?.addEventListener('click', () => window.close());
+    `
+
+  const html = getInvoiceHtml(sale).replace(
+    '</body>',
+    `
+      <div class="no-print invoice-actions">
+        <button id="backBtn">${isMobile ? 'Back' : 'Close'}</button>
+        <div class="invoice-actions-right">
+          <button id="shareBtn">Share</button>
+          <button id="downloadBtn">${isMobile ? 'Save / Share PDF' : 'Save PDF'}</button>
+          <button id="printBtn">Print</button>
+        </div>
+      </div>
+      <style>
+        .invoice-actions {
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 16px;
+          border-bottom: 1px solid #e5e7eb;
+          background: rgba(255,255,255,0.96);
+          backdrop-filter: blur(8px);
+        }
+        .invoice-actions-right {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .invoice-actions button {
+          border: none;
+          border-radius: 12px;
+          padding: 10px 14px;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          background: #4f46e5;
+          color: white;
+        }
+        .invoice-actions #shareBtn,
+        .invoice-actions #backBtn {
+          background: #eef2ff;
+          color: #4338ca;
+        }
+        @media print {
+          .invoice-actions { display: none !important; }
+        }
+      </style>
+      <script>${shareScript}</script>
+    </body>`
+  )
+
+  win.document.open()
+  win.document.write(html)
+  win.document.close()
 }
 
 const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
-  const invoiceRef = useRef<HTMLDivElement>(null)
-
   if (!sale) return null
 
   const subtotal = getSubtotal(sale)
@@ -383,51 +434,26 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
   const taxAmount = getTaxAmount(sale, taxableAmount)
   const total = Number(sale.total_amount ?? taxableAmount + taxAmount)
 
-  const downloadBlob = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-  }
-
-  const generateInvoiceFile = async () => {
-    if (!invoiceRef.current) {
-      throw new Error('Invoice not ready')
-    }
-
-    const blob = await createInvoiceImageBlob(invoiceRef.current)
-    const file = new File([blob], `${getInvoiceNumber(sale)}.png`, {
-      type: 'image/png',
-    })
-
-    return { blob, file }
-  }
-
   const handleShare = async () => {
     try {
-      const { blob, file } = await generateInvoiceFile()
-
-      const nav = navigator as Navigator & {
-        canShare?: (data: { files?: File[] }) => boolean
+      const isMobile = window.matchMedia('(max-width: 768px)').matches
+      if (isMobile) {
+        openInvoicePage(sale)
+        return
       }
 
-      if (navigator.share && (!nav.canShare || nav.canShare({ files: [file] }))) {
+      if (navigator.share) {
         await navigator.share({
           title: `${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}`,
           text: `${BUSINESS_NAME} invoice for ${sale.customer?.name || 'Customer'}`,
-          files: [file],
         })
         return
       }
 
-      downloadBlob(blob, file.name)
+      openInvoicePage(sale)
     } catch (error) {
       console.error('INVOICE SHARE ERROR:', error)
-      alert('Unable to share invoice right now. Please try again.')
+      alert('Unable to open invoice right now. Please try again.')
     }
   }
 
@@ -435,11 +461,10 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
     const isMobile = window.matchMedia('(max-width: 768px)').matches
     if (isMobile) {
       try {
-        const { blob, file } = await generateInvoiceFile()
-        downloadBlob(blob, file.name)
+        openInvoicePage(sale)
       } catch (error) {
-        console.error('INVOICE DOWNLOAD ERROR:', error)
-        alert('Unable to download invoice right now. Please try again.')
+        console.error('INVOICE PAGE ERROR:', error)
+        alert('Unable to open invoice right now. Please try again.')
       }
       return
     }
@@ -516,7 +541,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
         </div>
 
         <div className="overflow-y-auto p-6 bg-gray-50">
-          <div ref={invoiceRef} className="invoice-print-area bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm">
+          <div className="invoice-print-area bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm">
             <div className="flex justify-between gap-6 border-b-2 border-gray-900 pb-5 mb-6">
               <div>
                 <h1 className="text-3xl font-black tracking-tight text-gray-900">
