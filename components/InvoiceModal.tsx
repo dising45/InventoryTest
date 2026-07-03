@@ -383,41 +383,64 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
   const taxAmount = getTaxAmount(sale, taxableAmount)
   const total = Number(sale.total_amount ?? taxableAmount + taxAmount)
 
-  const handleShare = async () => {
-    if (!invoiceRef.current) return
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
+  const generateInvoiceFile = async () => {
+    if (!invoiceRef.current) {
+      throw new Error('Invoice not ready')
+    }
 
     const blob = await createInvoiceImageBlob(invoiceRef.current)
     const file = new File([blob], `${getInvoiceNumber(sale)}.png`, {
       type: 'image/png',
     })
 
-    const nav = navigator as Navigator & {
-      canShare?: (data: { files?: File[] }) => boolean
-    }
-
-    if (navigator.share && (!nav.canShare || nav.canShare({ files: [file] }))) {
-      await navigator.share({
-        title: `${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}`,
-        text: `${BUSINESS_NAME} invoice for ${sale.customer?.name || 'Customer'}`,
-        files: [file],
-      })
-      return
-    }
-
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${getInvoiceNumber(sale)}.png`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
+    return { blob, file }
   }
 
-  const handlePrint = () => {
+  const handleShare = async () => {
+    try {
+      const { blob, file } = await generateInvoiceFile()
+
+      const nav = navigator as Navigator & {
+        canShare?: (data: { files?: File[] }) => boolean
+      }
+
+      if (navigator.share && (!nav.canShare || nav.canShare({ files: [file] }))) {
+        await navigator.share({
+          title: `${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}`,
+          text: `${BUSINESS_NAME} invoice for ${sale.customer?.name || 'Customer'}`,
+          files: [file],
+        })
+        return
+      }
+
+      downloadBlob(blob, file.name)
+    } catch (error) {
+      console.error('INVOICE SHARE ERROR:', error)
+      alert('Unable to share invoice right now. Please try again.')
+    }
+  }
+
+  const handlePrint = async () => {
     const isMobile = window.matchMedia('(max-width: 768px)').matches
     if (isMobile) {
-      void handleShare()
+      try {
+        const { blob, file } = await generateInvoiceFile()
+        downloadBlob(blob, file.name)
+      } catch (error) {
+        console.error('INVOICE DOWNLOAD ERROR:', error)
+        alert('Unable to download invoice right now. Please try again.')
+      }
       return
     }
 
