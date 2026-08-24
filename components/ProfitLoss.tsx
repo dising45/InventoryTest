@@ -11,7 +11,8 @@ import {
   Loader2,
   Filter,
   Download,
-  Sparkles
+  Sparkles,
+  ShoppingCart
 } from 'lucide-react'
 import { profitLossService } from '../services/plService.supabase'
 import { exportCSV } from '../utils/exportCSV'
@@ -29,6 +30,7 @@ const ProfitLoss: React.FC = () => {
 
   const [totalSales, setTotalSales] = useState(0)
   const [totalExpenses, setTotalExpenses] = useState(0)
+  const [totalCOGS, setTotalCOGS] = useState(0)
   const [profit, setProfit] = useState(0)
   const [expenses, setExpenses] = useState<Expense[]>([])
 
@@ -63,6 +65,7 @@ const ProfitLoss: React.FC = () => {
       const res = await profitLossService.getSummary(from || undefined, to || undefined)
       setTotalSales(res.revenue || 0)
       setTotalExpenses(res.totalExpenses || 0)
+      setTotalCOGS(res.cogs || 0)
       setProfit(res.netProfit || 0)
       // Note: Logic for expenses category mapping remains as is
       // 🔥 THIS FEEDS THE CHART
@@ -145,9 +148,10 @@ const ProfitLoss: React.FC = () => {
       ) : (
         <>
           {/* MAIN KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
             <MetricCard label="Revenue" value={formatCurrency(totalSales)} icon={<TrendingUp className="w-5 h-5" />} color="emerald" subtext="Gross income" />
             <MetricCard label="Expenses" value={formatCurrency(totalExpenses)} icon={<TrendingDown className="w-5 h-5" />} color="rose" subtext="Total outgoing" />
+            <MetricCard label="Cost of Sales" value={formatCurrency(totalCOGS)} icon={<ShoppingCart className="w-5 h-5" />} color="amber" subtext="Stock sold cost" />
             <MetricCard label="Net Profit" value={formatCurrency(profit)} icon={<Wallet className="w-5 h-5" />} color={profit >= 0 ? 'indigo' : 'orange'} subtext="Balance" />
 
             <div className={`relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 ${profit >= 0 ? 'bg-indigo-50/50 border-indigo-100' : 'bg-rose-50/50 border-rose-100'
@@ -287,6 +291,7 @@ const MetricCard = ({ label, value, icon, color, subtext }: any) => {
     rose: "bg-rose-50 text-rose-600 border-rose-100 shadow-rose-100/20",
     indigo: "bg-indigo-50 text-indigo-600 border-indigo-100 shadow-indigo-100/20",
     orange: "bg-orange-50 text-orange-600 border-orange-100 shadow-orange-100/20",
+    amber: "bg-amber-50 text-amber-600 border-amber-100 shadow-amber-100/20",
   }
 
   return (

@@ -35,8 +35,6 @@ export const profitLossService = {
         return sum + itemsCOGS;
       }, 0) ?? 0;
 
-    const grossProfit = totalRevenue - totalCOGS;
-
     /* ---------- EXPENSES ---------- */
     let expenseQuery = supabase
       .from('expenses')
@@ -50,7 +48,7 @@ export const profitLossService = {
     const totalExpenses =
       expenses?.reduce((sum, e) => sum + Number(e.amount || 0), 0) ?? 0;
 
-    const netProfit = grossProfit - totalExpenses;
+    const netProfit = totalRevenue - totalExpenses;
 
     const netMargin =
       totalRevenue > 0
@@ -60,7 +58,6 @@ export const profitLossService = {
     return {
       revenue: totalRevenue,
       cogs: totalCOGS,
-      grossProfit,
       totalExpenses,
       expensesList: expenses ?? [],
       netProfit,
