@@ -92,6 +92,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
   const toast = useToast()
 
   const [loading, setLoading] = useState(false)
+  const [validationError, setValidationError] = useState('')
   const [customerId, setCustomerId] = useState('')
   const [orderType, setOrderType] = useState<OrderType>('B2C')
   const [items, setItems] = useState<SalesItem[]>([])
@@ -153,6 +154,10 @@ const SalesForm: React.FC<SalesFormProps> = ({
       if (walkIn) setCustomerId(walkIn.id)
     }
   }, [initialData, products, customers, isQuick])
+
+  useEffect(() => {
+    if (customerId || items.length > 0) setValidationError('')
+  }, [customerId, items])
 
   const getDefaultUnitPrice = (product: Product, variant?: Variant, type: OrderType = orderType) => {
     const basePrice =
@@ -297,8 +302,9 @@ const SalesForm: React.FC<SalesFormProps> = ({
   }
 
   const handleSubmit = async () => {
-    if (!customerId || items.length === 0) return
-
+    if (!customerId) { setValidationError('Please select a customer'); return }
+    if (items.length === 0) { setValidationError('Please add at least one item'); return }
+    setValidationError('')
     setLoading(true)
     try {
       await onSave({
@@ -342,10 +348,13 @@ const SalesForm: React.FC<SalesFormProps> = ({
         </div>
 
         {/* Desktop Save Button */}
-        <div className="hidden md:block">
+        <div className="hidden md:flex items-center gap-3">
+          {validationError && (
+            <p className="text-xs text-rose-600 font-semibold">{validationError}</p>
+          )}
           <button
             onClick={handleSubmit}
-            disabled={loading || items.length === 0}
+            disabled={loading}
             className="inline-flex items-center px-6 py-2 bg-indigo-600 text-white rounded-xl font-medium shadow-sm hover:bg-indigo-700 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
@@ -746,9 +755,12 @@ const SalesForm: React.FC<SalesFormProps> = ({
 
       {/* MOBILE FLOATING CTA */}
       <div className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-40">
+        {validationError && (
+          <p className="text-xs text-rose-600 font-semibold text-center mb-2">{validationError}</p>
+        )}
         <button
           onClick={handleSubmit}
-          disabled={loading || items.length === 0}
+          disabled={loading}
           className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-lg shadow-lg hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
         >
           {loading ? 'Processing...' : `Pay ${formatCurrency(finalTotal)}`}

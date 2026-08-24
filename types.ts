@@ -19,6 +19,7 @@ export interface Product {
   stock: number; // Total stock if variants exist, or direct stock
   has_variants: boolean;
   variants: Variant[];
+  created_at?: string;
   updated_at: string;
   image_url?: string   // ✅ ADD THIS
 }

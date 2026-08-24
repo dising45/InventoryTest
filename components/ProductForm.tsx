@@ -79,6 +79,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   onCancel,
 }) => {
   const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
   const toast = useToast()
 
@@ -112,6 +113,8 @@ const ProductForm: React.FC<ProductFormProps> = ({
   ) => {
     const { name, value, type } = e.target
     const parsedValue = type === 'number' ? parseFloat(value) || 0 : value
+
+    if (errors[name]) setErrors(prev => { const next = { ...prev }; delete next[name]; return next })
 
     setFormData(prev => {
       if (name === 'cost_price') {
@@ -228,6 +231,10 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const newErrors: Record<string, string> = {}
+    if (!String(formData.name || '').trim()) newErrors.name = 'Product name is required'
+    if (!formData.sell_price || Number(formData.sell_price) <= 0) newErrors.sell_price = 'Sell price must be greater than 0'
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return }
     setLoading(true)
     try {
       await onSave(formData)
@@ -353,6 +360,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   value={formData.name}
                   onChange={handleChange}
                 />
+                {errors.name && <p className="text-xs text-rose-500 -mt-3">{errors.name}</p>}
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 ml-1 uppercase tracking-wider flex items-center gap-1.5">
@@ -379,15 +387,18 @@ const ProductForm: React.FC<ProductFormProps> = ({
                   value={formData.cost_price}
                   onChange={handleChange}
                 />
-                <InputField
-                  required
-                  label="B2C Selling Price"
-                  type="number"
-                  name="sell_price"
-                  icon={IndianRupee}
-                  value={formData.sell_price}
-                  onChange={handleChange}
-                />
+                <div className="space-y-1">
+                  <InputField
+                    required
+                    label="B2C Selling Price"
+                    type="number"
+                    name="sell_price"
+                    icon={IndianRupee}
+                    value={formData.sell_price}
+                    onChange={handleChange}
+                  />
+                  {errors.sell_price && <p className="text-xs text-rose-500">{errors.sell_price}</p>}
+                </div>
                 <InputField
                   label="B2B Selling Price"
                   type="number"

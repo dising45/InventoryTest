@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react'
 import type { Product, SalesOrder, ViewState } from '../types'
 import { dashboardService } from '../services/dashboardService.supabase'
-import { salesService } from '../services/salesService.supabase'
 import {
   Package,
   AlertTriangle,
@@ -53,12 +52,9 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
   useEffect(() => {
     const load = async () => {
       try {
-        const [kpiData, salesData] = await Promise.all([
-          dashboardService.getKPIs(),
-          salesService.getSales(),
-        ])
+        const kpiData = await dashboardService.getKPIs()
         setKpis(kpiData)
-        setRecentSales(salesData.slice(0, 5)) // last 5 orders
+        setRecentSales(kpiData.recentOrders ?? [])
       } catch (err) {
         console.error('Dashboard load error:', err)
       } finally {

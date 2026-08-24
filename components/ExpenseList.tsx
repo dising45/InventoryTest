@@ -11,18 +11,21 @@ import {
   TrendingDown,
   Building2,
   Search,
-  Download
+  Download,
+  Plus
 } from 'lucide-react'
 import { exportCSV } from '../utils/exportCSV'
 
 interface ExpenseListProps {
   expenses: Expense[]
+  onAdd?: () => void
   onEdit?: (expense: Expense) => void
   onDelete?: (id: string) => void
 }
 
 const ExpenseList: React.FC<ExpenseListProps> = ({
   expenses,
+  onAdd,
   onEdit,
   onDelete,
 }) => {
@@ -270,9 +273,32 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
       {filteredExpenses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border border-gray-200 border-dashed text-center">
           <Wallet className="h-8 w-8 text-red-400 mb-4" />
-          <h3 className="text-lg font-bold text-gray-900">
-            No expenses found
-          </h3>
+          {search || vendorFilter || categoryFilter ? (
+            <>
+              <h3 className="text-lg font-bold text-gray-900">No results found</h3>
+              <p className="text-sm text-gray-400 mt-1 mb-5">Try adjusting your filters</p>
+              <button
+                onClick={() => { setSearch(''); setVendorFilter(''); setCategoryFilter('') }}
+                className="px-4 py-2 text-sm font-bold text-indigo-600 bg-indigo-50 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-colors"
+              >
+                Clear Filters
+              </button>
+            </>
+          ) : (
+            <>
+              <h3 className="text-lg font-bold text-gray-900">No expenses yet</h3>
+              <p className="text-sm text-gray-400 mt-1 mb-5">Track your business spending to see reports here</p>
+              {onAdd && (
+                <button
+                  onClick={onAdd}
+                  className="inline-flex items-center px-5 py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-xl shadow-sm hover:bg-indigo-700 transition-all"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Expense
+                </button>
+              )}
+            </>
+          )}
         </div>
       ) : (
         <>

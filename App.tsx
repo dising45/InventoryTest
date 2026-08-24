@@ -421,6 +421,7 @@ function AppInner() {
                       <FloatingActionButton onClick={() => setCurrentView('add-expense')} />
                       <ExpenseList
                         expenses={expenses}
+                        onAdd={() => setCurrentView('add-expense')}
                         onEdit={(exp) => { setEditingExpense(exp); setCurrentView('edit-expense'); }}
                         onDelete={handleDeleteExpense}
                       />

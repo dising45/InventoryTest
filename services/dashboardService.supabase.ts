@@ -117,6 +117,20 @@ export const dashboardService = {
     // Determine if MTD has meaningful data
     const hasMTDData = mtd.revenue > 0 || totalExpensesMTD > 0;
 
+    /* ---------- RECENT ORDERS ---------- */
+    const { data: recentOrdersData } = await supabase
+      .from('sales_orders')
+      .select(`
+        id,
+        total_amount,
+        order_date,
+        status,
+        created_at,
+        customer:customers (name)
+      `)
+      .order('order_date', { ascending: false })
+      .limit(5)
+
     return {
       // MTD
       salesMTD: mtd.revenue,
@@ -143,6 +157,9 @@ export const dashboardService = {
       // Inventory
       inventoryValue,
       lowStockCount,
+
+      // Recent orders
+      recentOrders: recentOrdersData ?? [],
     };
   },
 };
