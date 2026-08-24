@@ -62,14 +62,14 @@ export interface SalesOrder {
   subtotal?: number;
   total_amount: number;
   order_date?: string;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: 'Pending' | 'Confirmed' | 'Shipped' | 'Completed' | 'Awaiting Payment' | 'Cancelled';
   created_at: string;
   items?: SalesItem[];
   customer?: Customer;
   discount?: number;
-  discount_type?: 'flat' | 'percentage';
+  discount_type?: 'flat' | 'percent';
   tax?: number;
-  tax_type?: 'flat' | 'percentage';
+  tax_type?: 'flat' | 'percent';
   order_type?: OrderType;
 }
 

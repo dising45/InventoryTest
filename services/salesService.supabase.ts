@@ -38,9 +38,9 @@ export const salesService = {
     order_date: string;
     subtotal?: number;
     discount?: number;
-    discount_type?: 'flat' | 'percentage';
+    discount_type?: 'flat' | 'percent';
     tax?: number;
-    tax_type?: 'flat' | 'percentage';
+    tax_type?: 'flat' | 'percent';
     order_type?: OrderType;
   }) {
     const { data: order, error: orderError } = await supabase
@@ -51,11 +51,11 @@ export const salesService = {
         discount: sale.discount ?? 0,
         discount_type: sale.discount_type ?? 'flat',
         tax: sale.tax ?? 0,
-        tax_type: sale.tax_type ?? 'percentage',
+        tax_type: sale.tax_type ?? 'percent',
         total_amount: sale.total_amount,
         order_type: sale.order_type ?? 'B2C',
         order_date: sale.order_date,
-        status: 'completed',
+        status: 'Completed',
       })
       .select()
       .single();
@@ -125,7 +125,7 @@ export const salesService = {
         discount: sale.discount ?? 0,
         discount_type: sale.discount_type ?? 'flat',
         tax: sale.tax ?? 0,
-        tax_type: sale.tax_type ?? 'percentage',
+        tax_type: sale.tax_type ?? 'percent',
         order_type: sale.order_type ?? 'B2C',
       })
       .eq('id', salesOrderId);

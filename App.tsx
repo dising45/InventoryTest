@@ -161,6 +161,30 @@ function AppInner() {
     }, 'Delete')
   }
 
+  const handleDeleteCustomer = async (id: string) => {
+    showConfirm('Delete Customer', 'This customer will be permanently removed. This cannot be undone.', async () => {
+      try {
+        await removeCustomer(id)
+        toast.success('Customer deleted')
+      } catch {
+        toast.error('Failed to delete customer')
+      }
+      setConfirmState(emptyConfirm)
+    }, 'Delete')
+  }
+
+  const handleDeleteSupplier = async (id: string) => {
+    showConfirm('Delete Supplier', 'This supplier will be permanently removed. This cannot be undone.', async () => {
+      try {
+        await removeSupplier(id)
+        toast.success('Supplier deleted')
+      } catch {
+        toast.error('Failed to delete supplier')
+      }
+      setConfirmState(emptyConfirm)
+    }, 'Delete')
+  }
+
   /* -------------------- VIEW HELPERS -------------------- */
   const hideMobileNav = [
     'add-product', 'edit-product',
@@ -354,7 +378,7 @@ function AppInner() {
                       <CustomerList
                         customers={customers}
                         onEdit={(c) => { setEditingCustomer(c); setCurrentView('edit-customer'); }}
-                        onDelete={async (id) => { await removeCustomer(id); }}
+                        onDelete={handleDeleteCustomer}
                       />
                     </>
                   )}
@@ -388,7 +412,7 @@ function AppInner() {
                       <SupplierList
                         suppliers={suppliers}
                         onEdit={(s) => { setEditingSupplier(s); setCurrentView('edit-supplier'); }}
-                        onDelete={async (id) => { await removeSupplier(id); }}
+                        onDelete={handleDeleteSupplier}
                       />
                     </>
                   )}
