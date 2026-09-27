@@ -461,18 +461,10 @@ const SalesList: React.FC<SalesListProps> = ({
                       </td>
 
                       {/* Items */}
-                      <td className="px-6 py-4">
-                        <div className="space-y-1">
-                          {(sale.items || []).slice(0, 2).map((item: any, idx: number) => (
-                            <div key={idx} className="flex items-center gap-1.5">
-                              <span className="text-xs font-medium text-gray-700 truncate max-w-[140px]">{item.product_name}</span>
-                              <span className="text-[10px] text-gray-400 shrink-0">×{item.quantity}</span>
-                            </div>
-                          ))}
-                          {(sale.items?.length || 0) > 2 && (
-                            <span className="text-[10px] text-gray-400">+{sale.items!.length - 2} more</span>
-                          )}
-                        </div>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 text-xs font-medium">
+                          {sale.items?.reduce((acc, item) => acc + item.quantity, 0) || 0} items
+                        </span>
                       </td>
 
                       {/* Amount */}
@@ -556,21 +548,6 @@ const SalesList: React.FC<SalesListProps> = ({
                       </div>
                     </div>
 
-                    {/* Item chips */}
-                    {sale.items && sale.items.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {(sale.items as any[]).slice(0, 3).map((item: any, idx: number) => (
-                          <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-50 border border-gray-100 rounded-md text-[10px] text-gray-600 font-medium">
-                            {item.product_name}
-                            <span className="text-gray-400">×{item.quantity}</span>
-                          </span>
-                        ))}
-                        {sale.items.length > 3 && (
-                          <span className="text-[10px] text-gray-400 self-center">+{sale.items.length - 3} more</span>
-                        )}
-                      </div>
-                    )}
-
                     <div className="pt-3 border-t border-gray-50 flex items-center justify-between gap-2">
                       {/* Status Dropdown (Mobile) */}
                       <div className="relative min-w-0" onClick={(e) => e.stopPropagation()}>
@@ -595,6 +572,9 @@ const SalesList: React.FC<SalesListProps> = ({
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-xs text-gray-400 font-medium whitespace-nowrap">
+                          {itemCount} Items
+                        </span>
                         {onInvoice && (
                           <button
                             onClick={() => onInvoice(sale)}
