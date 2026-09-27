@@ -4,7 +4,6 @@ import {
   TrendingUp,
   TrendingDown,
   Wallet,
-  BarChart3,
   Calendar,
   ArrowRight,
   PieChart,
@@ -148,30 +147,11 @@ const ProfitLoss: React.FC = () => {
       ) : (
         <>
           {/* MAIN KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
-            <MetricCard label="Revenue" value={formatCurrency(totalSales)} icon={<TrendingUp className="w-5 h-5" />} color="emerald" subtext="Gross income" />
-            <MetricCard label="Expenses" value={formatCurrency(totalExpenses)} icon={<TrendingDown className="w-5 h-5" />} color="rose" subtext="Total outgoing" />
-            <MetricCard label="Cost of Sales" value={formatCurrency(totalCOGS)} icon={<ShoppingCart className="w-5 h-5" />} color="amber" subtext="Stock sold cost" />
-            <MetricCard label="Net Profit" value={formatCurrency(profit)} icon={<Wallet className="w-5 h-5" />} color={profit >= 0 ? 'indigo' : 'orange'} subtext="Balance" />
-
-            <div className={`relative overflow-hidden rounded-2xl p-5 border shadow-sm transition-all duration-300 ${profit >= 0 ? 'bg-indigo-50/50 border-indigo-100' : 'bg-rose-50/50 border-rose-100'
-              }`}>
-              <div className="flex justify-between items-start relative z-10">
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Efficiency</p>
-                  <h3 className={`text-2xl font-black mt-1 tabular-nums ${profit >= 0 ? 'text-indigo-700' : 'text-rose-700'}`}>
-                    {totalSales > 0 ? ((profit / totalSales) * 100).toFixed(1) : '0'}%
-                  </h3>
-                  <p className="text-[10px] text-gray-500 font-medium mt-1">Profit Margin</p>
-                </div>
-                <div className={`p-2 rounded-xl shadow-sm ${profit >= 0 ? 'bg-indigo-600 text-white' : 'bg-rose-600 text-white'}`}>
-                  <BarChart3 className="w-5 h-5" />
-                </div>
-              </div>
-              <div className="absolute -right-2 -bottom-2 opacity-10">
-                <BarChart3 className="w-20 h-20" />
-              </div>
-            </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <MetricCard label="Revenue" value={formatCurrency(totalSales)} icon={<TrendingUp className="w-4 h-4" />} color="emerald" subtext="Gross income" />
+            <MetricCard label="Expenses" value={formatCurrency(totalExpenses)} icon={<TrendingDown className="w-4 h-4" />} color="rose" subtext="Total outgoing" />
+            <MetricCard label="Cost of Sales" value={formatCurrency(totalCOGS)} icon={<ShoppingCart className="w-4 h-4" />} color="amber" subtext="Stock sold cost" />
+            <MetricCard label="Net Profit" value={formatCurrency(profit)} icon={<Wallet className="w-4 h-4" />} color={profit >= 0 ? 'indigo' : 'orange'} subtext={`${totalSales > 0 ? ((profit / totalSales) * 100).toFixed(1) : '0'}% margin`} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -239,6 +219,7 @@ const ProfitLoss: React.FC = () => {
 
                 <div className="space-y-4">
                   <SummaryRow label="Gross Revenue" value={formatCurrency(totalSales)} />
+                  <SummaryRow label="Cost of Sales" value={`-${formatCurrency(totalCOGS)}`} isRed />
                   <SummaryRow label="Operational Costs" value={`-${formatCurrency(totalExpenses)}`} isRed />
                   <div className="pt-4 border-t border-white/10 flex justify-between items-center">
                     <span className="text-xs font-bold text-indigo-300 uppercase tracking-widest">Net Cashflow</span>
@@ -253,6 +234,7 @@ const ProfitLoss: React.FC = () => {
                 onClick={() => {
                   const rows = [
                     { item: 'Gross Revenue', amount: totalSales.toFixed(2) },
+                    { item: 'Cost of Sales', amount: (-totalCOGS).toFixed(2) },
                     { item: 'Total Expenses', amount: (-totalExpenses).toFixed(2) },
                     { item: 'Net Profit', amount: profit.toFixed(2) },
                     { item: 'Profit Margin %', amount: totalSales > 0 ? ((profit / totalSales) * 100).toFixed(1) : '0' },
@@ -287,23 +269,21 @@ const ProfitLoss: React.FC = () => {
 
 const MetricCard = ({ label, value, icon, color, subtext }: any) => {
   const styles: any = {
-    emerald: "bg-emerald-50 text-emerald-600 border-emerald-100 shadow-emerald-100/20",
-    rose: "bg-rose-50 text-rose-600 border-rose-100 shadow-rose-100/20",
-    indigo: "bg-indigo-50 text-indigo-600 border-indigo-100 shadow-indigo-100/20",
-    orange: "bg-orange-50 text-orange-600 border-orange-100 shadow-orange-100/20",
-    amber: "bg-amber-50 text-amber-600 border-amber-100 shadow-amber-100/20",
+    emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
+    rose: "bg-rose-50 text-rose-600 border-rose-100",
+    indigo: "bg-indigo-50 text-indigo-600 border-indigo-100",
+    orange: "bg-orange-50 text-orange-600 border-orange-100",
+    amber: "bg-amber-50 text-amber-600 border-amber-100",
   }
 
   return (
-    <div className={`group bg-white rounded-2xl p-5 border shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 ${styles[color].split(' ')[2]}`}>
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 duration-300 ${styles[color].split(' ')[0]} ${styles[color].split(' ')[1]}`}>
+    <div className={`bg-white rounded-2xl p-4 border border-gray-100 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 ${styles[color].split(' ')[2]}`}>
+      <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-3 ${styles[color].split(' ')[0]} ${styles[color].split(' ')[1]}`}>
         {icon}
       </div>
-      <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{label}</p>
-        <h3 className="text-2xl font-black text-gray-900 tracking-tight tabular-nums">{value}</h3>
-        <p className="text-[10px] text-gray-400 font-medium mt-1">{subtext}</p>
-      </div>
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">{label}</p>
+      <h3 className="text-base md:text-xl font-black text-gray-900 tracking-tight tabular-nums leading-tight">{value}</h3>
+      {subtext && <p className="text-[10px] text-gray-400 font-medium mt-1">{subtext}</p>}
     </div>
   )
 }

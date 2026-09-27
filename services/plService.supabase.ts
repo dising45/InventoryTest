@@ -48,7 +48,7 @@ export const profitLossService = {
     const totalExpenses =
       expenses?.reduce((sum, e) => sum + Number(e.amount || 0), 0) ?? 0;
 
-    const netProfit = totalRevenue - totalExpenses;
+    const netProfit = totalRevenue - totalCOGS - totalExpenses;
 
     const netMargin =
       totalRevenue > 0
