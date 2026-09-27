@@ -233,6 +233,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
         variant_id: selectedVariant?.id,
         quantity,
         unit_price: unitPrice,
+        cost_price: Number(selectedProduct.cost_price || 0),
         product_name: selectedProduct.name,
         variant_name: selectedVariant?.name,
       },
@@ -648,7 +649,12 @@ const SalesForm: React.FC<SalesFormProps> = ({
                     <div className="flex justify-between items-start mb-2">
                       <div className="pr-6">
                         <p className="font-semibold text-sm text-gray-900 line-clamp-1">{item.product_name}</p>
-                        <p className="text-xs text-gray-500">{item.variant_name || 'Standard'}</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-gray-500">{item.variant_name || 'Standard'}</p>
+                          {Number(item.cost_price) > 0 && (
+                            <p className="text-[10px] text-gray-400">Cost ₹{Number(item.cost_price).toLocaleString('en-IN')}</p>
+                          )}
+                        </div>
                       </div>
                       <button
                         onClick={() => removeItem(i)}
