@@ -111,6 +111,16 @@ export const dashboardService = {
         0
       ) ?? 0;
 
+    const totalUnitsInStock =
+      products?.reduce((sum, p) => sum + Number(p.stock), 0) ?? 0;
+
+    const unitsSold =
+      allSales?.reduce((sum, sale) => {
+        return sum + ((sale.sales_items as any[])?.reduce(
+          (s: number, item: any) => s + Number(item.quantity), 0
+        ) ?? 0);
+      }, 0) ?? 0;
+
     const lowStockCount =
       products?.filter((p) => Number(p.stock) <= 5).length ?? 0;
 
@@ -156,6 +166,8 @@ export const dashboardService = {
 
       // Inventory
       inventoryValue,
+      totalUnitsInStock,
+      unitsSold,
       lowStockCount,
 
       // Recent orders

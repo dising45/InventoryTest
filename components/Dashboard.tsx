@@ -67,10 +67,6 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
   /* ================= INVENTORY CALCULATIONS ================= */
   const lowStockProducts = products
     .filter(p => (p.stock ?? 0) <= LOW_STOCK_THRESHOLD)
-    .sort((a, b) => (a.stock ?? 0) - (b.stock ?? 0)) // lowest stock first
-
-  const topLowStock = lowStockProducts.slice(0, 5)
-  const remainingLowStock = lowStockProducts.length - topLowStock.length
 
   // Format currency
   const fmt = (amount: number) =>
@@ -255,82 +251,95 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
           </div>
         </div>
 
-        {/* STOCK ALERTS */}
+        {/* INVENTORY HEALTH */}
         <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col min-h-[280px]">
           <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
             <h3 className="text-sm md:text-base font-bold text-gray-900 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              Stock Alerts
-              {lowStockProducts.length > 0 && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-600 border border-red-100">
-                  {lowStockProducts.length}
-                </span>
-              )}
+              <Package className="w-4 h-4 text-indigo-500" />
+              Inventory Health
             </h3>
-            {setCurrentView && (
-              <button
-                onClick={() => nav('inventory')}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors"
-              >
-                View All <ArrowRight className="w-3 h-3" />
-              </button>
+            {kpis?.lowStockCount > 0 ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-100 rounded-full text-[11px] font-bold text-amber-700">
+                <AlertTriangle className="w-3 h-3" />
+                {kpis.lowStockCount} low stock
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 border border-emerald-100 rounded-full text-[11px] font-bold text-emerald-700">
+                <CheckCircle2 className="w-3 h-3" />
+                All stocked
+              </span>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
-            {lowStockProducts.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-8 px-4 text-center">
-                <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mb-3">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-                </div>
-                <p className="text-sm font-bold text-gray-900">All Stocked Up</p>
-                <p className="text-xs text-gray-400 mt-1">No items below threshold ({LOW_STOCK_THRESHOLD} units)</p>
+
+          {loading ? (
+            <div className="flex-1 p-5 space-y-4 animate-pulse">
+              <div className="grid grid-cols-3 gap-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i}>
+                    <div className="h-3 bg-gray-100 rounded w-12 mb-2" />
+                    <div className="h-6 bg-gray-100 rounded w-8" />
+                  </div>
+                ))}
               </div>
-            ) : (
-              <>
-                <div className="divide-y divide-gray-50 flex-1">
-                  {topLowStock.map(p => {
-                    const stock = p.stock ?? 0
-                    const isCritical = stock === 0
-                    return (
-                      <div key={p.id} className="px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isCritical ? 'bg-red-500' : 'bg-amber-500'}`} />
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-gray-900 truncate">{p.name}</p>
-                            <p className="text-[11px] text-gray-400 font-medium">
-                              {p.has_variants ? `${p.variants?.length} variants` : 'Single SKU'}
-                            </p>
-                          </div>
-                        </div>
-                        <span className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold border ${
-                          isCritical
-                            ? 'bg-red-50 text-red-700 border-red-100'
-                            : 'bg-amber-50 text-amber-700 border-amber-100'
-                        }`}>
-                          {stock} left
-                        </span>
-                      </div>
-                    )
-                  })}
+              <div className="h-3 bg-gray-100 rounded-full w-full mt-4" />
+            </div>
+          ) : (() => {
+            const totalEver = (kpis?.totalUnitsInStock ?? 0) + (kpis?.unitsSold ?? 0)
+            const soldPct = totalEver > 0 ? ((kpis?.unitsSold ?? 0) / totalEver) * 100 : 0
+
+            return (
+              <div className="flex-1 p-5 flex flex-col justify-between">
+                {/* 3 stats */}
+                <div className="grid grid-cols-3 gap-2 mb-5">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Stocked</p>
+                    <p className="text-2xl font-black text-gray-900 tabular-nums">{totalEver.toLocaleString('en-IN')}</p>
+                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">units ever</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Sold</p>
+                    <p className="text-2xl font-black text-indigo-600 tabular-nums">{(kpis?.unitsSold ?? 0).toLocaleString('en-IN')}</p>
+                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">{soldPct.toFixed(0)}% of stock</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Remaining</p>
+                    <p className="text-2xl font-black text-emerald-600 tabular-nums">{(kpis?.totalUnitsInStock ?? 0).toLocaleString('en-IN')}</p>
+                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">in stock</p>
+                  </div>
                 </div>
 
-                {/* Footer: more items + View All */}
-                {remainingLowStock > 0 && setCurrentView && (
-                  <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between shrink-0">
-                    <span className="text-xs text-gray-500 font-medium">
-                      +{remainingLowStock} more item{remainingLowStock > 1 ? 's' : ''} below threshold
-                    </span>
+                {/* Progress bar */}
+                <div className="mb-5">
+                  <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className="bg-indigo-500 h-full rounded-full transition-all duration-700 ease-out"
+                      style={{ width: `${soldPct}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-gray-400 font-medium mt-1.5">
+                    <span>{soldPct.toFixed(0)}% sold</span>
+                    <span>{(100 - soldPct).toFixed(0)}% remaining</span>
+                  </div>
+                </div>
+
+                {/* Stock value */}
+                <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Stock Value</p>
+                    <p className="text-base font-black text-gray-900 mt-0.5">{fmt(kpis?.inventoryValue ?? 0)}</p>
+                  </div>
+                  {setCurrentView && (
                     <button
                       onClick={() => nav('inventory')}
                       className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors"
                     >
-                      View All <ArrowRight className="w-3 h-3" />
+                      View Inventory <ArrowRight className="w-3 h-3" />
                     </button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
         </div>
       </div>
     </div>
