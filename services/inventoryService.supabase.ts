@@ -1,6 +1,11 @@
 import { supabase } from './supabaseClient'
 import { Product } from '../types'
 
+async function generateSKU(): Promise<string> {
+  const { count } = await supabase.from('products').select('*', { count: 'exact', head: true })
+  return `NTR-${String((count ?? 0) + 1).padStart(4, '0')}`
+}
+
 class InventoryServiceSupabase {
   /* ===============================
      GET PRODUCTS
@@ -56,11 +61,14 @@ class InventoryServiceSupabase {
         )
         : Number(product.stock || 0)
 
+    const sku = product.sku || await generateSKU()
+
     const { data: productRow, error } = await supabase
       .from('products')
       .insert({
         name: product.name,
         description: product.description ?? null,
+        sku,
         cost_price: Number(product.cost_price ?? 0),
         sell_price: Number(product.sell_price ?? 0),
         b2b_sell_price: Number(product.b2b_sell_price ?? Number(product.cost_price ?? 0) + 100),
@@ -134,6 +142,7 @@ class InventoryServiceSupabase {
       .update({
         name: product.name,
         description: product.description ?? null,
+        sku: product.sku ?? undefined,
         cost_price: Number(product.cost_price ?? 0),
         sell_price: Number(product.sell_price ?? 0),
         b2b_sell_price: Number(product.b2b_sell_price ?? Number(product.cost_price ?? 0) + 100),

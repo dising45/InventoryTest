@@ -22,6 +22,7 @@ const PurchaseOrderForm: React.FC<Props> = ({
   onCancel,
 }) => {
   const [supplierId, setSupplierId] = useState('');
+  const [notes, setNotes] = useState('');
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
@@ -60,7 +61,7 @@ const PurchaseOrderForm: React.FC<Props> = ({
     return product;
   };
 
-  /* ---------------- Save PO ---------------- */
+  /* ---------------- Save Bill ---------------- */
   const handleSave = async () => {
     if (!supplierId || items.length === 0) {
       toast.warning('Supplier and at least one item required');
@@ -71,6 +72,7 @@ const PurchaseOrderForm: React.FC<Props> = ({
     try {
       await purchaseService.createPO({
         supplier_id: supplierId,
+        notes: notes.trim() || undefined,
         items: items.map(i => ({
           product_id: i.product_id!,
           variant_id: i.variant_id,
@@ -82,7 +84,7 @@ const PurchaseOrderForm: React.FC<Props> = ({
       onSuccess();
     } catch (e) {
       console.error(e);
-      toast.error('Failed to create PO');
+      toast.error('Failed to create vendor bill');
     } finally {
       setSaving(false);
     }
@@ -97,7 +99,7 @@ const PurchaseOrderForm: React.FC<Props> = ({
   return (
     <div className="max-w-5xl mx-auto bg-white p-6 rounded shadow">
       <h2 className="text-xl font-semibold mb-4">
-        New Purchase Order
+        New Vendor Bill
       </h2>
 
       {/* Supplier */}
@@ -140,6 +142,18 @@ const PurchaseOrderForm: React.FC<Props> = ({
         <Plus className="w-4 h-4 mr-1" /> Add item
       </button>
 
+      {/* Notes */}
+      <div className="mt-4">
+        <label className="text-sm text-gray-600">Notes (optional)</label>
+        <textarea
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          rows={2}
+          placeholder="e.g. Invoice #123, payment terms..."
+          className="w-full border rounded px-3 py-2 text-sm resize-none mt-1"
+        />
+      </div>
+
       {/* Footer */}
       <div className="flex justify-between items-center mt-6 border-t pt-4">
         <div className="text-lg font-semibold">
@@ -159,7 +173,7 @@ const PurchaseOrderForm: React.FC<Props> = ({
             className="px-5 py-2 bg-indigo-600 text-white rounded flex items-center"
           >
             <Save className="w-4 h-4 mr-2" />
-            {saving ? 'Saving…' : 'Save PO'}
+            {saving ? 'Saving…' : 'Save Bill'}
           </button>
         </div>
       </div>

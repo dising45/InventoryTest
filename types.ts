@@ -13,6 +13,7 @@ export interface Product {
   id: string;
   name: string;
   description?: string;
+  sku?: string;
   cost_price: number;
   sell_price: number;
   b2b_sell_price?: number;

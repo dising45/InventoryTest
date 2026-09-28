@@ -9,6 +9,7 @@ import {
   Truck,
   Wallet,
   BarChart3,
+  ClipboardList,
   X,
 } from 'lucide-react'
 
@@ -26,6 +27,7 @@ const primaryTabs = [
 
 const moreItems = [
   { id: 'suppliers', icon: Truck, label: 'Suppliers' },
+  { id: 'purchase-orders', icon: ClipboardList, label: 'Vendor Bills' },
   { id: 'expenses', icon: Wallet, label: 'Expenses' },
   { id: 'pl', icon: BarChart3, label: 'Profit & Loss' },
 ]

@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
 import { Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import { purchaseService } from '../services/purchaseService.supabase';
-import { useToast, ConfirmModal } from './ui';
 
 interface Props {
   purchaseOrders: any[];
+  onDelete: (id: string) => void;
   onRefresh: () => void;
 }
 
 const PurchaseOrderList: React.FC<Props> = ({
   purchaseOrders,
-  onRefresh,
+  onDelete,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const toast = useToast();
 
   const filtered = purchaseOrders.filter(po =>
+    !search ||
+    po.supplier?.name?.toLowerCase().includes(search.toLowerCase()) ||
     po.items?.some((i: any) =>
       i.product?.name
         ?.toLowerCase()
@@ -25,72 +24,60 @@ const PurchaseOrderList: React.FC<Props> = ({
     )
   );
 
-  const handleDeleteConfirmed = async () => {
-    if (!deleteId) return;
-    try {
-      await purchaseService.deletePO(deleteId);
-      toast.success('Purchase order deleted, stock rolled back');
-      onRefresh();
-    } catch {
-      toast.error('Failed to delete purchase order');
-    }
-    setDeleteId(null);
-  };
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 
   return (
     <div className="space-y-4">
-      <ConfirmModal
-        open={!!deleteId}
-        title="Delete Purchase Order"
-        message="Stock will be rolled back. This cannot be undone."
-        confirmLabel="Delete"
-        onConfirm={handleDeleteConfirmed}
-        onCancel={() => setDeleteId(null)}
-      />
       {/* Search */}
       <input
-        placeholder="Search by product name…"
+        placeholder="Search by supplier or product…"
         value={search}
         onChange={e => setSearch(e.target.value)}
-        className="w-full border rounded px-3 py-2"
+        className="w-full border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
       />
 
       {filtered.map(po => (
         <div
           key={po.id}
-          className="bg-white border rounded p-4"
+          className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm"
         >
           {/* Header */}
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-start">
             <div>
-              <p className="font-semibold">
-                PO #{po.id.slice(0, 6)}
+              <p className="font-bold text-gray-900">
+                {po.supplier?.name || 'Unknown Supplier'}
               </p>
-              <p className="text-sm text-gray-500">
-                {po.supplier?.name} · ₹{po.total_amount}
+              <p className="text-sm text-gray-500 mt-0.5">
+                Bill #{po.id.slice(0, 6).toUpperCase()} · {formatDate(po.created_at)}
               </p>
+              {po.notes && (
+                <p className="text-xs text-gray-400 mt-0.5 italic">{po.notes}</p>
+              )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0 ml-3">
+              <span className="text-sm font-black text-gray-900">₹{Number(po.total_amount).toLocaleString('en-IN')}</span>
               <button
                 onClick={() =>
                   setExpandedId(
                     expandedId === po.id ? null : po.id
                   )
                 }
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 {expandedId === po.id ? (
-                  <ChevronUp />
+                  <ChevronUp className="w-4 h-4 text-gray-500" />
                 ) : (
-                  <ChevronDown />
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
                 )}
               </button>
 
               <button
-                onClick={() => setDeleteId(po.id)}
-                className="text-red-600"
+                onClick={() => onDelete(po.id)}
+                className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               >
-                <Trash2 />
+                <Trash2 className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -101,7 +88,7 @@ const PurchaseOrderList: React.FC<Props> = ({
               {po.items.map((i: any) => (
                 <div
                   key={i.id}
-                  className="flex justify-between"
+                  className="flex justify-between text-gray-700"
                 >
                   <span>
                     {i.product?.name}
@@ -109,7 +96,7 @@ const PurchaseOrderList: React.FC<Props> = ({
                       ? ` (${i.variant.name})`
                       : ''}
                   </span>
-                  <span>
+                  <span className="font-medium tabular-nums">
                     {i.quantity} × ₹{i.unit_cost}
                   </span>
                 </div>
@@ -120,9 +107,9 @@ const PurchaseOrderList: React.FC<Props> = ({
       ))}
 
       {filtered.length === 0 && (
-        <p className="text-center text-gray-500">
-          No purchase orders found
-        </p>
+        <div className="text-center py-16 text-gray-400">
+          <p className="font-medium">No vendor bills found</p>
+        </div>
       )}
     </div>
   );

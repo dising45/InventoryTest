@@ -375,6 +375,21 @@ const ProductForm: React.FC<ProductFormProps> = ({
                     className="block w-full rounded-xl border-gray-200 bg-gray-50 border focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200 sm:text-sm py-3 px-4 resize-none"
                   />
                 </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 ml-1 uppercase tracking-wider">
+                    SKU / Product Code
+                  </label>
+                  <input
+                    type="text"
+                    name="sku"
+                    placeholder="e.g. NTR-0001 (auto-generated if empty)"
+                    value={formData.sku ?? ''}
+                    onChange={handleChange}
+                    className="block w-full rounded-xl border-gray-200 bg-gray-50 border focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all duration-200 sm:text-sm py-3 px-4"
+                  />
+                  <p className="text-[10px] text-gray-400 ml-1">Used for barcode scanning in future</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">

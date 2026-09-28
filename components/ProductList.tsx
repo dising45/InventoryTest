@@ -233,6 +233,9 @@ const ProductList: React.FC<ProductListProps> = ({
                                 'Single SKU'
                               )}
                             </div>
+                            {product.sku && (
+                              <div className="text-[10px] text-gray-400 font-mono mt-0.5">{product.sku}</div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -338,12 +341,15 @@ const ProductList: React.FC<ProductListProps> = ({
                     <div className="flex-1 min-w-0 flex flex-col justify-between">
                       <div className="flex justify-between items-start">
                         <div className="pr-2">
-                           <h3 className="text-sm font-bold text-gray-900 line-clamp-1 leading-tight">
+                          <h3 className="text-sm font-bold text-gray-900 line-clamp-1 leading-tight">
                             {product.name}
                           </h3>
                           <p className="text-[11px] text-gray-500 font-medium mt-0.5">
                             {product.has_variants ? `${product.variants?.length} Options` : 'Standard'}
                           </p>
+                          {product.sku && (
+                            <p className="text-[10px] text-gray-400 font-mono mt-0.5">{product.sku}</p>
+                          )}
                         </div>
                         <div className="text-right shrink-0">
                           <span className="block text-xs font-black text-indigo-600 whitespace-nowrap">

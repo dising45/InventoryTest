@@ -6,6 +6,7 @@ export const purchaseService = {
      =============================== */
   async createPO(data: {
     supplier_id: string;
+    notes?: string;
     items: {
       product_id?: string;        // optional → new product
       product_name?: string;      // required if new
@@ -29,6 +30,7 @@ export const purchaseService = {
       .insert({
         supplier_id: data.supplier_id,
         total_amount: totalAmount,
+        notes: data.notes ?? null,
       })
       .select()
       .single();
@@ -209,8 +211,17 @@ export const purchaseService = {
      DELETE PURCHASE ORDER
      =============================== */
   async deletePO(poId: string) {
-    // Delete PO items first (cascade may handle this, but be explicit)
-    await supabase.from('purchase_order_items').delete().eq('purchase_order_id', poId);
+    // Fetch items to roll back stock
+    const { data: items } = await supabase
+      .from('purchase_items')
+      .select('product_id, variant_id, quantity')
+      .eq('purchase_order_id', poId);
+
+    if (items && items.length > 0) {
+      await this.adjustStock(items, 'deduct');
+    }
+
+    await supabase.from('purchase_items').delete().eq('purchase_order_id', poId);
 
     const { error } = await supabase.from('purchase_orders').delete().eq('id', poId);
     if (error) throw error;

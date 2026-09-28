@@ -8,6 +8,7 @@ import { useCustomers } from './hooks/useCustomers'
 import { useSuppliers } from './hooks/useSuppliers'
 import { useSales } from './hooks/useSales'
 import { useExpenses } from './hooks/useExpenses'
+import { usePurchases } from './hooks/usePurchases'
 
 // Services (only needed for salesService.updateStatus)
 import { salesService } from './services/salesService.supabase'
@@ -31,6 +32,8 @@ import ExpenseList from './components/ExpenseList'
 import ExpenseForm from './components/ExpenseForm'
 import ProfitLoss from './components/ProfitLoss'
 import InvoiceModal from './components/InvoiceModal'
+import PurchaseOrderList from './components/PurchaseOrderList'
+import PurchaseOrderForm from './components/PurchaseOrderForm'
 
 import {
   LayoutDashboard,
@@ -43,6 +46,7 @@ import {
   BarChart3,
   Wallet,
   Loader2,
+  ClipboardList,
 } from 'lucide-react'
 
 /* =======================
@@ -73,6 +77,7 @@ function AppInner() {
   const { suppliers, loading: suppliersLoading, reload: reloadSuppliers, saveSupplier, deleteSupplier: removeSupplier } = useSuppliers()
   const { sales, loading: salesLoading, reload: reloadSales, saveSale, deleteSale: removeSale } = useSales()
   const { expenses, loading: expensesLoading, reload: reloadExpenses, saveExpense, deleteExpense: removeExpense } = useExpenses()
+  const { purchaseOrders, loading: poLoading, deletePO: removePO, reload: reloadPOs } = usePurchases()
 
   // Editing state
   const [editingProduct, setEditingProduct] = useState<typeof products[0] | undefined>()
@@ -81,7 +86,7 @@ function AppInner() {
   const [editingSupplier, setEditingSupplier] = useState<typeof suppliers[0] | undefined>()
   const [editingExpense, setEditingExpense] = useState<typeof expenses[0] | undefined>()
 
-  const isLoading = productsLoading || customersLoading || suppliersLoading || salesLoading || expensesLoading
+  const isLoading = productsLoading || customersLoading || suppliersLoading || salesLoading || expensesLoading || poLoading
 
   /* -------------------- CONFIRM HELPER -------------------- */
   const showConfirm = (title: string, message: string, onConfirm: () => void, confirmLabel?: string) => {
@@ -185,13 +190,27 @@ function AppInner() {
     }, 'Delete')
   }
 
+  const handleDeletePO = async (id: string) => {
+    showConfirm('Delete Vendor Bill', 'Stock added by this bill will be rolled back. This cannot be undone.', async () => {
+      try {
+        await removePO(id)
+        await reloadProducts()
+        toast.success('Vendor bill deleted, stock rolled back')
+      } catch {
+        toast.error('Failed to delete vendor bill')
+      }
+      setConfirmState(emptyConfirm)
+    }, 'Delete')
+  }
+
   /* -------------------- VIEW HELPERS -------------------- */
   const hideMobileNav = [
     'add-product', 'edit-product',
     'add-sale', 'edit-sale',
     'add-expense', 'edit-expense',
     'add-customer', 'edit-customer',
-    'add-supplier', 'edit-supplier'
+    'add-supplier', 'edit-supplier',
+    'add-po'
   ].includes(currentView)
 
   const viewTitles: Record<string, string> = {
@@ -201,7 +220,8 @@ function AppInner() {
     customers: 'Customers',
     suppliers: 'Suppliers',
     expenses: 'Expenses',
-    pl: 'Reports'
+    pl: 'Reports',
+    'purchase-orders': 'Vendor Bills'
   }
 
   /* -------------------- RENDER -------------------- */
@@ -241,6 +261,7 @@ function AppInner() {
           <NavButton view="sales" icon={ShoppingCart} label="Sales" currentView={currentView} setCurrentView={setCurrentView} />
           <NavButton view="customers" icon={Users} label="Customers" currentView={currentView} setCurrentView={setCurrentView} />
           <NavButton view="suppliers" icon={Truck} label="Suppliers" currentView={currentView} setCurrentView={setCurrentView} />
+          <NavButton view="purchase-orders" icon={ClipboardList} label="Vendor Bills" currentView={currentView} setCurrentView={setCurrentView} />
           <NavButton view="expenses" icon={Wallet} label="Expenses" currentView={currentView} setCurrentView={setCurrentView} />
           <NavButton view="pl" icon={BarChart3} label="Profit & Loss" currentView={currentView} setCurrentView={setCurrentView} />
         </nav>
@@ -429,6 +450,35 @@ function AppInner() {
                         onCancel={() => { setEditingSupplier(undefined); setCurrentView('suppliers'); }}
                       />
                     </div>
+                  )}
+
+                  {/* VENDOR BILLS */}
+                  {currentView === 'purchase-orders' && (
+                    <>
+                      <PageHeader
+                        title="Vendor Bills"
+                        action={
+                          <PrimaryButton onClick={() => setCurrentView('add-po')}>
+                            <Plus className="w-4 h-4 mr-2" /> New Bill
+                          </PrimaryButton>
+                        }
+                      />
+                      <FloatingActionButton onClick={() => setCurrentView('add-po')} />
+                      <PurchaseOrderList
+                        purchaseOrders={purchaseOrders}
+                        onDelete={handleDeletePO}
+                        onRefresh={reloadPOs}
+                      />
+                    </>
+                  )}
+
+                  {currentView === 'add-po' && (
+                    <PurchaseOrderForm
+                      suppliers={suppliers}
+                      products={products}
+                      onSuccess={() => { reloadProducts(); reloadPOs(); setCurrentView('purchase-orders'); }}
+                      onCancel={() => setCurrentView('purchase-orders')}
+                    />
                   )}
 
                   {/* EXPENSES */}
