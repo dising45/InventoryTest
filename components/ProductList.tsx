@@ -15,7 +15,9 @@ import {
   ArrowUpDown,
   ChevronDown,
   X,
+  QrCode,
 } from 'lucide-react'
+import QRCodeModal from './QRCodeModal'
 
 interface ProductListProps {
   products: Product[]
@@ -45,6 +47,7 @@ const ProductList: React.FC<ProductListProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<SortOption>('newest')
+  const [qrProduct, setQrProduct] = useState<Product | null>(null)
 
   const filteredProducts = useMemo(() => {
     const term = searchTerm.toLowerCase()
@@ -282,6 +285,13 @@ const ProductList: React.FC<ProductListProps> = ({
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                           <button
+                            onClick={() => setQrProduct(product)}
+                            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                            title="Show QR code"
+                          >
+                            <QrCode className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => onEdit(product)}
                             className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                             title="Edit"
@@ -374,6 +384,12 @@ const ProductList: React.FC<ProductListProps> = ({
                         {/* Quick Actions (Prevent bubbling) */}
                         <div className="flex gap-1">
                           <button
+                            onClick={(e) => { e.stopPropagation(); setQrProduct(product); }}
+                            className="p-2 text-gray-400 hover:text-indigo-500 active:bg-indigo-50 rounded-lg transition-colors"
+                          >
+                            <QrCode className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={(e) => { e.stopPropagation(); onDelete(product.id); }}
                             className="p-2 text-gray-400 hover:text-red-500 active:bg-red-50 rounded-lg transition-colors"
                           >
@@ -388,6 +404,10 @@ const ProductList: React.FC<ProductListProps> = ({
             })}
           </div>
         </>
+      )}
+
+      {qrProduct && (
+        <QRCodeModal product={qrProduct} onClose={() => setQrProduct(null)} />
       )}
     </div>
   )

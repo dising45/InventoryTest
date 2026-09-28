@@ -86,13 +86,13 @@ class InventoryServiceSupabase {
 
     // Insert variants
     if (product.has_variants && product.variants?.length > 0) {
-      const variantsPayload = product.variants.map((v: any) => ({
+      const variantsPayload = product.variants.map((v: any, idx: number) => ({
         product_id: productRow.id,
         name: v.name,
-        sku: v.sku ?? null,
+        sku: v.sku || `${sku}-V${idx + 1}`,
         stock: Number(v.stock || 0),
         price_modifier: Number(v.price_modifier || 0),
-        image_url: v.image_url ?? null,   // ✅ ADD THIS
+        image_url: v.image_url ?? null,
       }))
 
       const { error: variantError } = await supabase
@@ -162,11 +162,11 @@ class InventoryServiceSupabase {
        VARIANTS: SAFE UPSERT + CLEANUP
        =============================== */
     if (product.has_variants) {
-      const variantsPayload = (product.variants ?? []).map((v: any) => ({
+      const variantsPayload = (product.variants ?? []).map((v: any, idx: number) => ({
         id: v.id ?? undefined,
         product_id: product.id,
         name: v.name,
-        sku: v.sku ?? null,
+        sku: v.sku || `${product.sku}-V${idx + 1}`,
         stock: Number(v.stock || 0),
         price_modifier: Number(v.price_modifier || 0),
         image_url: v.image_url ?? null,

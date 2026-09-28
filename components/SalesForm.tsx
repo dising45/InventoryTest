@@ -17,9 +17,11 @@ import {
   Tag,
   Percent,
   Receipt,
-  Loader2
+  Loader2,
+  ScanLine,
 } from 'lucide-react'
 import ProductPicker from './ui/ProductPicker'
+import BarcodeScanner from './BarcodeScanner'
 import { useToast } from './ui'
 
 interface SalesFormProps {
@@ -98,6 +100,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
   const [items, setItems] = useState<SalesItem[]>([])
   const [showNewCustomer, setShowNewCustomer] = useState(false)
   const [creatingCustomer, setCreatingCustomer] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
   const [newCustomer, setNewCustomer] = useState({
     name: '',
     phone: '',
@@ -248,6 +251,56 @@ const SalesForm: React.FC<SalesFormProps> = ({
   const removeItem = (i: number) =>
     setItems(prev => prev.filter((_, idx) => idx !== i))
 
+  /* ---------------- SCAN TO ADD ---------------- */
+  const handleScan = (sku: string) => {
+    // Search products by SKU
+    const matchedProduct = products.find(p => p.sku === sku)
+    if (matchedProduct) {
+      addScannedItem(matchedProduct, undefined)
+      return
+    }
+    // Search variants by SKU
+    for (const p of products) {
+      const matchedVariant = p.variants?.find(v => v.sku === sku)
+      if (matchedVariant) {
+        addScannedItem(p, matchedVariant)
+        return
+      }
+    }
+    toast.warning(`No product found for code: ${sku}`)
+  }
+
+  const addScannedItem = (product: Product, variant?: Variant) => {
+    const existingIndex = items.findIndex(
+      i => i.product_id === product.id && (variant ? i.variant_id === variant.id : !i.variant_id)
+    )
+    if (existingIndex >= 0) {
+      const maxStock = variant ? variant.stock : product.stock
+      const current = items[existingIndex].quantity
+      if (current >= maxStock) {
+        toast.warning(`Only ${maxStock} in stock`)
+        return
+      }
+      updateItem(existingIndex, 'quantity', current + 1)
+      toast.success(`${product.name}${variant ? ` — ${variant.name}` : ''} ×${current + 1}`)
+    } else {
+      const unitPrice = getDefaultUnitPrice(product, variant)
+      setItems(prev => [
+        ...prev,
+        {
+          product_id: product.id,
+          variant_id: variant?.id,
+          quantity: 1,
+          unit_price: unitPrice,
+          cost_price: Number(product.cost_price || 0),
+          product_name: product.name,
+          variant_name: variant?.name,
+        },
+      ])
+      toast.success(`Added: ${product.name}${variant ? ` — ${variant.name}` : ''}`)
+    }
+  }
+
   /* ---------------- TOTALS ---------------- */
   const subTotal = items.reduce(
     (sum, i) => sum + i.quantity * i.unit_price,
@@ -330,6 +383,13 @@ const SalesForm: React.FC<SalesFormProps> = ({
   /* ---------------- RENDER ---------------- */
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 pb-24 md:pb-0">
+
+      {showScanner && (
+        <BarcodeScanner
+          onScan={handleScan}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
 
       {/* HEADER */}
       <div className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 py-4 flex items-center justify-between z-30">
@@ -509,9 +569,19 @@ const SalesForm: React.FC<SalesFormProps> = ({
           {/* PRODUCT ENTRY CARD */}
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500" />
-            <h3 className="font-bold text-gray-900 mb-4 flex items-center">
-              <Package className="w-5 h-5 mr-2 text-indigo-600" />
-              Add Items
+            <h3 className="font-bold text-gray-900 mb-4 flex items-center justify-between">
+              <span className="flex items-center">
+                <Package className="w-5 h-5 mr-2 text-indigo-600" />
+                Add Items
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowScanner(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 active:scale-95 transition-all"
+              >
+                <ScanLine className="w-3.5 h-3.5" />
+                Scan
+              </button>
             </h3>
 
             <div className="space-y-4">
