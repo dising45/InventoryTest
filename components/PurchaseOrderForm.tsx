@@ -71,9 +71,9 @@ const PurchaseOrderForm: React.FC<Props> = ({
       toast.warning('Add at least one item');
       return;
     }
-    const unpicked = items.some(i => !i.product_id);
+    const unpicked = items.some(i => !i.product_id && !i.product_name?.trim());
     if (unpicked) {
-      toast.warning('Please select or finish creating a product for each item');
+      toast.warning('Please select a product or enter a name for each item');
       return;
     }
 
@@ -83,7 +83,8 @@ const PurchaseOrderForm: React.FC<Props> = ({
         supplier_id: supplierId,
         notes: notes.trim() || undefined,
         items: items.map(i => ({
-          product_id: i.product_id!,
+          product_id: i.product_id || undefined,
+          product_name: i.product_id ? undefined : i.product_name,
           variant_id: i.variant_id,
           quantity: i.quantity,
           unit_cost: i.unit_cost,

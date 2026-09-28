@@ -55,7 +55,7 @@ export const purchaseService = {
             .insert({
               name: item.product_name,
               has_variants: item.has_variants ?? false,
-              base_cost_price: item.unit_cost,
+              cost_price: item.unit_cost,
               sell_price: item.sell_price ?? item.unit_cost * 1.3,
               stock: item.has_variants ? 0 : item.quantity,
             })
@@ -116,11 +116,11 @@ export const purchaseService = {
       /* 5️⃣ Update base_cost_price + stock */
       await this.adjustStock(resolvedItems, 'add');
 
-      /* Update base cost price (latest PO wins) */
+      /* Update cost price to latest bill price */
       for (const i of resolvedItems) {
         await supabase
           .from('products')
-          .update({ base_cost_price: i.unit_cost })
+          .update({ cost_price: i.unit_cost })
           .eq('id', i.product_id);
       }
 
