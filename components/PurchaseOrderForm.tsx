@@ -63,8 +63,17 @@ const PurchaseOrderForm: React.FC<Props> = ({
 
   /* ---------------- Save Bill ---------------- */
   const handleSave = async () => {
-    if (!supplierId || items.length === 0) {
-      toast.warning('Supplier and at least one item required');
+    if (!supplierId) {
+      toast.warning('Please select a supplier');
+      return;
+    }
+    if (items.length === 0) {
+      toast.warning('Add at least one item');
+      return;
+    }
+    const unpicked = items.some(i => !i.product_id);
+    if (unpicked) {
+      toast.warning('Please select or finish creating a product for each item');
       return;
     }
 
