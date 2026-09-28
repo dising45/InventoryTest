@@ -56,8 +56,8 @@ export const purchaseService = {
               name: item.product_name,
               has_variants: item.has_variants ?? false,
               cost_price: item.unit_cost,
-              sell_price: item.sell_price ?? item.unit_cost * 1.3,
-              stock: item.has_variants ? 0 : item.quantity,
+              sell_price: item.sell_price ?? item.unit_cost * 3,
+              stock: 0,  // adjustStock below handles the increment
             })
             .select()
             .single();
@@ -72,7 +72,7 @@ export const purchaseService = {
               .insert({
                 product_id: productId,
                 name: item.variant_name,
-                stock: item.quantity,
+                stock: 0,  // adjustStock below handles the increment
                 price_modifier: 0,
               })
               .select()
