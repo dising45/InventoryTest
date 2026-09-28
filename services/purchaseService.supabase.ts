@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { generateSKU } from './inventoryService.supabase';
 
 export const purchaseService = {
   /* ===============================
@@ -50,6 +51,7 @@ export const purchaseService = {
             throw new Error('Product name required for new product');
           }
 
+          const sku = await generateSKU();
           const { data: product, error } = await supabase
             .from('products')
             .insert({
@@ -58,6 +60,7 @@ export const purchaseService = {
               cost_price: item.unit_cost,
               sell_price: item.sell_price ?? item.unit_cost * 3,
               stock: 0,  // adjustStock below handles the increment
+              sku,
             })
             .select()
             .single();

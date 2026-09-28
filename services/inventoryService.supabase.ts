@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient'
 import { Product } from '../types'
 
-async function generateSKU(): Promise<string> {
+export async function generateSKU(): Promise<string> {
   const { count } = await supabase.from('products').select('*', { count: 'exact', head: true })
   return `NTR-${String((count ?? 0) + 1).padStart(4, '0')}`
 }
