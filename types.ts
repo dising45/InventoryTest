@@ -97,8 +97,24 @@ export interface PurchaseOrder {
   po_number?: string;
   total_amount: number;
   notes?: string;
+  bill_date?: string;
+  discount?: number;
+  discount_type?: 'flat' | 'percent';
+  status?: 'unpaid' | 'paid';
+  paid_at?: string | null;
+  is_legacy?: boolean;
   created_at: string;
   items: PurchaseItem[];
+  charges?: PurchaseCharge[];
+}
+
+export interface PurchaseCharge {
+  id?: string;
+  purchase_order_id?: string;
+  description?: string;
+  amount: number;
+  category: string;
+  expense_id?: string | null;
 }
 
 export interface PurchaseItem {

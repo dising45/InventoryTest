@@ -16,6 +16,7 @@ interface Props {
   onChange: (item: PurchaseItem) => void;
   onRemove: () => void;
   onCreateProduct: (name: string, baseCost: number) => Promise<Product>;
+  allowCreate?: boolean; // when false (legacy bills), only existing products can be picked
 }
 
 const PurchaseItemRow: React.FC<Props> = ({
@@ -23,6 +24,7 @@ const PurchaseItemRow: React.FC<Props> = ({
   products,
   onChange,
   onRemove,
+  allowCreate = true,
 }) => {
   const [isNew, setIsNew] = useState(false);
   const selectedProduct = products.find(p => p.id === item.product_id);
@@ -58,7 +60,9 @@ const PurchaseItemRow: React.FC<Props> = ({
             <button
               type="button"
               onClick={switchToNew}
-              className="mt-1 text-xs text-indigo-600 flex items-center"
+              disabled={!allowCreate}
+              className="mt-1 text-xs text-indigo-600 flex items-center disabled:opacity-40 disabled:cursor-not-allowed"
+              title={allowCreate ? undefined : 'Legacy bills can only reference existing products'}
             >
               <Plus className="w-3 h-3 mr-1" /> Add new product
             </button>

@@ -21,10 +21,28 @@ export function usePurchases() {
     await load()
   }
 
+  const updatePO = async (
+    id: string,
+    data: Parameters<typeof purchaseService.updatePO>[1]
+  ) => {
+    await purchaseService.updatePO(id, data)
+    await load()
+  }
+
+  const markPaid = async (id: string) => {
+    await purchaseService.markPaid(id)
+    await load()
+  }
+
+  const markUnpaid = async (id: string) => {
+    await purchaseService.markUnpaid(id)
+    await load()
+  }
+
   const deletePO = async (id: string) => {
     await purchaseService.deletePO(id)
     await load()
   }
 
-  return { purchaseOrders, loading, savePO, deletePO, reload: load }
+  return { purchaseOrders, loading, savePO, updatePO, markPaid, markUnpaid, deletePO, reload: load }
 }

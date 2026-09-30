@@ -77,7 +77,7 @@ function AppInner() {
   const { suppliers, loading: suppliersLoading, reload: reloadSuppliers, saveSupplier, deleteSupplier: removeSupplier } = useSuppliers()
   const { sales, loading: salesLoading, reload: reloadSales, saveSale, deleteSale: removeSale } = useSales()
   const { expenses, loading: expensesLoading, reload: reloadExpenses, saveExpense, deleteExpense: removeExpense } = useExpenses()
-  const { purchaseOrders, loading: poLoading, deletePO: removePO, reload: reloadPOs } = usePurchases()
+  const { purchaseOrders, loading: poLoading, markPaid: markPOPaid, markUnpaid: markPOUnpaid, deletePO: removePO, reload: reloadPOs } = usePurchases()
 
   // Editing state
   const [editingProduct, setEditingProduct] = useState<typeof products[0] | undefined>()
@@ -85,6 +85,7 @@ function AppInner() {
   const [editingCustomer, setEditingCustomer] = useState<typeof customers[0] | undefined>()
   const [editingSupplier, setEditingSupplier] = useState<typeof suppliers[0] | undefined>()
   const [editingExpense, setEditingExpense] = useState<typeof expenses[0] | undefined>()
+  const [editingPO, setEditingPO] = useState<any>(undefined)
 
   const isLoading = productsLoading || customersLoading || suppliersLoading || salesLoading || expensesLoading || poLoading
 
@@ -191,16 +192,42 @@ function AppInner() {
   }
 
   const handleDeletePO = async (id: string) => {
-    showConfirm('Delete Vendor Bill', 'Stock added by this bill will be rolled back. This cannot be undone.', async () => {
+    showConfirm('Delete Vendor Bill', 'Stock added by this bill will be rolled back and any generated expenses removed. This cannot be undone.', async () => {
       try {
         await removePO(id)
         await reloadProducts()
+        await reloadExpenses()
         toast.success('Vendor bill deleted, stock rolled back')
       } catch {
         toast.error('Failed to delete vendor bill')
       }
       setConfirmState(emptyConfirm)
     }, 'Delete')
+  }
+
+  const handleMarkPOPaid = async (id: string) => {
+    try {
+      await markPOPaid(id)
+      await reloadExpenses()
+      toast.success('Marked paid — charges posted to Expenses')
+    } catch {
+      toast.error('Failed to mark bill paid')
+    }
+  }
+
+  const handleMarkPOUnpaid = async (id: string) => {
+    try {
+      await markPOUnpaid(id)
+      await reloadExpenses()
+      toast.success('Marked unpaid — charge expenses removed')
+    } catch {
+      toast.error('Failed to mark bill unpaid')
+    }
+  }
+
+  const handleEditPO = (po: any) => {
+    setEditingPO(po)
+    setCurrentView('add-po')
   }
 
   /* -------------------- VIEW HELPERS -------------------- */
@@ -458,15 +485,18 @@ function AppInner() {
                       <PageHeader
                         title="Vendor Bills"
                         action={
-                          <PrimaryButton onClick={() => setCurrentView('add-po')}>
+                          <PrimaryButton onClick={() => { setEditingPO(undefined); setCurrentView('add-po'); }}>
                             <Plus className="w-4 h-4 mr-2" /> New Bill
                           </PrimaryButton>
                         }
                       />
-                      <FloatingActionButton onClick={() => setCurrentView('add-po')} />
+                      <FloatingActionButton onClick={() => { setEditingPO(undefined); setCurrentView('add-po'); }} />
                       <PurchaseOrderList
                         purchaseOrders={purchaseOrders}
                         onDelete={handleDeletePO}
+                        onEdit={handleEditPO}
+                        onMarkPaid={handleMarkPOPaid}
+                        onMarkUnpaid={handleMarkPOUnpaid}
                         onRefresh={reloadPOs}
                       />
                     </>
@@ -476,8 +506,9 @@ function AppInner() {
                     <PurchaseOrderForm
                       suppliers={suppliers}
                       products={products}
-                      onSuccess={() => { reloadProducts(); reloadPOs(); setCurrentView('purchase-orders'); }}
-                      onCancel={() => setCurrentView('purchase-orders')}
+                      editingPO={editingPO}
+                      onSuccess={() => { reloadProducts(); reloadPOs(); reloadExpenses(); setEditingPO(undefined); setCurrentView('purchase-orders'); }}
+                      onCancel={() => { setEditingPO(undefined); setCurrentView('purchase-orders'); }}
                     />
                   )}
 
