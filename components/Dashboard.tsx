@@ -68,6 +68,12 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
   const lowStockProducts = products
     .filter(p => (p.stock ?? 0) <= LOW_STOCK_THRESHOLD)
 
+  // Compute inventory metrics from the same products state as ProductList
+  // so dashboard and inventory always show the same numbers
+  const totalUnitsInStock = products.reduce((sum, p) => sum + (p.stock ?? 0), 0)
+  const inventoryValue = products.reduce((sum, p) => sum + (p.stock ?? 0) * Number(p.cost_price || 0), 0)
+  const lowStockCount = lowStockProducts.length
+
   // Format currency
   const fmt = (amount: number) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount)
@@ -258,10 +264,10 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
               <Package className="w-4 h-4 text-indigo-500" />
               Inventory Health
             </h3>
-            {kpis?.lowStockCount > 0 ? (
+            {lowStockCount > 0 ? (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-100 rounded-full text-[11px] font-bold text-amber-700">
                 <AlertTriangle className="w-3 h-3" />
-                {kpis.lowStockCount} low stock
+                {lowStockCount} low stock
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 border border-emerald-100 rounded-full text-[11px] font-bold text-emerald-700">
@@ -284,7 +290,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
               <div className="h-3 bg-gray-100 rounded-full w-full mt-4" />
             </div>
           ) : (() => {
-            const totalEver = (kpis?.totalUnitsInStock ?? 0) + (kpis?.unitsSold ?? 0)
+            const totalEver = totalUnitsInStock + (kpis?.unitsSold ?? 0)
             const soldPct = totalEver > 0 ? ((kpis?.unitsSold ?? 0) / totalEver) * 100 : 0
 
             return (
@@ -303,7 +309,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Remaining</p>
-                    <p className="text-2xl font-black text-emerald-600 tabular-nums">{(kpis?.totalUnitsInStock ?? 0).toLocaleString('en-IN')}</p>
+                    <p className="text-2xl font-black text-emerald-600 tabular-nums">{totalUnitsInStock.toLocaleString('en-IN')}</p>
                     <p className="text-[10px] text-gray-400 font-medium mt-0.5">in stock</p>
                   </div>
                 </div>
@@ -326,7 +332,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
                 <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Stock Value</p>
-                    <p className="text-base font-black text-gray-900 mt-0.5">{fmt(kpis?.inventoryValue ?? 0)}</p>
+                    <p className="text-base font-black text-gray-900 mt-0.5">{fmt(inventoryValue)}</p>
                   </div>
                   {setCurrentView && (
                     <button
