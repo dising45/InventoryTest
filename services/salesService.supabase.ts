@@ -92,9 +92,9 @@ export const salesService = {
       order_date: string;
       subtotal?: number;
       discount?: number;
-      discount_type?: 'flat' | 'percentage';
+      discount_type?: 'flat' | 'percent';
       tax?: number;
-      tax_type?: 'flat' | 'percentage';
+      tax_type?: 'flat' | 'percent';
       order_type?: OrderType;
     }
   ) {

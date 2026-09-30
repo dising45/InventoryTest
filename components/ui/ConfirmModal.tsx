@@ -1,5 +1,5 @@
-import React from 'react'
-import { AlertTriangle, X } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { AlertTriangle, Loader2 } from 'lucide-react'
 
 interface ConfirmModalProps {
   open: boolean
@@ -8,7 +8,7 @@ interface ConfirmModalProps {
   confirmLabel?: string
   cancelLabel?: string
   danger?: boolean
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
   onCancel: () => void
 }
 
@@ -22,14 +22,34 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  // Prevents a slow async confirm (e.g. delete + stock rollback) from being
+  // fired twice by a double-click, which would double-delete / double-adjust.
+  const [busy, setBusy] = useState(false)
+
+  // Reset when the modal is (re)opened or closed by the parent.
+  useEffect(() => {
+    if (!open) setBusy(false)
+  }, [open])
+
   if (!open) return null
+
+  const handleConfirm = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      await onConfirm()
+    } catch {
+      // If the confirm handler throws, re-enable so the user can retry.
+      setBusy(false)
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onCancel}
+        onClick={busy ? undefined : onCancel}
       />
 
       {/* Modal */}
@@ -51,19 +71,22 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         <div className="flex gap-3 px-6 pb-6">
           <button
             onClick={onCancel}
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+            disabled={busy}
+            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {cancelLabel}
           </button>
           <button
-            onClick={onConfirm}
-            className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-colors ${
+            onClick={handleConfirm}
+            disabled={busy}
+            className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-colors inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-80 ${
               danger
                 ? 'bg-red-600 hover:bg-red-700'
                 : 'bg-indigo-600 hover:bg-indigo-700'
             }`}
           >
-            {confirmLabel}
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+            {busy ? 'Working…' : confirmLabel}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { LOW_STOCK_THRESHOLD } from '../constants';
 
 export const dashboardService = {
   async getKPIs() {
@@ -122,7 +123,7 @@ export const dashboardService = {
       }, 0) ?? 0;
 
     const lowStockCount =
-      products?.filter((p) => Number(p.stock) <= 5).length ?? 0;
+      products?.filter((p) => Number(p.stock) <= LOW_STOCK_THRESHOLD).length ?? 0;
 
     // Determine if MTD has meaningful data
     const hasMTDData = mtd.revenue > 0 || totalExpensesMTD > 0;

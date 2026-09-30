@@ -124,16 +124,18 @@ const SalesList: React.FC<SalesListProps> = ({
     if (s === 'cancelled') return <XCircle className="w-3.5 h-3.5 mr-1.5" />
     return null
   }
-  /* ================= SALES KPIs ================= */
+  /* ================= SALES KPIs =================
+     Computed from filteredSales so the headline numbers always match the
+     rows shown below (filter to "This week" → KPIs reflect this week). */
 
-  const totalRevenue = sales.reduce(
+  const totalRevenue = filteredSales.reduce(
     (sum, sale) => sum + Number(sale.total_amount || 0),
     0
   )
 
-  const totalOrders = sales.length
+  const totalOrders = filteredSales.length
 
-  const totalQuantitySold = sales.reduce((sum, sale) => {
+  const totalQuantitySold = filteredSales.reduce((sum, sale) => {
     const qty =
       sale.items?.reduce(
         (itemSum: number, item: any) =>
@@ -143,7 +145,7 @@ const SalesList: React.FC<SalesListProps> = ({
     return sum + qty
   }, 0)
 
-  const totalCOGS = sales.reduce((sum, sale) => {
+  const totalCOGS = filteredSales.reduce((sum, sale) => {
     const cogs =
       sale.items?.reduce(
         (itemSum: number, item: any) =>
@@ -180,7 +182,8 @@ const SalesList: React.FC<SalesListProps> = ({
                 { key: 'status', label: 'Status' },
                 { key: 'total_amount', label: 'Amount (₹)' },
               ],
-              data: sales.map(s => ({
+              // Export what's on screen — respects active search/date/status filters.
+              data: filteredSales.map(s => ({
                 date: s.order_date || s.created_at,
                 order_id: s.id.slice(0, 8).toUpperCase(),
                 customer: s.customer?.name || 'Unknown',

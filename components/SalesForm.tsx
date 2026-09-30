@@ -19,6 +19,7 @@ import {
   Receipt,
   Loader2,
   ScanLine,
+  AlertTriangle,
 } from 'lucide-react'
 import ProductPicker from './ui/ProductPicker'
 import BarcodeScanner from './BarcodeScanner'
@@ -358,6 +359,11 @@ const SalesForm: React.FC<SalesFormProps> = ({
   const handleSubmit = async () => {
     if (!customerId) { setValidationError('Please select a customer'); return }
     if (items.length === 0) { setValidationError('Please add at least one item'); return }
+    const zeroLine = items.find(it => Number(it.unit_price) <= 0)
+    if (zeroLine) {
+      setValidationError(`"${zeroLine.product_name}" has a ₹0 price — set a price before saving`)
+      return
+    }
     setValidationError('')
     setLoading(true)
     try {
@@ -758,6 +764,13 @@ const SalesForm: React.FC<SalesFormProps> = ({
                         {formatCurrency(item.quantity * item.unit_price)}
                       </div>
                     </div>
+
+                    {Number(item.unit_price) > 0 && Number(item.unit_price) < Number(item.cost_price || 0) && (
+                      <div className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-100 rounded-md px-2 py-1">
+                        <AlertTriangle className="w-3 h-3 shrink-0" />
+                        Below cost — this line loses money
+                      </div>
+                    )}
                   </div>
                 ))
               )}

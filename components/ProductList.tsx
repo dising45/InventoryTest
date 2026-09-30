@@ -18,14 +18,13 @@ import {
   QrCode,
 } from 'lucide-react'
 import QRCodeModal from './QRCodeModal'
+import { LOW_STOCK_THRESHOLD } from '../constants'
 
 interface ProductListProps {
   products: Product[]
   onEdit: (product: Product) => void
   onDelete: (id: string) => void
 }
-
-const LOW_STOCK_THRESHOLD = 10
 
 type SortOption = 'name-asc' | 'name-desc' | 'price-asc' | 'price-desc' | 'stock-asc' | 'stock-desc' | 'newest' | 'oldest'
 

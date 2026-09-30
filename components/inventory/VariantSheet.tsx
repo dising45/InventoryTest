@@ -2,6 +2,7 @@
 import React from 'react'
 import { Variant } from '../../types'
 import { X, Layers, Package, AlertCircle } from 'lucide-react'
+import { LOW_STOCK_THRESHOLD } from '../../constants'
 
 interface Props {
   variants: Variant[]
@@ -55,7 +56,7 @@ export default function VariantSheet({ variants, onClose }: Props) {
           ) : (
             variants.map((v) => {
               const stock = v.stock ?? 0
-              const isLow = stock <= 5
+              const isLow = stock <= LOW_STOCK_THRESHOLD
               
               return (
                 <div

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import type { Product, SalesOrder, ViewState } from '../types'
 import { dashboardService } from '../services/dashboardService.supabase'
+import { LOW_STOCK_THRESHOLD } from '../constants'
 import {
   Package,
   AlertTriangle,
@@ -26,8 +27,6 @@ interface DashboardProps {
   products: Product[]
   setCurrentView?: (v: ViewState) => void
 }
-
-const LOW_STOCK_THRESHOLD = 10
 
 const PRIVACY_KEY = 'naitree_privacy_mode'
 
