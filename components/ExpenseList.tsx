@@ -110,17 +110,13 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
   const topCategory =
     Object.entries(categoryTotals).sort((a, b) => (b[1] as number) - (a[1] as number))[0]?.[0] || '-'
 
-  const vendorTotals = filteredExpenses.reduce<Record<string, number>>(
-    (acc, e) => {
-      if (!e.vendor) return acc
-      acc[e.vendor] = (acc[e.vendor] || 0) + Number(e.amount || 0)
-      return acc
-    },
-    {}
-  )
-
-  const topVendor =
-    Object.entries(vendorTotals).sort((a, b) => (b[1] as number) - (a[1] as number))[0]?.[0] || '-'
+  // Month-to-date spend (respects active filters, like the other summary cards)
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    .toISOString()
+    .slice(0, 10)
+  const thisMonthTotal = filteredExpenses
+    .filter(e => (e.expense_date ?? '') >= monthStart)
+    .reduce((sum, e) => sum + Number(e.amount || 0), 0)
   /* ================= RENDER ================= */
 
   return (
@@ -132,7 +128,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
         <SummaryCard label="Total Expenses" value={formatCurrency(totalExpenseAmount)} color="red" />
         <SummaryCard label="Transactions" value={totalTransactions} color="gray" />
         <SummaryCard label="Top Category" value={topCategory} color="indigo" />
-        <SummaryCard label="Top Vendor" value={topVendor} color="emerald" />
+        <SummaryCard label="This Month" value={formatCurrency(thisMonthTotal)} color="emerald" />
       </div>
 
       {/* Mobile Summary */}
@@ -168,9 +164,9 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
             </div>
 
             <div>
-              <p className="text-xs opacity-70">Top Vendor</p>
+              <p className="text-xs opacity-70">This Month</p>
               <p className="text-sm font-bold truncate">
-                {topVendor}
+                {formatCurrency(thisMonthTotal)}
               </p>
             </div>
           </div>
