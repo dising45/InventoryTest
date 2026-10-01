@@ -220,7 +220,7 @@ const SalesList: React.FC<SalesListProps> = ({
           color="gray"
         />
         <KpiCard
-          label="Profit"
+          label="Gross Profit"
           value={formatCurrency(totalProfit)}
           color={totalProfit >= 0 ? 'green' : 'red'}
         />
@@ -259,7 +259,7 @@ const SalesList: React.FC<SalesListProps> = ({
             </div>
 
             <div>
-              <p className="text-xs opacity-70">Profit</p>
+              <p className="text-xs opacity-70">Gross Profit</p>
               <p className={`text-lg font-bold tabular-nums ${totalProfit >= 0 ? 'text-emerald-300' : 'text-rose-300'
                 }`}>
                 {formatCurrency(totalProfit)}

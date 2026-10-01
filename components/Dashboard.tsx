@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react'
 import type { Product, SalesOrder, ViewState } from '../types'
 import { dashboardService } from '../services/dashboardService.supabase'
-import { LOW_STOCK_THRESHOLD } from '../constants'
 import {
   Package,
   AlertTriangle,
@@ -64,14 +63,11 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
   }, [])
 
   /* ================= INVENTORY CALCULATIONS ================= */
-  const lowStockProducts = products
-    .filter(p => (p.stock ?? 0) <= LOW_STOCK_THRESHOLD)
-
   // Compute inventory metrics from the same products state as ProductList
   // so dashboard and inventory always show the same numbers
   const totalUnitsInStock = products.reduce((sum, p) => sum + (p.stock ?? 0), 0)
   const inventoryValue = products.reduce((sum, p) => sum + (p.stock ?? 0) * Number(p.cost_price || 0), 0)
-  const lowStockCount = lowStockProducts.length
+  const soldOutCount = products.filter(p => (p.stock ?? 0) === 0).length
 
   // Format currency
   const fmt = (amount: number) =>
@@ -91,6 +87,18 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
   }
 
   const nav = (view: ViewState) => setCurrentView?.(view)
+
+  /* ================= BUSINESS KPI VALUES ================= */
+  const revThis = kpis?.salesMTD ?? 0
+  const revLast = kpis?.salesPrevMonth ?? 0
+  const revDeltaPct = revLast > 0 ? ((revThis - revLast) / revLast) * 100 : null
+  const revDeltaLabel =
+    revDeltaPct === null
+      ? 'no sales last month'
+      : `${revDeltaPct >= 0 ? '↑' : '↓'} ${Math.abs(revDeltaPct).toFixed(0)}% vs last month`
+  const netAll = kpis?.netProfitAllTime ?? 0
+  const marginAll = kpis?.profitMarginAllTime ?? 0
+  const ordersThisMonth = kpis?.ordersMTD ?? 0
 
   /* ================= UI ================= */
   return (
@@ -129,50 +137,46 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
           <KpiCard
-            title={kpis?.hasMTDData ? "Today's Sales" : "Total Revenue"}
-            value={mask(fmtCompact(kpis?.hasMTDData ? (kpis?.salesToday ?? 0) : (kpis?.salesAllTime ?? 0)))}
-            desktopValue={mask(fmt(kpis?.hasMTDData ? (kpis?.salesToday ?? 0) : (kpis?.salesAllTime ?? 0))) as string}
-            icon={ShoppingCart}
-            color="indigo"
-            subtitle={kpis?.hasMTDData ? "Revenue today" : "All time"}
-          />
-          <KpiCard
-            title={kpis?.hasMTDData ? "This Month" : "Total Sales"}
-            value={mask(fmtCompact(kpis?.hasMTDData ? (kpis?.salesMTD ?? 0) : (kpis?.salesAllTime ?? 0)))}
-            desktopValue={mask(fmt(kpis?.hasMTDData ? (kpis?.salesMTD ?? 0) : (kpis?.salesAllTime ?? 0))) as string}
+            title="Revenue"
+            value={mask(fmtCompact(revThis))}
+            desktopValue={mask(fmt(revThis)) as string}
             icon={TrendingUp}
-            color="emerald"
-            subtitle={kpis?.hasMTDData ? "MTD Revenue" : "All time revenue"}
+            color="indigo"
+            subtitle={privacyMode ? '••••••' : `This month · ${revDeltaLabel}`}
           />
           <KpiCard
             title="Net Profit"
-            value={mask(fmtCompact(kpis?.hasMTDData ? (kpis?.netProfitMTD ?? 0) : (kpis?.netProfitAllTime ?? 0)))}
-            desktopValue={mask(fmt(kpis?.hasMTDData ? (kpis?.netProfitMTD ?? 0) : (kpis?.netProfitAllTime ?? 0))) as string}
+            value={mask(fmtCompact(netAll))}
+            desktopValue={mask(fmt(netAll)) as string}
             icon={BarChart3}
-            color={privacyMode ? 'indigo' : ((kpis?.hasMTDData ? (kpis?.netProfitMTD ?? 0) : (kpis?.netProfitAllTime ?? 0)) >= 0 ? 'emerald' : 'red')}
-            subtitle={privacyMode ? '••••••' : (kpis?.hasMTDData
-              ? `${(kpis?.profitMargin ?? 0).toFixed(1)}% margin · MTD`
-              : `${(kpis?.profitMarginAllTime ?? 0).toFixed(1)}% margin · All time`
-            )}
+            color={privacyMode ? 'indigo' : (netAll >= 0 ? 'emerald' : 'red')}
+            subtitle={privacyMode ? '••••••' : `${marginAll.toFixed(1)}% margin · all-time`}
           />
           <KpiCard
-            title="Low Stock"
-            value={lowStockProducts.length}
-            icon={AlertTriangle}
-            color="amber"
-            subtitle="Action Needed"
-            alert={lowStockProducts.length > 0}
+            title="Orders"
+            value={ordersThisMonth}
+            icon={ShoppingCart}
+            color="blue"
+            subtitle="This month"
+          />
+          <KpiCard
+            title="Stock Value"
+            value={mask(fmtCompact(inventoryValue))}
+            desktopValue={mask(fmt(inventoryValue)) as string}
+            icon={Package}
+            color="emerald"
+            subtitle="Capital in stock"
           />
         </div>
       )}
 
       {/* ================= QUICK ACTIONS ================= */}
       {setCurrentView && (
-        <div className="grid grid-cols-3 md:grid-cols-4 gap-2 md:gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
           <QuickAction icon={ShoppingCart} label="New Sale" color="indigo" onClick={() => nav('add-sale')} />
           <QuickAction icon={Package} label="Add Product" color="blue" onClick={() => nav('add-product')} />
           <QuickAction icon={Users} label="Add Customer" color="violet" onClick={() => nav('add-customer')} />
-          <QuickAction icon={Wallet} label="Add Expense" color="amber" className="hidden md:flex" onClick={() => nav('add-expense')} />
+          <QuickAction icon={Wallet} label="Add Expense" color="amber" onClick={() => nav('add-expense')} />
         </div>
       )}
 
@@ -239,12 +243,9 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
                       <p className="text-sm font-bold text-gray-900 truncate">
                         {sale.customer?.name || 'Walk-in'}
                       </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[11px] text-gray-400 font-medium">
-                          {formatDate(sale.order_date || sale.created_at)}
-                        </span>
-                        <StatusDot status={sale.status} />
-                      </div>
+                      <span className="block text-[11px] text-gray-400 font-medium mt-0.5">
+                        {formatDate(sale.order_date || sale.created_at)}
+                      </span>
                     </div>
                     <span className="text-sm font-black text-gray-900 tabular-nums shrink-0">
                       {privacyMode ? '••••••' : fmt(sale.total_amount)}
@@ -256,24 +257,16 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
           </div>
         </div>
 
-        {/* INVENTORY HEALTH */}
+        {/* INVENTORY SNAPSHOT */}
         <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col min-h-[280px]">
           <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center shrink-0">
             <h3 className="text-sm md:text-base font-bold text-gray-900 flex items-center gap-2">
               <Package className="w-4 h-4 text-indigo-500" />
-              Inventory Health
+              Inventory Snapshot
             </h3>
-            {lowStockCount > 0 ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-100 rounded-full text-[11px] font-bold text-amber-700">
-                <AlertTriangle className="w-3 h-3" />
-                {lowStockCount} low stock
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 border border-emerald-100 rounded-full text-[11px] font-bold text-emerald-700">
-                <CheckCircle2 className="w-3 h-3" />
-                All stocked
-              </span>
-            )}
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 border border-gray-100 rounded-full text-[11px] font-bold text-gray-500">
+              {products.length} designs
+            </span>
           </div>
 
           {loading ? (
@@ -289,27 +282,29 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
               <div className="h-3 bg-gray-100 rounded-full w-full mt-4" />
             </div>
           ) : (() => {
-            const totalEver = totalUnitsInStock + (kpis?.unitsSold ?? 0)
-            const soldPct = totalEver > 0 ? ((kpis?.unitsSold ?? 0) / totalEver) * 100 : 0
+            const inStock = totalUnitsInStock
+            const sold = kpis?.unitsSold ?? 0
+            const everStocked = inStock + sold
+            const sellThrough = everStocked > 0 ? (sold / everStocked) * 100 : 0
 
             return (
               <div className="flex-1 p-5 flex flex-col justify-between">
                 {/* 3 stats */}
                 <div className="grid grid-cols-3 gap-2 mb-5">
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Stocked</p>
-                    <p className="text-2xl font-black text-gray-900 tabular-nums">{totalEver.toLocaleString('en-IN')}</p>
-                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">units ever</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">In Stock</p>
+                    <p className="text-2xl font-black text-emerald-600 tabular-nums">{inStock.toLocaleString('en-IN')}</p>
+                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">pieces available</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Sold</p>
-                    <p className="text-2xl font-black text-indigo-600 tabular-nums">{(kpis?.unitsSold ?? 0).toLocaleString('en-IN')}</p>
-                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">{soldPct.toFixed(0)}% of stock</p>
+                    <p className="text-2xl font-black text-indigo-600 tabular-nums">{sold.toLocaleString('en-IN')}</p>
+                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">all-time</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Remaining</p>
-                    <p className="text-2xl font-black text-emerald-600 tabular-nums">{totalUnitsInStock.toLocaleString('en-IN')}</p>
-                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">in stock</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Sell-through</p>
+                    <p className="text-2xl font-black text-gray-900 tabular-nums">{sellThrough.toFixed(0)}%</p>
+                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">of all pieces</p>
                   </div>
                 </div>
 
@@ -318,20 +313,20 @@ const Dashboard: React.FC<DashboardProps> = ({ products, setCurrentView }) => {
                   <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
                     <div
                       className="bg-indigo-500 h-full rounded-full transition-all duration-700 ease-out"
-                      style={{ width: `${soldPct}%` }}
+                      style={{ width: `${sellThrough}%` }}
                     />
                   </div>
                   <div className="flex justify-between text-[10px] text-gray-400 font-medium mt-1.5">
-                    <span>{soldPct.toFixed(0)}% sold</span>
-                    <span>{(100 - soldPct).toFixed(0)}% remaining</span>
+                    <span>{sellThrough.toFixed(0)}% sold</span>
+                    <span>{(100 - sellThrough).toFixed(0)}% remaining</span>
                   </div>
                 </div>
 
-                {/* Stock value */}
+                {/* Footer */}
                 <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Stock Value</p>
-                    <p className="text-base font-black text-gray-900 mt-0.5">{fmt(inventoryValue)}</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Fully Sold</p>
+                    <p className="text-base font-black text-gray-900 mt-0.5">{soldOutCount} designs</p>
                   </div>
                   {setCurrentView && (
                     <button
@@ -423,22 +418,6 @@ const QuickAction = ({ icon: Icon, label, color, onClick, className = '' }: Quic
       <span className="hidden sm:inline">{label}</span>
       <span className="sm:hidden">{label.split(' ').pop()}</span>
     </button>
-  )
-}
-
-const StatusDot = ({ status }: { status: string }) => {
-  const s = status?.toLowerCase() || ''
-  let cls = 'bg-gray-300'
-  let label = status
-  if (s === 'completed' || s === 'paid') { cls = 'bg-emerald-500'; label = 'Paid' }
-  else if (s === 'pending') { cls = 'bg-amber-500'; label = 'Pending' }
-  else if (s === 'cancelled') { cls = 'bg-red-500'; label = 'Cancelled' }
-
-  return (
-    <span className="inline-flex items-center gap-1">
-      <span className={`w-1.5 h-1.5 rounded-full ${cls}`} />
-      <span className="text-[10px] text-gray-400 font-medium">{label}</span>
-    </span>
   )
 }
 

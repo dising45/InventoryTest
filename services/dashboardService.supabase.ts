@@ -146,6 +146,7 @@ export const dashboardService = {
       // MTD
       salesMTD: mtd.revenue,
       salesToday: totalSalesToday,
+      ordersMTD: salesMTDList.length,
       expensesMTD: totalExpensesMTD,
       netProfitMTD,
       grossProfitMTD,
