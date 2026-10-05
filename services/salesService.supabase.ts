@@ -55,7 +55,7 @@ export const salesService = {
         total_amount: sale.total_amount,
         order_type: sale.order_type ?? 'B2C',
         order_date: sale.order_date,
-        status: 'Completed',
+        status: 'Confirmed',
       })
       .select()
       .single();
@@ -71,6 +71,33 @@ export const salesService = {
      UPDATE Status
   ==========================*/
   async updateStatus(id: string, status: string) {
+    // Stock is reserved for every order EXCEPT Cancelled ones. So moving an
+    // order into Cancelled returns its pieces to stock, and moving it back out
+    // re-reserves them. All other status changes leave stock untouched.
+    const { data: order } = await supabase
+      .from('sales_orders')
+      .select('status')
+      .eq('id', id)
+      .single()
+
+    const wasCancelled = order?.status === 'Cancelled'
+    const willBeCancelled = status === 'Cancelled'
+
+    if (wasCancelled !== willBeCancelled) {
+      const { data: items } = await supabase
+        .from('sales_items')
+        .select('*')
+        .eq('sales_order_id', id)
+
+      if (items?.length) {
+        if (willBeCancelled) {
+          await this.restoreStock(items as SalesItem[]) // cancel → return stock
+        } else {
+          await this.deductStock(items as SalesItem[])  // un-cancel → reserve again
+        }
+      }
+    }
+
     const { error } = await supabase
       .from('sales_orders')
       .update({ status })
@@ -98,13 +125,22 @@ export const salesService = {
       order_type?: OrderType;
     }
   ) {
+    // A Cancelled order currently holds no stock, so skip the restore/deduct
+    // dance for it — only swap the item rows and totals.
+    const { data: current } = await supabase
+      .from('sales_orders')
+      .select('status')
+      .eq('id', salesOrderId)
+      .single()
+    const holdsStock = current?.status !== 'Cancelled'
+
     // 1️⃣ Restore stock
     const { data: oldItems } = await supabase
       .from('sales_items')
       .select('*')
       .eq('sales_order_id', salesOrderId);
 
-    if (oldItems?.length) {
+    if (holdsStock && oldItems?.length) {
       await this.restoreStock(oldItems as SalesItem[]);
     }
 
@@ -136,7 +172,9 @@ export const salesService = {
     await this.insertItems(salesOrderId, sale.items);
 
     // 5️⃣ Deduct stock
-    await this.deductStock(sale.items);
+    if (holdsStock) {
+      await this.deductStock(sale.items);
+    }
   },
   // Delete stock
   async deleteSale(salesOrderId: string) {
@@ -152,8 +190,15 @@ export const salesService = {
         throw fetchError
       }
 
-      // 2️⃣ Restore stock
-      if (items?.length) {
+      // 2️⃣ Restore stock — but only if the order still holds it. A Cancelled
+      // order already returned its stock, so restoring again would over-count.
+      const { data: order } = await supabase
+        .from('sales_orders')
+        .select('status')
+        .eq('id', salesOrderId)
+        .single()
+
+      if (items?.length && order?.status !== 'Cancelled') {
         await this.restoreStock(items as SalesItem[])
       }
 

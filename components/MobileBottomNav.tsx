@@ -10,6 +10,7 @@ import {
   Wallet,
   BarChart3,
   ClipboardList,
+  Settings,
   X,
 } from 'lucide-react'
 
@@ -30,6 +31,7 @@ const moreItems = [
   { id: 'purchase-orders', icon: ClipboardList, label: 'Vendor Bills' },
   { id: 'expenses', icon: Wallet, label: 'Expenses' },
   { id: 'pl', icon: BarChart3, label: 'Profit & Loss' },
+  { id: 'settings', icon: Settings, label: 'Settings' },
 ]
 
 const moreIds = moreItems.map(i => i.id)

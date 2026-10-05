@@ -5,9 +5,11 @@ import { Printer, X, Receipt, Share2 } from 'lucide-react'
 interface InvoiceModalProps {
   sale: SalesOrder | null
   onClose: () => void
+  businessName?: string
+  businessLogoUrl?: string | null
 }
 
-const BUSINESS_NAME = 'Naitree'
+const DEFAULT_BUSINESS_NAME = 'Naitree'
 const BUSINESS_TAGLINE = 'Tax Invoice'
 const BUSINESS_PHONE = ''
 const BUSINESS_EMAIL = ''
@@ -77,7 +79,7 @@ const getTaxAmount = (sale: SalesOrder, taxableAmount: number) => {
   return tax
 }
 
-const getInvoiceHtml = (sale: SalesOrder) => {
+const getInvoiceHtml = (sale: SalesOrder, brandName: string, logoUrl?: string | null) => {
   const subtotal = getSubtotal(sale)
   const discountAmount = getDiscountAmount(sale, subtotal)
   const taxableAmount = Math.max(0, subtotal - discountAmount)
@@ -231,7 +233,8 @@ const getInvoiceHtml = (sale: SalesOrder) => {
   <div class="invoice">
     <div class="header">
       <div class="business">
-        <h1>${BUSINESS_NAME}</h1>
+        ${logoUrl ? `<img src="${logoUrl}" alt="${brandName}" style="max-height:56px;max-width:180px;object-fit:contain;margin-bottom:8px;display:block;" />` : ''}
+        <h1>${brandName}</h1>
         <p>${BUSINESS_TAGLINE}</p>
         ${BUSINESS_ADDRESS ? `<p>${BUSINESS_ADDRESS}</p>` : ''}
         ${BUSINESS_PHONE ? `<p>Phone: ${BUSINESS_PHONE}</p>` : ''}
@@ -309,7 +312,7 @@ const getInvoiceHtml = (sale: SalesOrder) => {
 `
 }
 
-const openInvoicePage = (sale: SalesOrder) => {
+const openInvoicePage = (sale: SalesOrder, brandName: string, logoUrl?: string | null) => {
   const isMobile = window.matchMedia('(max-width: 768px)').matches
   const win = window.open('', isMobile ? '_self' : '_blank')
 
@@ -324,7 +327,7 @@ const openInvoicePage = (sale: SalesOrder) => {
       const printBtn = document.getElementById('printBtn');
       const backBtn = document.getElementById('backBtn');
 
-      const invoiceText = ${JSON.stringify(`${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}
+      const invoiceText = ${JSON.stringify(`${brandName} Invoice ${getInvoiceNumber(sale)}
 Customer: ${sale.customer?.name || 'Customer'}
 Date: ${formatDate(sale.order_date || sale.created_at)}
 Total: ${formatCurrency(Number(sale.total_amount || 0))}`)};
@@ -333,7 +336,7 @@ Total: ${formatCurrency(Number(sale.total_amount || 0))}`)};
         try {
           if (navigator.share) {
             await navigator.share({
-              title: ${JSON.stringify(`${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}`)},
+              title: ${JSON.stringify(`${brandName} Invoice ${getInvoiceNumber(sale)}`)},
               text: invoiceText
             });
           } else if (navigator.clipboard) {
@@ -355,8 +358,8 @@ Total: ${formatCurrency(Number(sale.total_amount || 0))}`)};
         try {
           if (navigator.share) {
             await navigator.share({
-              title: ${JSON.stringify(`${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}`)},
-              text: ${JSON.stringify(`${BUSINESS_NAME} invoice for ${sale.customer?.name || 'Customer'}`)}
+              title: ${JSON.stringify(`${brandName} Invoice ${getInvoiceNumber(sale)}`)},
+              text: ${JSON.stringify(`${brandName} invoice for ${sale.customer?.name || 'Customer'}`)}
             });
           }
         } catch (e) {
@@ -367,7 +370,7 @@ Total: ${formatCurrency(Number(sale.total_amount || 0))}`)};
       document.getElementById('backBtn')?.addEventListener('click', () => window.close());
     `
 
-  const html = getInvoiceHtml(sale).replace(
+  const html = getInvoiceHtml(sale, brandName, logoUrl).replace(
     '</body>',
     `
       <div class="no-print invoice-actions">
@@ -425,8 +428,11 @@ Total: ${formatCurrency(Number(sale.total_amount || 0))}`)};
   win.document.close()
 }
 
-const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
+const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose, businessName, businessLogoUrl }) => {
   if (!sale) return null
+
+  const brandName = businessName?.trim() || DEFAULT_BUSINESS_NAME
+  const logoUrl = businessLogoUrl || null
 
   const subtotal = getSubtotal(sale)
   const discountAmount = getDiscountAmount(sale, subtotal)
@@ -438,19 +444,19 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
     try {
       const isMobile = window.matchMedia('(max-width: 768px)').matches
       if (isMobile) {
-        openInvoicePage(sale)
+        openInvoicePage(sale, brandName, logoUrl)
         return
       }
 
       if (navigator.share) {
         await navigator.share({
-          title: `${BUSINESS_NAME} Invoice ${getInvoiceNumber(sale)}`,
-          text: `${BUSINESS_NAME} invoice for ${sale.customer?.name || 'Customer'}`,
+          title: `${brandName} Invoice ${getInvoiceNumber(sale)}`,
+          text: `${brandName} invoice for ${sale.customer?.name || 'Customer'}`,
         })
         return
       }
 
-      openInvoicePage(sale)
+      openInvoicePage(sale, brandName, logoUrl)
     } catch (error) {
       console.error('INVOICE SHARE ERROR:', error)
       alert('Unable to open invoice right now. Please try again.')
@@ -461,7 +467,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
     const isMobile = window.matchMedia('(max-width: 768px)').matches
     if (isMobile) {
       try {
-        openInvoicePage(sale)
+        openInvoicePage(sale, brandName, logoUrl)
       } catch (error) {
         console.error('INVOICE PAGE ERROR:', error)
         alert('Unable to open invoice right now. Please try again.')
@@ -544,8 +550,15 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
           <div className="invoice-print-area bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm">
             <div className="flex justify-between gap-6 border-b-2 border-gray-900 pb-5 mb-6">
               <div>
+                {logoUrl && (
+                  <img
+                    src={logoUrl}
+                    alt={brandName}
+                    className="max-h-14 max-w-[180px] object-contain mb-2"
+                  />
+                )}
                 <h1 className="text-3xl font-black tracking-tight text-gray-900">
-                  {BUSINESS_NAME}
+                  {brandName}
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">{BUSINESS_TAGLINE}</p>
               </div>

@@ -9,6 +9,7 @@ import { useSuppliers } from './hooks/useSuppliers'
 import { useSales } from './hooks/useSales'
 import { useExpenses } from './hooks/useExpenses'
 import { usePurchases } from './hooks/usePurchases'
+import { useAuth } from './hooks/useAuth'
 
 // Services (only needed for salesService.updateStatus)
 import { salesService } from './services/salesService.supabase'
@@ -34,6 +35,8 @@ import ProfitLoss from './components/ProfitLoss'
 import InvoiceModal from './components/InvoiceModal'
 import PurchaseOrderList from './components/PurchaseOrderList'
 import PurchaseOrderForm from './components/PurchaseOrderForm'
+import Login from './components/Login'
+import Settings from './components/Settings'
 
 import {
   LayoutDashboard,
@@ -47,6 +50,8 @@ import {
   Wallet,
   Loader2,
   ClipboardList,
+  LogOut,
+  Settings as SettingsIcon,
 } from 'lucide-react'
 
 /* =======================
@@ -65,7 +70,16 @@ const emptyConfirm: ConfirmState = { open: false, title: '', message: '', onConf
 /* =======================
    MAIN APP (INNER)
 ======================= */
-function AppInner() {
+interface AppInnerProps {
+  businessName: string
+  businessLogoUrl: string | null
+  userEmail: string
+  onSignOut: () => void
+  onUpdateBusiness: (fields: { business_name?: string; business_logo_url?: string }) => Promise<void>
+  onUpdatePassword: (newPassword: string) => Promise<void>
+}
+
+function AppInner({ businessName, businessLogoUrl, userEmail, onSignOut, onUpdateBusiness, onUpdatePassword }: AppInnerProps) {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard')
   const [confirmState, setConfirmState] = useState<ConfirmState>(emptyConfirm)
   const [invoiceSale, setInvoiceSale] = useState<SalesOrder | null>(null)
@@ -248,7 +262,8 @@ function AppInner() {
     suppliers: 'Suppliers',
     expenses: 'Expenses',
     pl: 'Reports',
-    'purchase-orders': 'Vendor Bills'
+    'purchase-orders': 'Vendor Bills',
+    settings: 'Settings'
   }
 
   /* -------------------- RENDER -------------------- */
@@ -258,6 +273,8 @@ function AppInner() {
       {/* INVOICE MODAL */}
       <InvoiceModal
         sale={invoiceSale}
+        businessName={businessName}
+        businessLogoUrl={businessLogoUrl}
         onClose={() => setInvoiceSale(null)}
       />
       
@@ -291,18 +308,28 @@ function AppInner() {
           <NavButton view="purchase-orders" icon={ClipboardList} label="Vendor Bills" currentView={currentView} setCurrentView={setCurrentView} />
           <NavButton view="expenses" icon={Wallet} label="Expenses" currentView={currentView} setCurrentView={setCurrentView} />
           <NavButton view="pl" icon={BarChart3} label="Profit & Loss" currentView={currentView} setCurrentView={setCurrentView} />
+          <NavButton view="settings" icon={SettingsIcon} label="Settings" currentView={currentView} setCurrentView={setCurrentView} />
         </nav>
 
-        <div className="p-4 border-t border-gray-100">
+        <div className="p-4 border-t border-gray-100 space-y-2">
           <div className="flex items-center gap-3 px-4 py-3 bg-gray-50/80 rounded-xl border border-gray-100">
-            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs shadow-sm">
-              JD
+            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs shadow-sm shrink-0 overflow-hidden">
+              {businessLogoUrl
+                ? <img src={businessLogoUrl} alt={businessName} className="w-full h-full object-cover" />
+                : businessName.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-gray-900 truncate">Admin</p>
-              <p className="text-[10px] text-gray-500 truncate font-medium">admin@inventory.pro</p>
+              <p className="text-sm font-bold text-gray-900 truncate">{businessName}</p>
+              <p className="text-[10px] text-gray-500 truncate font-medium">Signed in</p>
             </div>
           </div>
+          <button
+            onClick={onSignOut}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold text-gray-500 hover:text-rose-600 hover:bg-rose-50 border border-gray-100 rounded-xl transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Sign out
+          </button>
         </div>
       </aside>
 
@@ -320,8 +347,10 @@ function AppInner() {
                 {viewTitles[currentView] || 'App'}
               </span>
             </div>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-xs shadow-sm">
-              JD
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-xs shadow-sm overflow-hidden">
+              {businessLogoUrl
+                ? <img src={businessLogoUrl} alt={businessName} className="w-full h-full object-cover" />
+                : businessName.charAt(0).toUpperCase()}
             </div>
           </header>
         )}
@@ -550,6 +579,21 @@ function AppInner() {
                       <ProfitLoss />
                     </>
                   )}
+
+                  {/* SETTINGS */}
+                  {currentView === 'settings' && (
+                    <>
+                      <PageHeader title="Settings" />
+                      <Settings
+                        businessName={businessName}
+                        businessLogoUrl={businessLogoUrl}
+                        userEmail={userEmail}
+                        onUpdateBusiness={onUpdateBusiness}
+                        onUpdatePassword={onUpdatePassword}
+                        onSignOut={onSignOut}
+                      />
+                    </>
+                  )}
                 </div>
               </ErrorBoundary>
             )}
@@ -571,12 +615,43 @@ function AppInner() {
 }
 
 /* =======================
+   AUTH GATE
+======================= */
+function AuthGate() {
+  const { session, user, businessName, businessLogoUrl, loading, signIn, signOut, updateBusiness, updatePassword } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="h-[100dvh] w-full bg-gray-50 flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+        <p className="text-sm font-medium text-gray-400 animate-pulse">Loading…</p>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return <Login onSignIn={signIn} />
+  }
+
+  return (
+    <AppInner
+      businessName={businessName}
+      businessLogoUrl={businessLogoUrl}
+      userEmail={user?.email ?? ''}
+      onSignOut={signOut}
+      onUpdateBusiness={updateBusiness}
+      onUpdatePassword={updatePassword}
+    />
+  )
+}
+
+/* =======================
    ROOT WITH TOAST PROVIDER
 ======================= */
 export default function App() {
   return (
     <ToastProvider>
-      <AppInner />
+      <AuthGate />
     </ToastProvider>
   )
 }

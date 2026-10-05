@@ -82,7 +82,8 @@ export type ViewState =
   | 'sales' | 'add-sale' | 'edit-sale'
   | 'expenses' | 'add-expense' | 'edit-expense'
   | 'purchase-orders' | 'add-po'
-  | 'pl';
+  | 'pl'
+  | 'settings';
 
 export interface InventoryStats {
   totalProducts: number;

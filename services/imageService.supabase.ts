@@ -4,8 +4,14 @@ const BUCKET = 'product-images'
 
 export const imageService = {
   async uploadProductImage(file: File) {
+    // Scope uploads to the signed-in business's own folder so the
+    // per-owner storage policy accepts the write (and files can't
+    // collide across businesses).
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not signed in')
+
     const fileExt = file.name.split('.').pop()
-    const fileName = `${Date.now()}-${Math.random()
+    const fileName = `${user.id}/${Date.now()}-${Math.random()
       .toString(36)
       .substring(2)}.${fileExt}`
 

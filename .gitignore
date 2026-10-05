@@ -13,6 +13,9 @@ dist
 dist-ssr
 *.local
 
+# Local data backups (contain full business data in plaintext)
+backups/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
