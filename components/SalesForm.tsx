@@ -20,6 +20,7 @@ import {
   Loader2,
   ScanLine,
   AlertTriangle,
+  Truck,
 } from 'lucide-react'
 import ProductPicker from './ui/ProductPicker'
 import BarcodeScanner from './BarcodeScanner'
@@ -39,6 +40,7 @@ interface SalesFormProps {
     discount_type: 'flat' | 'percent'
     tax: number
     tax_type: 'flat' | 'percent'
+    shipping: number
     order_type: OrderType
   }) => Promise<void>
   onCreateCustomer?: (customer: Omit<Customer, 'id' | 'created_at'>) => Promise<Customer>
@@ -123,6 +125,9 @@ const SalesForm: React.FC<SalesFormProps> = ({
   const [taxType, setTaxType] = useState<'flat' | 'percent'>('percent')
   const [taxValue, setTaxValue] = useState(0)
 
+  /* -------- Shipping (flat ₹) -------- */
+  const [shippingValue, setShippingValue] = useState(0)
+
   /* ---------------- INIT ---------------- */
   useEffect(() => {
     if (initialData) {
@@ -150,6 +155,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
 
       setTaxType(initialData.tax_type ?? 'percent')
       setTaxValue(initialData.tax ?? 0)
+      setShippingValue(initialData.shipping ?? 0)
       return
     }
 
@@ -320,7 +326,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
 
   const finalTotal = Math.max(
     0,
-    subTotal - discountAmount + taxAmount
+    subTotal - discountAmount + taxAmount + Number(shippingValue || 0)
   )
 
   const formatCurrency = (val: number) =>
@@ -376,6 +382,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
         discount_type: discountType,
         tax: taxValue,
         tax_type: taxType,
+        shipping: Number(shippingValue || 0),
         order_type: orderType,
       })
     } catch {
@@ -827,6 +834,24 @@ const SalesForm: React.FC<SalesFormProps> = ({
                     value={taxValue}
                     onChange={e => setTaxValue(+e.target.value)}
                     className="w-20 text-right text-sm border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* Shipping (flat ₹) */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Shipping</span>
+                </div>
+                <div className="relative w-20">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">₹</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={shippingValue}
+                    onChange={e => setShippingValue(Math.max(0, +e.target.value))}
+                    className="w-full text-right text-sm border border-gray-200 rounded-lg pl-5 pr-2 py-1 outline-none focus:border-indigo-500"
                   />
                 </div>
               </div>

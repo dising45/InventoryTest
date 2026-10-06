@@ -12,6 +12,7 @@ export interface SalePayload {
   discount_type?: 'flat' | 'percent'
   tax?: number
   tax_type?: 'flat' | 'percent'
+  shipping?: number
   order_type?: OrderType
 }
 

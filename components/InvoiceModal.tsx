@@ -84,7 +84,8 @@ const getInvoiceHtml = (sale: SalesOrder, brandName: string, logoUrl?: string | 
   const discountAmount = getDiscountAmount(sale, subtotal)
   const taxableAmount = Math.max(0, subtotal - discountAmount)
   const taxAmount = getTaxAmount(sale, taxableAmount)
-  const total = Number(sale.total_amount ?? taxableAmount + taxAmount)
+  const shippingAmount = Number(sale.shipping || 0)
+  const total = Number(sale.total_amount ?? taxableAmount + taxAmount + shippingAmount)
 
   const rows = (sale.items || [])
     .map((item: any, index) => {
@@ -290,6 +291,11 @@ const getInvoiceHtml = (sale: SalesOrder, brandName: string, logoUrl?: string | 
             ? `<div class="total-row"><span>Tax</span><strong>${formatCurrency(taxAmount)}</strong></div>`
             : ''
         }
+        ${
+          shippingAmount > 0
+            ? `<div class="total-row"><span>Shipping</span><strong>${formatCurrency(shippingAmount)}</strong></div>`
+            : ''
+        }
         <div class="total-row grand-total">
           <span>Total</span>
           <span>${formatCurrency(total)}</span>
@@ -438,7 +444,8 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose, businessName
   const discountAmount = getDiscountAmount(sale, subtotal)
   const taxableAmount = Math.max(0, subtotal - discountAmount)
   const taxAmount = getTaxAmount(sale, taxableAmount)
-  const total = Number(sale.total_amount ?? taxableAmount + taxAmount)
+  const shippingAmount = Number(sale.shipping || 0)
+  const total = Number(sale.total_amount ?? taxableAmount + taxAmount + shippingAmount)
 
   const handleShare = async () => {
     try {
@@ -643,6 +650,12 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose, businessName
                 <div className="flex justify-between text-sm text-gray-500">
                   <span>Tax</span>
                   <span className="font-bold text-gray-900">{formatCurrency(taxAmount)}</span>
+                </div>
+              )}
+              {shippingAmount > 0 && (
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Shipping</span>
+                  <span className="font-bold text-gray-900">{formatCurrency(shippingAmount)}</span>
                 </div>
               )}
               <div className="flex justify-between border-t-2 border-gray-900 pt-3 text-lg font-black text-gray-900">
