@@ -47,6 +47,9 @@ const getItemName = (item: any) => {
 const getLineTotal = (item: any) =>
   Number(item.line_total ?? Number(item.quantity || 0) * Number(item.unit_price || 0))
 
+// A line given away free as a promotion (₹0 price / ₹0 line total).
+const isFreeLine = (item: any) => getLineTotal(item) === 0
+
 const getSubtotal = (sale: SalesOrder) =>
   Number(
     sale.subtotal ??
@@ -92,14 +95,15 @@ const getInvoiceHtml = (sale: SalesOrder, brandName: string, logoUrl?: string | 
       const qty = Number(item.quantity || 0)
       const rate = Number(item.unit_price || 0)
       const amount = getLineTotal(item)
+      const free = isFreeLine(item)
 
       return `
         <tr>
           <td>${index + 1}</td>
           <td>${getItemName(item)}</td>
           <td class="num">${qty}</td>
-          <td class="num">${formatCurrency(rate)}</td>
-          <td class="num">${formatCurrency(amount)}</td>
+          <td class="num">${free ? 'FREE' : formatCurrency(rate)}</td>
+          <td class="num">${free ? 'FREE' : formatCurrency(amount)}</td>
         </tr>
       `
     })
@@ -624,10 +628,10 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose, businessName
                         {Number(item.quantity || 0)}
                       </td>
                       <td className="py-3 text-right tabular-nums">
-                        {formatCurrency(Number(item.unit_price || 0))}
+                        {isFreeLine(item) ? 'FREE' : formatCurrency(Number(item.unit_price || 0))}
                       </td>
                       <td className="py-3 text-right font-bold tabular-nums">
-                        {formatCurrency(getLineTotal(item))}
+                        {isFreeLine(item) ? 'FREE' : formatCurrency(getLineTotal(item))}
                       </td>
                     </tr>
                   ))}

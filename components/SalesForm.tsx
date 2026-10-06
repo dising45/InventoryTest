@@ -21,6 +21,7 @@ import {
   ScanLine,
   AlertTriangle,
   Truck,
+  Gift,
 } from 'lucide-react'
 import ProductPicker from './ui/ProductPicker'
 import BarcodeScanner from './BarcodeScanner'
@@ -258,6 +259,24 @@ const SalesForm: React.FC<SalesFormProps> = ({
   const removeItem = (i: number) =>
     setItems(prev => prev.filter((_, idx) => idx !== i))
 
+  /* ---------------- GIFT / FREE TOGGLE ---------------- */
+  // "Free" is inferred from a ₹0 price. Toggling on sets the line to ₹0;
+  // toggling off restores the product's default price for the current order type.
+  const toggleGift = (index: number) => {
+    setItems(prev =>
+      prev.map((item, i) => {
+        if (i !== index) return item
+        if (Number(item.unit_price) === 0) {
+          const product = products.find(p => p.id === item.product_id)
+          const variant = product?.variants.find(v => v.id === item.variant_id)
+          const restored = product ? getDefaultUnitPrice(product, variant) : 0
+          return { ...item, unit_price: restored }
+        }
+        return { ...item, unit_price: 0 }
+      })
+    )
+  }
+
   /* ---------------- SCAN TO ADD ---------------- */
   const handleScan = (sku: string) => {
     // Search products by SKU
@@ -365,11 +384,7 @@ const SalesForm: React.FC<SalesFormProps> = ({
   const handleSubmit = async () => {
     if (!customerId) { setValidationError('Please select a customer'); return }
     if (items.length === 0) { setValidationError('Please add at least one item'); return }
-    const zeroLine = items.find(it => Number(it.unit_price) <= 0)
-    if (zeroLine) {
-      setValidationError(`"${zeroLine.product_name}" has a ₹0 price — set a price before saving`)
-      return
-    }
+    // ₹0 lines are allowed — they're intentional free gifts, shown as FREE in the cart.
     setValidationError('')
     setLoading(true)
     try {
@@ -727,11 +742,20 @@ const SalesForm: React.FC<SalesFormProps> = ({
                   <p className="text-sm">Cart is empty. Add items from the left.</p>
                 </div>
               ) : (
-                items.map((item, i) => (
+                items.map((item, i) => {
+                  const isFree = Number(item.unit_price) === 0
+                  return (
                   <div key={i} className="group relative bg-white border border-gray-100 rounded-xl p-3 shadow-sm hover:border-indigo-100 transition-colors">
                     <div className="flex justify-between items-start mb-2">
                       <div className="pr-6">
-                        <p className="font-semibold text-sm text-gray-900 line-clamp-1">{item.product_name}</p>
+                        <p className="font-semibold text-sm text-gray-900 line-clamp-1 flex items-center gap-1.5">
+                          {item.product_name}
+                          {isFree && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5 uppercase tracking-wide">
+                              <Gift className="w-2.5 h-2.5" /> Free
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-gray-500">
                           {item.variant_name || 'Standard'}
                           {Number(item.cost_price) > 0 && (
@@ -739,12 +763,25 @@ const SalesForm: React.FC<SalesFormProps> = ({
                           )}
                         </p>
                       </div>
-                      <button
-                        onClick={() => removeItem(i)}
-                        className="text-gray-400 hover:text-red-500 p-1 rounded-md hover:bg-red-50 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => toggleGift(i)}
+                          title={isFree ? 'Charge for this item' : 'Give this item free'}
+                          className={`p-1 rounded-md transition-colors ${
+                            isFree
+                              ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
+                              : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
+                          }`}
+                        >
+                          <Gift className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => removeItem(i)}
+                          className="text-gray-400 hover:text-red-500 p-1 rounded-md hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-lg">
@@ -767,8 +804,10 @@ const SalesForm: React.FC<SalesFormProps> = ({
                           className="w-full text-xs font-bold py-1 outline-none border-none bg-transparent"
                         />
                       </div>
-                      <div className="text-sm font-bold text-gray-900 tabular-nums text-right min-w-[60px]">
-                        {formatCurrency(item.quantity * item.unit_price)}
+                      <div className="text-sm font-bold tabular-nums text-right min-w-[60px]">
+                        {isFree
+                          ? <span className="text-emerald-600 text-xs font-bold uppercase">Free</span>
+                          : <span className="text-gray-900">{formatCurrency(item.quantity * item.unit_price)}</span>}
                       </div>
                     </div>
 
@@ -779,7 +818,8 @@ const SalesForm: React.FC<SalesFormProps> = ({
                       </div>
                     )}
                   </div>
-                ))
+                  )
+                })
               )}
             </div>
 
