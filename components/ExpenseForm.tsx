@@ -1,15 +1,17 @@
 // ExpenseForm.tsx
 import React, { useState } from 'react'
-import { 
-  ArrowLeft, 
-  Save, 
-  Calendar, 
-  Tag, 
-  Store, 
-  IndianRupee, 
-  CreditCard, 
-  FileText, 
-  Loader2 
+import {
+  ArrowLeft,
+  Save,
+  Calendar,
+  Tag,
+  Store,
+  IndianRupee,
+  CreditCard,
+  FileText,
+  Package,
+  Ruler,
+  Loader2
 } from 'lucide-react'
 
 interface ExpenseFormProps {
@@ -19,6 +21,8 @@ interface ExpenseFormProps {
     category: string
     description?: string
     amount: number
+    quantity?: number | null
+    unit?: string | null
     payment_mode?: string
     reference?: string
     vendor?: string
@@ -28,6 +32,8 @@ interface ExpenseFormProps {
     category: string
     description?: string
     amount: number
+    quantity?: number | null
+    unit?: string | null
     payment_mode?: string
     reference?: string
     vendor?: string
@@ -67,6 +73,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     category: initialData?.category || '',
     description: initialData?.description || '',
     amount: initialData?.amount || 0,
+    quantity: initialData?.quantity ?? 0,
+    unit: initialData?.unit || '',
     payment_mode: initialData?.payment_mode || '',
     reference: initialData?.reference || '',
     vendor: initialData?.vendor || '',
@@ -78,7 +86,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     const { name, value } = e.target
     setForm((prev) => ({
       ...prev,
-      [name]: name === 'amount' ? Number(value) : value,
+      [name]: name === 'amount' || name === 'quantity' ? Number(value) : value,
     }))
   }
 
@@ -86,7 +94,12 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     e.preventDefault()
     setLoading(true)
     try {
-      await onSave(form)
+      // qty/unit are optional "bought stuff" metadata — send NULL when blank.
+      await onSave({
+        ...form,
+        quantity: form.quantity > 0 ? form.quantity : null,
+        unit: form.unit.trim() || null,
+      })
     } finally {
       setLoading(false)
     }
@@ -165,6 +178,42 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               value={form.vendor}
               onChange={handleChange}
             />
+
+            {/* Optional — only when the expense is for purchased goods */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <InputField
+                label="Quantity (optional)"
+                type="number"
+                name="quantity"
+                min={0}
+                step="any"
+                icon={Package}
+                placeholder="e.g. 10"
+                value={form.quantity || ''}
+                onChange={handleChange}
+              />
+              <InputField
+                label="Unit (optional)"
+                name="unit"
+                icon={Ruler}
+                placeholder="kg, pcs, litre…"
+                list="expense-units"
+                value={form.unit}
+                onChange={handleChange}
+              />
+              <datalist id="expense-units">
+                <option value="kg" />
+                <option value="g" />
+                <option value="litre" />
+                <option value="ml" />
+                <option value="pcs" />
+                <option value="box" />
+                <option value="packet" />
+                <option value="dozen" />
+                <option value="metre" />
+                <option value="roll" />
+              </datalist>
+            </div>
           </div>
 
           <hr className="border-gray-100" />

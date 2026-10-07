@@ -70,6 +70,8 @@ class ExpenseServiceSupabase {
     category: string
     description?: string
     amount: number
+    quantity?: number | null
+    unit?: string | null
     payment_mode?: string
     reference?: string
     vendor?: string
@@ -82,6 +84,8 @@ class ExpenseServiceSupabase {
           category: expense.category,
           description: expense.description ?? null,
           amount: Number(expense.amount),
+          quantity: expense.quantity ?? null,
+          unit: expense.unit ?? null,
           payment_mode: expense.payment_mode ?? null,
           reference: expense.reference ?? null,
           vendor: expense.vendor ?? null,
@@ -106,6 +110,8 @@ class ExpenseServiceSupabase {
     category: string
     description?: string
     amount: number
+    quantity?: number | null
+    unit?: string | null
     payment_mode?: string
     reference?: string
     vendor?: string
@@ -117,6 +123,8 @@ class ExpenseServiceSupabase {
         category: expense.category,
         description: expense.description ?? null,
         amount: Number(expense.amount),
+        quantity: expense.quantity ?? null,
+        unit: expense.unit ?? null,
         payment_mode: expense.payment_mode ?? null,
         reference: expense.reference ?? null,
         vendor: expense.vendor ?? null,

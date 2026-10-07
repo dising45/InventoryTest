@@ -34,6 +34,9 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
   const [search, setSearch] = useState('')
   const [vendorFilter, setVendorFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [dateRange, setDateRange] = useState<'all' | 'this_month' | 'last_month' | 'this_year' | 'custom'>('all')
+  const [customFrom, setCustomFrom] = useState('')
+  const [customTo, setCustomTo] = useState('')
   const [sortBy, setSortBy] = useState<'expense_date' | 'amount'>('expense_date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
@@ -52,6 +55,38 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
       month: 'short',
       year: 'numeric'
     })
+
+  // "10 kg" / "5 pcs" / "" — only when the expense recorded purchased goods.
+  const formatQtyUnit = (e: Expense) => {
+    const qty = e.quantity != null && e.quantity > 0 ? String(e.quantity) : ''
+    const unit = e.unit?.trim() || ''
+    return [qty, unit].filter(Boolean).join(' ')
+  }
+
+  // Local yyyy-mm-dd (avoids the UTC shift toISOString() causes in +ht zones).
+  const toYMD = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+  // Resolve the active preset / custom range to inclusive {from, to} bounds
+  // (either side may be '' = open-ended). Compared against expense_date, which
+  // is a yyyy-mm-dd string, so plain string comparison is correct.
+  const { from: dateFrom, to: dateTo } = useMemo(() => {
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = now.getMonth()
+    switch (dateRange) {
+      case 'this_month':
+        return { from: toYMD(new Date(y, m, 1)), to: toYMD(new Date(y, m + 1, 0)) }
+      case 'last_month':
+        return { from: toYMD(new Date(y, m - 1, 1)), to: toYMD(new Date(y, m, 0)) }
+      case 'this_year':
+        return { from: toYMD(new Date(y, 0, 1)), to: toYMD(new Date(y, 11, 31)) }
+      case 'custom':
+        return { from: customFrom, to: customTo }
+      default:
+        return { from: '', to: '' }
+    }
+  }, [dateRange, customFrom, customTo])
 
   /* ================= FILTERED + SORTED DATA ================= */
 
@@ -72,6 +107,14 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
       data = data.filter(e => e.category === categoryFilter)
     }
 
+    if (dateFrom) {
+      data = data.filter(e => (e.expense_date ?? '').slice(0, 10) >= dateFrom)
+    }
+
+    if (dateTo) {
+      data = data.filter(e => (e.expense_date ?? '').slice(0, 10) <= dateTo)
+    }
+
     data.sort((a, b) => {
       if (sortBy === 'amount') {
         return sortOrder === 'asc'
@@ -86,7 +129,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
     })
 
     return data
-  }, [expenses, search, vendorFilter, categoryFilter, sortBy, sortOrder])
+  }, [expenses, search, vendorFilter, categoryFilter, dateFrom, dateTo, sortBy, sortOrder])
 
   const vendors = [...new Set(expenses.map(e => e.vendor).filter((v): v is string => !!v))]
   const categories = [...new Set(expenses.map(e => e.category).filter((c): c is string => !!c))]
@@ -184,6 +227,8 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                 { key: 'category', label: 'Category' },
                 { key: 'vendor', label: 'Vendor' },
                 { key: 'description', label: 'Description' },
+                { key: 'quantity', label: 'Quantity' },
+                { key: 'unit', label: 'Unit' },
                 { key: 'payment_mode', label: 'Payment Mode' },
                 { key: 'reference', label: 'Reference' },
                 { key: 'amount', label: 'Amount (₹)' },
@@ -193,6 +238,8 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                 category: e.category,
                 vendor: e.vendor || '',
                 description: e.description || '',
+                quantity: e.quantity != null ? String(e.quantity) : '',
+                unit: e.unit || '',
                 payment_mode: e.payment_mode || '',
                 reference: e.reference || '',
                 amount: Number(e.amount || 0).toFixed(2),
@@ -245,6 +292,41 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
           ))}
         </select>
 
+        {/* Date Range Filter */}
+        <select
+          value={dateRange}
+          onChange={(e) => setDateRange(e.target.value as any)}
+          className="px-3 py-2 border border-gray-200 rounded-xl text-sm"
+        >
+          <option value="all">All Dates</option>
+          <option value="this_month">This Month</option>
+          <option value="last_month">Last Month</option>
+          <option value="this_year">This Year</option>
+          <option value="custom">Custom Range…</option>
+        </select>
+
+        {/* Custom From / To (only when Custom is selected) */}
+        {dateRange === 'custom' && (
+          <>
+            <input
+              type="date"
+              value={customFrom}
+              max={customTo || undefined}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-xl text-sm"
+              aria-label="From date"
+            />
+            <input
+              type="date"
+              value={customTo}
+              min={customFrom || undefined}
+              onChange={(e) => setCustomTo(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-xl text-sm"
+              aria-label="To date"
+            />
+          </>
+        )}
+
         {/* Sort */}
         <select
           value={sortBy}
@@ -269,12 +351,12 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
       {filteredExpenses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border border-gray-200 border-dashed text-center">
           <Wallet className="h-8 w-8 text-red-400 mb-4" />
-          {search || vendorFilter || categoryFilter ? (
+          {search || vendorFilter || categoryFilter || dateRange !== 'all' ? (
             <>
               <h3 className="text-lg font-bold text-gray-900">No results found</h3>
               <p className="text-sm text-gray-400 mt-1 mb-5">Try adjusting your filters</p>
               <button
-                onClick={() => { setSearch(''); setVendorFilter(''); setCategoryFilter('') }}
+                onClick={() => { setSearch(''); setVendorFilter(''); setCategoryFilter(''); setDateRange('all'); setCustomFrom(''); setCustomTo('') }}
                 className="px-4 py-2 text-sm font-bold text-indigo-600 bg-indigo-50 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-colors"
               >
                 Clear Filters
@@ -328,8 +410,13 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                       {e.category}
                     </td>
 
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                      {e.description || '-'}
+                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
+                      <span className="block truncate">{e.description || '-'}</span>
+                      {formatQtyUnit(e) && (
+                        <span className="inline-block mt-1 text-[10px] font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
+                          {formatQtyUnit(e)}
+                        </span>
+                      )}
                     </td>
 
                     <td className="px-6 py-4 text-right text-sm font-bold">
@@ -389,7 +476,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                       )}
                     </div>
                     <p className="text-[11px] text-gray-400 truncate mt-0.5">
-                      {formatDate(e.expense_date)}{e.description ? ` · ${e.description}` : ''}
+                      {formatDate(e.expense_date)}{e.description ? ` · ${e.description}` : ''}{formatQtyUnit(e) ? ` · ${formatQtyUnit(e)}` : ''}
                     </p>
                   </div>
 

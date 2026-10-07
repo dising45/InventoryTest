@@ -136,6 +136,8 @@ export interface Expense {
   category: string
   description?: string
   amount: number
+  quantity?: number
+  unit?: string
   payment_mode?: string
   reference?: string
   vendor?: string
