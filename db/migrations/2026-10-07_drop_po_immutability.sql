@@ -1,0 +1,28 @@
+-- ============================================================
+-- Drop the vendor-bill immutability guard
+-- Run this ONCE in the Supabase SQL editor. Idempotent.
+-- ============================================================
+--
+-- WHY:
+--   `purchase_orders` carried a BEFORE UPDATE trigger `no_po_update`
+--   that rejected EVERY update to a bill. It dates back to when bills
+--   were meant to be write-once. The app has since grown features that
+--   must update the bill header:
+--       * edit a vendor bill   (purchaseService.updatePO)
+--       * mark paid            (purchaseService.markPaid)
+--       * mark unpaid          (purchaseService.markUnpaid)
+--   All three issued a PATCH to purchase_orders and got HTTP 400 from
+--   the trigger. (Deletes were unaffected — the trigger only fires on
+--   UPDATE — which is why deleting a bill "worked" but still errored
+--   on any edit.)
+--
+-- SAFETY:
+--   * Removes NO business data — it only drops the write guard.
+--   * Reversible: recreate the trigger from its function if you ever
+--     want bills locked again (the trigger function is left in place,
+--     harmless and unused).
+--   * Verified only purchase_orders had such a trigger (sales_orders,
+--     products, variants were clean).
+-- ============================================================
+
+DROP TRIGGER IF EXISTS no_po_update ON public.purchase_orders;
