@@ -54,7 +54,7 @@ export const purchaseService = {
      CREATE VENDOR BILL
      =============================== */
   async createPO(data: POInput) {
-    const { scale, totalAmount } = computeTotals(data);
+    const { totalAmount } = computeTotals(data);
     const isLegacy = !!data.is_legacy;
     const status = data.status ?? 'unpaid';
 
@@ -95,14 +95,12 @@ export const purchaseService = {
         if (itemsError) throw itemsError;
       }
 
-      /* 3️⃣ Stock + cost price (skipped for legacy bills) */
+      /* 3️⃣ Stock + weighted-average cost (skipped for legacy bills) */
       if (!isLegacy) {
         await this.adjustStock(resolvedItems, 'add');
-        for (const i of resolvedItems) {
-          await supabase
-            .from('products')
-            .update({ cost_price: round2(i.unit_cost * scale) })
-            .eq('id', i.product_id);
+        const productIds = [...new Set(resolvedItems.map((i) => i.product_id))];
+        for (const productId of productIds) {
+          await this.recomputeAverageCost(productId);
         }
       }
 
@@ -127,7 +125,7 @@ export const purchaseService = {
      UPDATE VENDOR BILL (full edit)
      =============================== */
   async updatePO(poId: string, data: POInput) {
-    const { scale, totalAmount } = computeTotals(data);
+    const { totalAmount } = computeTotals(data);
     const isLegacy = !!data.is_legacy;
 
     /* Existing state */
@@ -166,15 +164,9 @@ export const purchaseService = {
       if (itemsError) throw itemsError;
     }
 
-    /* 3️⃣ Re-apply stock + cost price (skipped for legacy) */
+    /* 3️⃣ Re-apply stock (skipped for legacy) */
     if (!isLegacy) {
       await this.adjustStock(resolvedItems, 'add');
-      for (const i of resolvedItems) {
-        await supabase
-          .from('products')
-          .update({ cost_price: round2(i.unit_cost * scale) })
-          .eq('id', i.product_id);
-      }
     }
 
     /* 4️⃣ Rebuild charges + their expenses */
@@ -202,6 +194,16 @@ export const purchaseService = {
       .select()
       .single();
     if (updErr) throw updErr;
+
+    /* Re-average cost for every product this edit touched — those now on the
+       bill and any that were removed from it — from the surviving bills. */
+    const affectedProducts = new Set<string>([
+      ...(oldItems ?? []).map((i) => i.product_id),
+      ...resolvedItems.map((i) => i.product_id),
+    ]);
+    for (const productId of affectedProducts) {
+      await this.recomputeAverageCost(productId);
+    }
 
     /* 6️⃣ Post charge expenses if paid */
     if (status === 'paid') {
@@ -281,15 +283,16 @@ export const purchaseService = {
       .eq('id', poId)
       .single();
 
+    // Capture this bill's products before deleting its lines, so we can
+    // re-average their cost from the surviving bills afterwards.
+    const { data: items } = await supabase
+      .from('purchase_items')
+      .select('product_id, variant_id, quantity')
+      .eq('purchase_order_id', poId);
+
     // Roll back stock (only for non-legacy bills that touched stock)
-    if (!po?.is_legacy) {
-      const { data: items } = await supabase
-        .from('purchase_items')
-        .select('product_id, variant_id, quantity')
-        .eq('purchase_order_id', poId);
-      if (items && items.length > 0) {
-        await this.adjustStock(items, 'deduct');
-      }
+    if (!po?.is_legacy && items && items.length > 0) {
+      await this.adjustStock(items, 'deduct');
     }
 
     // Remove any generated charge expenses
@@ -299,6 +302,12 @@ export const purchaseService = {
     // purchase_charges rows cascade with the bill
     const { error } = await supabase.from('purchase_orders').delete().eq('id', poId);
     if (error) throw error;
+
+    // Re-average cost for each affected product now this bill's lines are gone.
+    const productIds = [...new Set((items ?? []).map((i) => i.product_id))];
+    for (const productId of productIds) {
+      await this.recomputeAverageCost(productId);
+    }
   },
 
   /* ===============================
@@ -442,6 +451,75 @@ export const purchaseService = {
           .eq('id', charge.id);
       }
     }
+  },
+
+  /* ===============================
+     WEIGHTED-AVERAGE COST
+     ===============================
+     A product's cost is the average price actually paid across all of its
+     non-legacy vendor-bill lines: Σ(qty × discounted unit cost) / Σ(qty).
+     Recomputed from the surviving bills after any create / edit / delete, so
+     it reverts cleanly when a bill is reduced or removed (a single blended
+     number can't un-blend itself). Each line's cost carries the same
+     proportional discount its bill applied when saved. */
+  async recomputeAverageCost(productId: string) {
+    // Every bill line for this product (legacy lines are filtered out below).
+    const { data: lines } = await supabase
+      .from('purchase_items')
+      .select('quantity, unit_cost, purchase_order_id')
+      .eq('product_id', productId);
+
+    // No purchase history → leave the cost as it was set manually.
+    if (!lines || lines.length === 0) return;
+
+    const billIds = [...new Set(lines.map((l) => l.purchase_order_id))];
+
+    const { data: bills } = await supabase
+      .from('purchase_orders')
+      .select('id, discount, discount_type, is_legacy')
+      .in('id', billIds);
+    const billById = new Map((bills ?? []).map((b) => [b.id, b]));
+
+    // Each bill's goods subtotal (all its lines) is needed to distribute its
+    // discount proportionally — matching how the cost was recorded on save.
+    const { data: allItems } = await supabase
+      .from('purchase_items')
+      .select('purchase_order_id, quantity, unit_cost')
+      .in('purchase_order_id', billIds);
+
+    const goodsSubtotalByBill = new Map<string, number>();
+    for (const it of allItems ?? []) {
+      goodsSubtotalByBill.set(
+        it.purchase_order_id,
+        (goodsSubtotalByBill.get(it.purchase_order_id) ?? 0) +
+          it.quantity * Number(it.unit_cost)
+      );
+    }
+
+    let totalQty = 0;
+    let totalCost = 0;
+    for (const line of lines) {
+      const bill = billById.get(line.purchase_order_id);
+      if (!bill || bill.is_legacy) continue; // legacy bills don't affect cost
+      const goodsSubtotal = goodsSubtotalByBill.get(line.purchase_order_id) ?? 0;
+      const discount = Number(bill.discount ?? 0);
+      const discountValue =
+        bill.discount_type === 'percent'
+          ? goodsSubtotal * (discount / 100)
+          : discount;
+      const scale =
+        goodsSubtotal > 0 ? (goodsSubtotal - discountValue) / goodsSubtotal : 1;
+      totalQty += line.quantity;
+      totalCost += line.quantity * (Number(line.unit_cost) * scale);
+    }
+
+    // Only legacy lines left → nothing meaningful to average; keep current cost.
+    if (totalQty <= 0) return;
+
+    await supabase
+      .from('products')
+      .update({ cost_price: round2(totalCost / totalQty) })
+      .eq('id', productId);
   },
 
   /* ===============================
