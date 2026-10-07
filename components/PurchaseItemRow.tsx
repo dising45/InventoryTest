@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Product } from '../types';
-import { Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Search, X } from 'lucide-react';
 
 export interface PurchaseItem {
   product_id?: string;
@@ -29,8 +29,49 @@ const PurchaseItemRow: React.FC<Props> = ({
   const [isNew, setIsNew] = useState(false);
   const selectedProduct = products.find(p => p.id === item.product_id);
 
+  /* Searchable product combobox state */
+  const [query, setQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Filter by name or SKU. Unlike the POS picker, zero-stock items stay
+  // selectable — restocking is exactly when stock is low or empty.
+  const filtered = useMemo(() => {
+    if (!query.trim()) return products;
+    const q = query.toLowerCase();
+    return products.filter(
+      p =>
+        p.name.toLowerCase().includes(q) ||
+        p.sku?.toLowerCase().includes(q)
+    );
+  }, [products, query]);
+
+  // Close the dropdown on an outside click.
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const pickProduct = (p: Product) => {
+    onChange({ ...item, product_id: p.id, product_name: undefined, variant_id: null });
+    setQuery('');
+    setIsOpen(false);
+  };
+
+  const clearProduct = () => {
+    onChange({ ...item, product_id: undefined, product_name: undefined, variant_id: null });
+    setQuery('');
+    setIsOpen(true);
+  };
+
   const switchToNew = () => {
     setIsNew(true);
+    setIsOpen(false);
     onChange({ ...item, product_id: undefined, product_name: '' });
   };
 
@@ -47,16 +88,62 @@ const PurchaseItemRow: React.FC<Props> = ({
 
         {!isNew ? (
           <>
-            <select
-              value={item.product_id || ''}
-              onChange={e => onChange({ ...item, product_id: e.target.value || undefined, product_name: undefined, variant_id: null })}
-              className="w-full border rounded px-2 py-1"
-            >
-              <option value="">Select product</option>
-              {products.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+            <div ref={pickerRef} className="relative">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={isOpen ? query : (selectedProduct?.name ?? '')}
+                  onChange={e => { setQuery(e.target.value); setIsOpen(true); }}
+                  onFocus={() => { setQuery(''); setIsOpen(true); }}
+                  placeholder={selectedProduct ? selectedProduct.name : 'Search product'}
+                  className="w-full border rounded pl-7 pr-6 py-1"
+                />
+                {selectedProduct && !isOpen && (
+                  <button
+                    type="button"
+                    onClick={clearProduct}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    title="Clear"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {isOpen && (
+                <div className="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg max-h-56 overflow-y-auto">
+                  {filtered.length === 0 ? (
+                    <p className="px-3 py-3 text-xs text-gray-400 text-center">No products found</p>
+                  ) : (
+                    filtered.map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => pickProduct(p)}
+                        className={`w-full flex items-center gap-2 text-left px-2 py-1.5 text-sm hover:bg-indigo-50 ${
+                          p.id === item.product_id ? 'bg-indigo-50 font-medium' : ''
+                        }`}
+                      >
+                        <span className="w-7 h-7 rounded bg-gray-50 border border-gray-100 overflow-hidden flex-shrink-0">
+                          {p.image_url ? (
+                            <img src={p.image_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="w-full h-full flex items-center justify-center text-indigo-500 font-bold text-xs bg-indigo-50">
+                              {p.name.charAt(0)}
+                            </span>
+                          )}
+                        </span>
+                        <span className="flex-1 min-w-0 truncate">
+                          {p.name}
+                          {p.sku && <span className="ml-1 text-[10px] text-gray-400">{p.sku}</span>}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
             <button
               type="button"
               onClick={switchToNew}
