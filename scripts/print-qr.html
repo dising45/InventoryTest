@@ -98,10 +98,10 @@
       border-radius: 3pt;
     }
 
-    /* qrcodejs creates a canvas (and hidden img) inside .qr-wrap */
-    .qr-wrap        { width: 15mm; height: 15mm; overflow: hidden; flex-shrink: 0; }
-    .qr-wrap canvas { width: 15mm !important; height: 15mm !important; display: block; }
-    .qr-wrap img    { display: none !important; }
+    /* qrcodejs draws to canvas, converts to img, then HIDES the canvas.
+       So: size the img, leave canvas alone — never hide the img. */
+    .qr-wrap     { width: 15mm; height: 15mm; overflow: hidden; flex-shrink: 0; }
+    .qr-wrap img { width: 15mm !important; height: 15mm !important; display: block !important; }
 
     .tile .name {
       font-size: 7pt; font-weight: 700; color: #111827;
@@ -134,8 +134,8 @@
         width: 21mm; padding: 1.5mm 1mm 1mm;
         page-break-inside: avoid; break-inside: avoid;
       }
-      .qr-wrap        { width: 1.5cm; height: 1.5cm; }
-      .qr-wrap canvas { width: 1.5cm !important; height: 1.5cm !important; }
+      .qr-wrap     { width: 1.5cm; height: 1.5cm; }
+      .qr-wrap img { width: 1.5cm !important; height: 1.5cm !important; display: block !important; }
       .tile .name { font-size: 5.5pt; }
       .tile .sku  { font-size: 4.5pt; }
     }
