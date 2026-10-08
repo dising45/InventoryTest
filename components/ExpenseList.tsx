@@ -34,6 +34,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
   const [search, setSearch] = useState('')
   const [vendorFilter, setVendorFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [referenceFilter, setReferenceFilter] = useState('')
   const [dateRange, setDateRange] = useState<'all' | 'this_month' | 'last_month' | 'this_year' | 'custom'>('all')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
@@ -107,6 +108,10 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
       data = data.filter(e => e.category === categoryFilter)
     }
 
+    if (referenceFilter) {
+      data = data.filter(e => e.reference === referenceFilter)
+    }
+
     if (dateFrom) {
       data = data.filter(e => (e.expense_date ?? '').slice(0, 10) >= dateFrom)
     }
@@ -129,10 +134,11 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
     })
 
     return data
-  }, [expenses, search, vendorFilter, categoryFilter, dateFrom, dateTo, sortBy, sortOrder])
+  }, [expenses, search, vendorFilter, categoryFilter, referenceFilter, dateFrom, dateTo, sortBy, sortOrder])
 
   const vendors = [...new Set(expenses.map(e => e.vendor).filter((v): v is string => !!v))]
   const categories = [...new Set(expenses.map(e => e.category).filter((c): c is string => !!c))]
+  const references = [...new Set(expenses.map(e => e.reference).filter((r): r is string => !!r))]
   /* ================= SUMMARY CALCULATIONS ================= */
 
   const totalExpenseAmount = filteredExpenses.reduce(
@@ -292,6 +298,18 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
           ))}
         </select>
 
+        {/* Reference Filter */}
+        <select
+          value={referenceFilter}
+          onChange={(e) => setReferenceFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-xl text-sm"
+        >
+          <option value="">All References</option>
+          {references.map(r => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+
         {/* Date Range Filter */}
         <select
           value={dateRange}
@@ -351,12 +369,12 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
       {filteredExpenses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border border-gray-200 border-dashed text-center">
           <Wallet className="h-8 w-8 text-red-400 mb-4" />
-          {search || vendorFilter || categoryFilter || dateRange !== 'all' ? (
+          {search || vendorFilter || categoryFilter || referenceFilter || dateRange !== 'all' ? (
             <>
               <h3 className="text-lg font-bold text-gray-900">No results found</h3>
               <p className="text-sm text-gray-400 mt-1 mb-5">Try adjusting your filters</p>
               <button
-                onClick={() => { setSearch(''); setVendorFilter(''); setCategoryFilter(''); setDateRange('all'); setCustomFrom(''); setCustomTo('') }}
+                onClick={() => { setSearch(''); setVendorFilter(''); setCategoryFilter(''); setReferenceFilter(''); setDateRange('all'); setCustomFrom(''); setCustomTo('') }}
                 className="px-4 py-2 text-sm font-bold text-indigo-600 bg-indigo-50 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-colors"
               >
                 Clear Filters
