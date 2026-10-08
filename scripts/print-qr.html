@@ -9,9 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
   <style>
-    /* ─── Screen layout ─── */
+    /* ─── Base ─── */
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: #f3f4f6;
@@ -21,22 +20,20 @@
     /* ─── Login card ─── */
     #login-screen {
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
     }
     .login-card {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 16px;
-      padding: 36px 32px;
-      width: 340px;
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 16px;
+      padding: 36px 32px; width: 340px;
       box-shadow: 0 4px 24px rgba(0,0,0,.08);
     }
     .login-card h1 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
     .login-card p  { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
     .field { margin-bottom: 14px; }
-    .field label { display: block; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    .field label {
+      display: block; font-size: 11px; font-weight: 700; color: #6b7280;
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px;
+    }
     .field input {
       width: 100%; padding: 10px 12px; border: 1px solid #d1d5db;
       border-radius: 10px; font-size: 14px; outline: none; transition: border .15s;
@@ -47,7 +44,7 @@
       border: none; border-radius: 10px; font-size: 14px; font-weight: 700;
       cursor: pointer; margin-top: 4px; transition: background .15s;
     }
-    #login-btn:hover  { background: #374151; }
+    #login-btn:hover   { background: #374151; }
     #login-btn:disabled { background: #9ca3af; cursor: not-allowed; }
     #login-error { margin-top: 12px; font-size: 12px; color: #dc2626; text-align: center; }
 
@@ -58,12 +55,10 @@
       position: sticky; top: 0; z-index: 10;
       background: #fff; border-bottom: 1px solid #e5e7eb;
       padding: 12px 20px;
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 12px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
     }
     .topbar-left h2 { font-size: 16px; font-weight: 800; }
     .topbar-left p  { font-size: 12px; color: #6b7280; margin-top: 2px; }
-    .topbar-right { display: flex; gap: 8px; }
     .btn-print {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 9px 18px; background: #111827; color: #fff;
@@ -73,83 +68,103 @@
     .btn-print:hover { background: #374151; }
     .btn-print svg { width: 16px; height: 16px; }
 
-    /* ─── Grid ─── */
-    .sheet-area {
-      padding: 16px 20px 40px;
+    /* ─── A4 sheet preview (screen) ─── */
+    .sheet-area { padding: 20px; }
+
+    /* A4 page simulation on screen */
+    .a4-page {
+      background: #fff;
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto 16px;
+      padding: 10mm;
+      box-shadow: 0 2px 12px rgba(0,0,0,.12);
+      border-radius: 4px;
     }
+
+    /* ─── QR tile grid ─── */
     .grid {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 3mm;
     }
+
     .tile {
       display: flex;
       flex-direction: column;
       align-items: center;
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 8px 6px 6px;
-      width: 110px;
+      width: 21mm;
       text-align: center;
+      padding: 2mm 1.5mm 1.5mm;
+      border: 0.5pt solid #e5e7eb;
+      border-radius: 3pt;
+      background: #fff;
     }
+
     .tile canvas {
-      width: 80px;
-      height: 80px;
+      width: 15mm;   /* 1.5cm preview — same as print */
+      height: 15mm;
       display: block;
     }
+
     .tile .name {
-      font-size: 9px;
+      font-size: 7pt;
       font-weight: 700;
       color: #111827;
-      margin-top: 5px;
+      margin-top: 2pt;
       line-height: 1.3;
       word-break: break-word;
     }
+
     .tile .sku {
-      font-size: 8px;
+      font-size: 6pt;
       color: #6b7280;
       font-family: 'Courier New', monospace;
-      margin-top: 2px;
+      margin-top: 1pt;
       word-break: break-all;
     }
 
-    /* ─── Print styles ─── */
+    /* ─── Print: A4, 8 across ─── */
     @media print {
-      body { background: #fff; }
-      .no-print { display: none !important; }
+      @page {
+        size: A4 portrait;
+        margin: 10mm;
+      }
+
+      body        { background: #fff; }
+      .no-print   { display: none !important; }
       .sheet-area { padding: 0; }
 
-      .grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 3mm;
+      .a4-page {
+        width: 100%;
+        min-height: auto;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border-radius: 0;
+        page-break-after: always;
+        break-after: page;
       }
-      .tile {
-        border: 0.5pt solid #d1d5db;
-        border-radius: 3pt;
-        padding: 2mm 1.5mm 1.5mm;
-        width: auto;
-        /* Each tile is sized around the fixed canvas size */
-      }
-      .tile canvas {
-        /* 1.5cm × 1.5cm physical print size */
-        width: 1.5cm !important;
-        height: 1.5cm !important;
-      }
-      .tile .name {
-        font-size: 5pt;
-        margin-top: 1.5pt;
-      }
-      .tile .sku {
-        font-size: 4.5pt;
+      /* Last page: don't force a blank page after it */
+      .a4-page:last-child {
+        page-break-after: auto;
+        break-after: auto;
       }
 
-      /* Prevent tiles splitting across page breaks */
+      .grid { gap: 2mm; }
+
       .tile {
+        width: 21mm;
+        padding: 1.5mm 1mm 1mm;
         page-break-inside: avoid;
         break-inside: avoid;
       }
+      .tile canvas {
+        width: 1.5cm !important;
+        height: 1.5cm !important;
+      }
+      .tile .name { font-size: 5.5pt; }
+      .tile .sku  { font-size: 4.5pt; }
     }
   </style>
 </head>
@@ -159,8 +174,7 @@
 <div id="login-screen">
   <div class="login-card">
     <h1>🖨️ Print QR Codes</h1>
-    <p>Sign in to load your inventory QR codes</p>
-
+    <p>Sign in to load your inventory and print one QR per unit in stock</p>
     <div class="field">
       <label>Email</label>
       <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
@@ -169,7 +183,6 @@
       <label>Password</label>
       <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
     </div>
-
     <button id="login-btn" onclick="login()">Load QR Codes</button>
     <div id="login-error"></div>
   </div>
@@ -180,24 +193,23 @@
 
   <div class="topbar no-print">
     <div class="topbar-left">
-      <h2>QR Code Print Sheet</h2>
+      <h2>QR Code Print Sheet — A4</h2>
       <p id="status-line">Loading…</p>
     </div>
     <div class="topbar-right">
       <button class="btn-print" onclick="window.print()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
           <rect x="6" y="14" width="12" height="8"/>
         </svg>
-        Print
+        Print / Save PDF
       </button>
     </div>
   </div>
 
-  <div class="sheet-area">
-    <div class="grid" id="grid"></div>
-  </div>
-
+  <div class="sheet-area" id="sheet-area"></div>
 </div>
 
 <script>
@@ -208,7 +220,13 @@
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoemRveGF4cXdlYXh4bHVqdXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0Nzc4NTksImV4cCI6MjA4NjA1Mzg1OX0.XlYh3-vMnkjTgqkLhmHvKUJbKUGzxNmtlC7WfEsYW3g'
   );
 
-  // Allow Enter key on password field
+  // A4 printable area at 96dpi: (210-20)mm wide = 190mm ≈ 720px
+  // Each tile is 21mm wide + 2mm gap → fits 8 columns
+  const TILES_PER_ROW = 8;
+  // Row height ~23mm → rows per A4 page (277mm printable height / 25mm) ≈ 11
+  const ROWS_PER_PAGE = 11;
+  const TILES_PER_PAGE = TILES_PER_ROW * ROWS_PER_PAGE; // 88
+
   document.getElementById('password').addEventListener('keydown', e => {
     if (e.key === 'Enter') login();
   });
@@ -243,11 +261,11 @@
   // ─── Fetch + render ────────────────────────────────────────────────────────
   async function loadQRCodes() {
     const statusEl = document.getElementById('status-line');
-    statusEl.textContent = 'Fetching products…';
+    statusEl.textContent = 'Fetching inventory…';
 
     const { data: products, error } = await sb
       .from('products')
-      .select('id, name, sku, has_variants, variants(id, name, sku)')
+      .select('id, name, sku, stock, has_variants, variants(id, name, sku, stock)')
       .order('name', { ascending: true });
 
     if (error) {
@@ -255,70 +273,88 @@
       return;
     }
 
-    // ── Build tile list ──────────────────────────────────────────────────────
+    // ── Build tile list (one tile per unit in stock) ─────────────────────────
     const tiles  = [];
     let skipped  = 0;
 
     for (const p of products) {
       if (p.has_variants && p.variants && p.variants.length > 0) {
         for (const v of p.variants) {
-          if (v.sku) {
-            tiles.push({ sku: v.sku, name: p.name, sub: v.name });
-          } else {
-            skipped++;
+          const qty = Math.max(0, Math.floor(v.stock ?? 0));
+          if (!v.sku) { skipped++; continue; }
+          if (qty === 0) continue;           // nothing in stock, nothing to print
+          for (let i = 0; i < qty; i++) {
+            tiles.push({
+              sku:   v.sku,
+              label: `${p.name} — ${v.name}`,
+            });
           }
         }
       } else {
-        if (p.sku) {
-          tiles.push({ sku: p.sku, name: p.name, sub: null });
-        } else {
-          skipped++;
+        const qty = Math.max(0, Math.floor(p.stock ?? 0));
+        if (!p.sku) { skipped++; continue; }
+        if (qty === 0) continue;
+        for (let i = 0; i < qty; i++) {
+          tiles.push({ sku: p.sku, label: p.name });
         }
       }
     }
 
+    const pageCount = Math.max(1, Math.ceil(tiles.length / TILES_PER_PAGE));
     statusEl.textContent =
-      `${tiles.length} code${tiles.length !== 1 ? 's' : ''}` +
+      `${tiles.length} QR code${tiles.length !== 1 ? 's' : ''} · ` +
+      `${pageCount} A4 page${pageCount !== 1 ? 's' : ''}` +
       (skipped > 0 ? ` · ${skipped} skipped (no SKU)` : '');
 
-    // ── Render tiles ─────────────────────────────────────────────────────────
-    const grid = document.getElementById('grid');
-    grid.innerHTML = '';
+    // ── Split into A4 pages and render ───────────────────────────────────────
+    const sheetArea = document.getElementById('sheet-area');
+    sheetArea.innerHTML = '';
 
     if (tiles.length === 0) {
-      grid.innerHTML = '<p style="color:#6b7280;font-size:14px;padding:40px">No SKUs found — add SKUs to your products first.</p>';
+      sheetArea.innerHTML =
+        '<p style="color:#6b7280;font-size:14px;padding:40px;text-align:center">' +
+        'No items in stock with SKUs — add SKUs and stock to your products first.</p>';
       return;
     }
 
-    for (const tile of tiles) {
-      const div = document.createElement('div');
-      div.className = 'tile';
+    for (let p = 0; p < pageCount; p++) {
+      const page = document.createElement('div');
+      page.className = 'a4-page';
 
-      // Canvas — QRCode renders into this
-      const canvas = document.createElement('canvas');
-      div.appendChild(canvas);
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+      page.appendChild(grid);
+      sheetArea.appendChild(page);
 
-      // Label: product name
-      const nameEl = document.createElement('div');
-      nameEl.className = 'name';
-      nameEl.textContent = tile.sub ? `${tile.name} — ${tile.sub}` : tile.name;
-      div.appendChild(nameEl);
+      const pageTiles = tiles.slice(p * TILES_PER_PAGE, (p + 1) * TILES_PER_PAGE);
 
-      // Label: SKU mono
-      const skuEl = document.createElement('div');
-      skuEl.className = 'sku';
-      skuEl.textContent = tile.sku;
-      div.appendChild(skuEl);
+      for (const tile of pageTiles) {
+        const div = document.createElement('div');
+        div.className = 'tile';
 
-      grid.appendChild(div);
+        const canvas = document.createElement('canvas');
+        div.appendChild(canvas);
 
-      // Generate QR — render at 200px; CSS scales to 80px screen / 1.5cm print
-      await QRCode.toCanvas(canvas, tile.sku, {
-        width: 200,
-        margin: 1,
-        errorCorrectionLevel: 'M',
-        color: { dark: '#111827', light: '#ffffff' },
-      });
+        const labelEl = document.createElement('div');
+        labelEl.className = 'name';
+        labelEl.textContent = tile.label;
+        div.appendChild(labelEl);
+
+        const skuEl = document.createElement('div');
+        skuEl.className = 'sku';
+        skuEl.textContent = tile.sku;
+        div.appendChild(skuEl);
+
+        grid.appendChild(div);
+
+        // Render QR at 200px; CSS scales to 1.5cm for print
+        await QRCode.toCanvas(canvas, tile.sku, {
+          width: 200,
+          margin: 1,
+          errorCorrectionLevel: 'M',
+          color: { dark: '#111827', light: '#ffffff' },
+        });
+      }
     }
   }
 </script>
