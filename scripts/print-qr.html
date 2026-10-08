@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Code Sheet — Naitree</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+
+  <style>
+    /* ─── Screen layout ─── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f3f4f6;
+      color: #111;
+    }
+
+    /* ─── Login card ─── */
+    #login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 36px 32px;
+      width: 340px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    }
+    .login-card h1 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+    .login-card p  { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    .field input {
+      width: 100%; padding: 10px 12px; border: 1px solid #d1d5db;
+      border-radius: 10px; font-size: 14px; outline: none; transition: border .15s;
+    }
+    .field input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
+    #login-btn {
+      width: 100%; padding: 11px; background: #111827; color: #fff;
+      border: none; border-radius: 10px; font-size: 14px; font-weight: 700;
+      cursor: pointer; margin-top: 4px; transition: background .15s;
+    }
+    #login-btn:hover  { background: #374151; }
+    #login-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+    #login-error { margin-top: 12px; font-size: 12px; color: #dc2626; text-align: center; }
+
+    /* ─── Sheet screen ─── */
+    #sheet-screen { display: none; }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 10;
+      background: #fff; border-bottom: 1px solid #e5e7eb;
+      padding: 12px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+    }
+    .topbar-left h2 { font-size: 16px; font-weight: 800; }
+    .topbar-left p  { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .topbar-right { display: flex; gap: 8px; }
+    .btn-print {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; background: #111827; color: #fff;
+      border: none; border-radius: 10px; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: background .15s;
+    }
+    .btn-print:hover { background: #374151; }
+    .btn-print svg { width: 16px; height: 16px; }
+
+    /* ─── Grid ─── */
+    .sheet-area {
+      padding: 16px 20px 40px;
+    }
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 6px 6px;
+      width: 110px;
+      text-align: center;
+    }
+    .tile canvas {
+      width: 80px;
+      height: 80px;
+      display: block;
+    }
+    .tile .name {
+      font-size: 9px;
+      font-weight: 700;
+      color: #111827;
+      margin-top: 5px;
+      line-height: 1.3;
+      word-break: break-word;
+    }
+    .tile .sku {
+      font-size: 8px;
+      color: #6b7280;
+      font-family: 'Courier New', monospace;
+      margin-top: 2px;
+      word-break: break-all;
+    }
+
+    /* ─── Print styles ─── */
+    @media print {
+      body { background: #fff; }
+      .no-print { display: none !important; }
+      .sheet-area { padding: 0; }
+
+      .grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 3mm;
+      }
+      .tile {
+        border: 0.5pt solid #d1d5db;
+        border-radius: 3pt;
+        padding: 2mm 1.5mm 1.5mm;
+        width: auto;
+        /* Each tile is sized around the fixed canvas size */
+      }
+      .tile canvas {
+        /* 1.5cm × 1.5cm physical print size */
+        width: 1.5cm !important;
+        height: 1.5cm !important;
+      }
+      .tile .name {
+        font-size: 5pt;
+        margin-top: 1.5pt;
+      }
+      .tile .sku {
+        font-size: 4.5pt;
+      }
+
+      /* Prevent tiles splitting across page breaks */
+      .tile {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════ LOGIN ═══════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>🖨️ Print QR Codes</h1>
+    <p>Sign in to load your inventory QR codes</p>
+
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+
+    <button id="login-btn" onclick="login()">Load QR Codes</button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ SHEET ═══════════════════ -->
+<div id="sheet-screen">
+
+  <div class="topbar no-print">
+    <div class="topbar-left">
+      <h2>QR Code Print Sheet</h2>
+      <p id="status-line">Loading…</p>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-print" onclick="window.print()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+        Print
+      </button>
+    </div>
+  </div>
+
+  <div class="sheet-area">
+    <div class="grid" id="grid"></div>
+  </div>
+
+</div>
+
+<script>
+  // ─── Supabase client ───────────────────────────────────────────────────────
+  const { createClient } = supabase;
+  const sb = createClient(
+    'https://thzdoxaxqweaxxlujush.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoemRveGF4cXdlYXh4bHVqdXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0Nzc4NTksImV4cCI6MjA4NjA1Mzg1OX0.XlYh3-vMnkjTgqkLhmHvKUJbKUGzxNmtlC7WfEsYW3g'
+  );
+
+  // Allow Enter key on password field
+  document.getElementById('password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
+
+  // ─── Login ─────────────────────────────────────────────────────────────────
+  async function login() {
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const errEl    = document.getElementById('login-error');
+    const btn      = document.getElementById('login-btn');
+
+    errEl.textContent = '';
+    if (!email || !password) { errEl.textContent = 'Enter your email and password.'; return; }
+
+    btn.disabled    = true;
+    btn.textContent = 'Signing in…';
+
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      errEl.textContent = error.message;
+      btn.disabled      = false;
+      btn.textContent   = 'Load QR Codes';
+      return;
+    }
+
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('sheet-screen').style.display = 'block';
+    await loadQRCodes();
+  }
+
+  // ─── Fetch + render ────────────────────────────────────────────────────────
+  async function loadQRCodes() {
+    const statusEl = document.getElementById('status-line');
+    statusEl.textContent = 'Fetching products…';
+
+    const { data: products, error } = await sb
+      .from('products')
+      .select('id, name, sku, has_variants, variants(id, name, sku)')
+      .order('name', { ascending: true });
+
+    if (error) {
+      statusEl.textContent = 'Error: ' + error.message;
+      return;
+    }
+
+    // ── Build tile list ──────────────────────────────────────────────────────
+    const tiles  = [];
+    let skipped  = 0;
+
+    for (const p of products) {
+      if (p.has_variants && p.variants && p.variants.length > 0) {
+        for (const v of p.variants) {
+          if (v.sku) {
+            tiles.push({ sku: v.sku, name: p.name, sub: v.name });
+          } else {
+            skipped++;
+          }
+        }
+      } else {
+        if (p.sku) {
+          tiles.push({ sku: p.sku, name: p.name, sub: null });
+        } else {
+          skipped++;
+        }
+      }
+    }
+
+    statusEl.textContent =
+      `${tiles.length} code${tiles.length !== 1 ? 's' : ''}` +
+      (skipped > 0 ? ` · ${skipped} skipped (no SKU)` : '');
+
+    // ── Render tiles ─────────────────────────────────────────────────────────
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+
+    if (tiles.length === 0) {
+      grid.innerHTML = '<p style="color:#6b7280;font-size:14px;padding:40px">No SKUs found — add SKUs to your products first.</p>';
+      return;
+    }
+
+    for (const tile of tiles) {
+      const div = document.createElement('div');
+      div.className = 'tile';
+
+      // Canvas — QRCode renders into this
+      const canvas = document.createElement('canvas');
+      div.appendChild(canvas);
+
+      // Label: product name
+      const nameEl = document.createElement('div');
+      nameEl.className = 'name';
+      nameEl.textContent = tile.sub ? `${tile.name} — ${tile.sub}` : tile.name;
+      div.appendChild(nameEl);
+
+      // Label: SKU mono
+      const skuEl = document.createElement('div');
+      skuEl.className = 'sku';
+      skuEl.textContent = tile.sku;
+      div.appendChild(skuEl);
+
+      grid.appendChild(div);
+
+      // Generate QR — render at 200px; CSS scales to 80px screen / 1.5cm print
+      await QRCode.toCanvas(canvas, tile.sku, {
+        width: 200,
+        margin: 1,
+        errorCorrectionLevel: 'M',
+        color: { dark: '#111827', light: '#ffffff' },
+      });
+    }
+  }
+</script>
+</body>
+</html>
