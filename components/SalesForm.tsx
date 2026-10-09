@@ -297,34 +297,45 @@ const SalesForm: React.FC<SalesFormProps> = ({
   }
 
   const addScannedItem = (product: Product, variant?: Variant) => {
-    const existingIndex = items.findIndex(
-      i => i.product_id === product.id && (variant ? i.variant_id === variant.id : !i.variant_id)
-    )
-    if (existingIndex >= 0) {
-      const maxStock = variant ? variant.stock : product.stock
-      const current = items[existingIndex].quantity
-      if (current >= maxStock) {
-        toast.warning(`Only ${maxStock} in stock`)
-        return
+    const maxStock = variant ? variant.stock : product.stock
+    const name = `${product.name}${variant ? ` — ${variant.name}` : ''}`
+
+    setItems(prev => {
+      // Always read from `prev` (latest state), never from the stale closure.
+      // Without this, rapid scans see the old items list and create duplicates.
+      const idx = prev.findIndex(
+        i =>
+          i.product_id === product.id &&
+          (variant ? i.variant_id === variant.id : !i.variant_id)
+      )
+
+      if (idx >= 0) {
+        const current = prev[idx].quantity
+        if (current >= maxStock) {
+          toast.warning(`Only ${maxStock} in stock`)
+          return prev                          // no change
+        }
+        toast.success(`${name} ×${current + 1}`)
+        return prev.map((item, i) =>
+          i === idx ? { ...item, quantity: current + 1 } : item
+        )
       }
-      updateItem(existingIndex, 'quantity', current + 1)
-      toast.success(`${product.name}${variant ? ` — ${variant.name}` : ''} ×${current + 1}`)
-    } else {
-      const unitPrice = getDefaultUnitPrice(product, variant)
-      setItems(prev => [
+
+      // First scan of this product/variant → new line
+      toast.success(`Added: ${name}`)
+      return [
         ...prev,
         {
-          product_id: product.id,
-          variant_id: variant?.id,
-          quantity: 1,
-          unit_price: unitPrice,
-          cost_price: Number(product.cost_price || 0),
+          product_id:   product.id,
+          variant_id:   variant?.id ?? null,
+          quantity:     1,
+          unit_price:   getDefaultUnitPrice(product, variant),
+          cost_price:   Number(product.cost_price || 0),
           product_name: product.name,
           variant_name: variant?.name,
         },
-      ])
-      toast.success(`Added: ${product.name}${variant ? ` — ${variant.name}` : ''}`)
-    }
+      ]
+    })
   }
 
   /* ---------------- TOTALS ---------------- */
