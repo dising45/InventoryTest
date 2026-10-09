@@ -2,8 +2,13 @@ import { supabase } from './supabaseClient'
 import { Product } from '../types'
 
 export async function generateSKU(): Promise<string> {
-  const { count } = await supabase.from('products').select('*', { count: 'exact', head: true })
-  return `NTR-${String((count ?? 0) + 1).padStart(4, '0')}`
+  const { data } = await supabase.from('products').select('sku').like('sku', 'NTR-%')
+  let maxNum = 0
+  for (const row of data ?? []) {
+    const n = parseInt((row.sku ?? '').replace('NTR-', ''), 10)
+    if (!isNaN(n) && n > maxNum) maxNum = n
+  }
+  return `NTR-${String(maxNum + 1).padStart(4, '0')}`
 }
 
 class InventoryServiceSupabase {
