@@ -54,26 +54,29 @@
     .topbar {
       position: sticky; top: 0; z-index: 10;
       background: #fff; border-bottom: 1px solid #e5e7eb;
-      padding: 12px 20px;
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 10px 20px;
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
     }
-    .topbar h2 { font-size: 16px; font-weight: 800; }
-    .topbar p  { font-size: 12px; color: #6b7280; margin-top: 2px; }
-    .skip-row {
+    .topbar-title { flex: 1; min-width: 180px; }
+    .topbar-title h2 { font-size: 15px; font-weight: 800; }
+    .topbar-title p  { font-size: 11px; color: #6b7280; margin-top: 2px; }
+
+    .range-row {
       display: flex; align-items: center; gap: 8px;
-      font-size: 13px; color: #374151;
+      font-size: 13px; color: #374151; flex-wrap: wrap;
     }
-    .skip-row label { font-weight: 600; white-space: nowrap; }
-    .skip-row input[type=number] {
-      width: 64px; padding: 7px 10px; border: 1px solid #d1d5db;
+    .range-row label { font-weight: 600; white-space: nowrap; }
+    .range-row input[type=number] {
+      width: 70px; padding: 7px 10px; border: 1px solid #d1d5db;
       border-radius: 8px; font-size: 13px; text-align: center; outline: none;
     }
-    .skip-row input[type=number]:focus { border-color: #6366f1; }
-    .skip-row .apply-btn {
+    .range-row input[type=number]:focus { border-color: #6366f1; }
+    .range-row .apply-btn {
       padding: 7px 14px; background: #f3f4f6; border: 1px solid #d1d5db;
       border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
     }
-    .skip-row .apply-btn:hover { background: #e5e7eb; }
+    .range-row .apply-btn:hover { background: #e5e7eb; }
+
     .btn-print {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 9px 18px; background: #111827; color: #fff;
@@ -82,6 +85,40 @@
     }
     .btn-print:hover { background: #374151; }
     .btn-print svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* ─── Tile index ─── */
+    .index-section {
+      margin: 16px 20px 0;
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;
+    }
+    .index-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; cursor: pointer; user-select: none;
+      font-size: 13px; font-weight: 700; color: #374151;
+      background: #f9fafb;
+    }
+    .index-header:hover { background: #f3f4f6; }
+    .index-header span { color: #6b7280; font-weight: 400; margin-left: 6px; }
+    .index-body { display: none; max-height: 360px; overflow-y: auto; }
+    .index-body.open { display: block; }
+    .index-table {
+      width: 100%; border-collapse: collapse; font-size: 12px;
+    }
+    .index-table th {
+      position: sticky; top: 0; background: #f9fafb;
+      padding: 6px 12px; text-align: left; font-size: 11px;
+      color: #6b7280; border-bottom: 1px solid #e5e7eb; font-weight: 600;
+    }
+    .index-table td {
+      padding: 5px 12px; border-bottom: 1px solid #f3f4f6; color: #374151;
+    }
+    .index-table tr:last-child td { border-bottom: none; }
+    .index-table td:first-child { color: #6b7280; font-family: monospace; width: 52px; }
+    .index-table td:last-child { color: #9ca3af; font-family: monospace; font-size: 11px; }
+    .index-hint {
+      padding: 10px 16px; font-size: 12px; color: #6b7280; border-top: 1px solid #f3f4f6;
+      background: #fffbeb;
+    }
 
     /* ─── A4 page preview ─── */
     .sheet-area { padding: 20px; }
@@ -111,6 +148,14 @@
       padding: 2mm 1.5mm 1.5mm;
       border: 0.5pt solid #e5e7eb;
       border-radius: 3pt;
+      position: relative;
+    }
+
+    /* Tile number badge — screen only */
+    .tile-num {
+      position: absolute; top: 1pt; left: 2pt;
+      font-size: 5pt; color: #c4b5fd; font-weight: 700;
+      font-family: monospace; line-height: 1;
     }
 
     /* qrcodejs draws to canvas, converts to img, then HIDES the canvas.
@@ -149,6 +194,7 @@
         width: 21mm; padding: 1.5mm 1mm 1mm;
         page-break-inside: avoid; break-inside: avoid;
       }
+      .tile-num { display: none; }
       .qr-wrap     { width: 1.5cm; height: 1.5cm; }
       .qr-wrap img { width: 1.5cm !important; height: 1.5cm !important; display: block !important; }
       .tile .name { font-size: 5.5pt; }
@@ -180,15 +226,16 @@
 <div id="sheet-screen">
 
   <div class="topbar no-print">
-    <div>
-      <h2>QR Code Print Sheet — A4</h2>
+    <div class="topbar-title">
+      <h2>QR Code Print Sheet</h2>
       <p id="status-line">Loading…</p>
     </div>
-    <div class="skip-row">
-      <label>Skip first</label>
-      <input type="number" id="skip-pages" min="0" value="0" />
-      <label>page(s)</label>
-      <button class="apply-btn" onclick="applySkip()">Apply</button>
+    <div class="range-row">
+      <label>Print tiles</label>
+      <input type="number" id="from-tile" min="1" value="1" />
+      <label>to</label>
+      <input type="number" id="to-tile" min="1" value="" placeholder="end" />
+      <button class="apply-btn" onclick="applyRange()">Apply</button>
     </div>
     <button class="btn-print" onclick="window.print()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -201,6 +248,23 @@
     </button>
   </div>
 
+  <!-- Tile index: numbered list of every tile -->
+  <div class="index-section no-print" id="index-section" style="display:none">
+    <div class="index-header" onclick="toggleIndex()">
+      📋 Tile Index — match your printed sheets to tile numbers
+      <span id="index-toggle-label">▶ Show</span>
+    </div>
+    <div class="index-body" id="index-body">
+      <table class="index-table">
+        <thead><tr><th>#</th><th>Product</th><th>SKU</th></tr></thead>
+        <tbody id="index-tbody"></tbody>
+      </table>
+      <div class="index-hint">
+        💡 Find the last tile you printed → note its number → set "Print tiles FROM" to the next number above
+      </div>
+    </div>
+  </div>
+
   <div class="sheet-area" id="sheet-area"></div>
 </div>
 
@@ -211,10 +275,9 @@
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoemRveGF4cXdlYXh4bHVqdXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0Nzc4NTksImV4cCI6MjA4NjA1Mzg1OX0.XlYh3-vMnkjTgqkLhmHvKUJbKUGzxNmtlC7WfEsYW3g'
   );
 
-  // 8 columns × 11 rows = 88 tiles per A4 page
-  const TILES_PER_PAGE = 88;
+  const TILES_PER_PAGE = 88;  // 8 cols × 11 rows
 
-  let allTiles = [];   // stored after load so applySkip() can re-render
+  let allTiles = [];
 
   document.getElementById('password').addEventListener('keydown', e => {
     if (e.key === 'Enter') login();
@@ -256,9 +319,8 @@
 
     if (error) { statusEl.textContent = 'Error: ' + error.message; return; }
 
-    // Build tile list — repeat each SKU once per unit in stock
-    const tiles  = [];
-    let skipped  = 0;
+    const tiles = [];
+    let skipped = 0;
 
     for (const p of products) {
       if (p.has_variants && p.variants && p.variants.length > 0) {
@@ -266,58 +328,84 @@
           const qty = Math.max(0, Math.floor(v.stock ?? 0));
           if (!v.sku) { skipped++; continue; }
           if (qty === 0) continue;
-          for (let i = 0; i < qty; i++) {
+          for (let i = 0; i < qty; i++)
             tiles.push({ sku: v.sku, label: `${p.name} — ${v.name}` });
-          }
         }
       } else {
         const qty = Math.max(0, Math.floor(p.stock ?? 0));
         if (!p.sku) { skipped++; continue; }
         if (qty === 0) continue;
-        for (let i = 0; i < qty; i++) {
+        for (let i = 0; i < qty; i++)
           tiles.push({ sku: p.sku, label: p.name });
-        }
       }
     }
 
     allTiles = tiles;
-    renderSheet(0, skipped);
+
+    // Populate the tile index table
+    const tbody = document.getElementById('index-tbody');
+    tiles.forEach((t, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i + 1}</td><td>${t.label}</td><td>${t.sku}</td>`;
+      tbody.appendChild(tr);
+    });
+    document.getElementById('to-tile').value = tiles.length;
+    document.getElementById('index-section').style.display = '';
+    document.getElementById('index-section').querySelector('span').textContent =
+      `(${tiles.length} tiles total) ▶ Show`;
+
+    const pageCount = Math.ceil(tiles.length / TILES_PER_PAGE);
+    const skippedMsg = skipped > 0 ? ` · ${skipped} skipped (no SKU)` : '';
+    statusEl.textContent =
+      `${tiles.length} tiles · ${pageCount} A4 page${pageCount !== 1 ? 's' : ''}${skippedMsg}`;
+
+    renderSheet(1, tiles.length);
   }
 
-  function applySkip() {
-    const skip = Math.max(0, parseInt(document.getElementById('skip-pages').value, 10) || 0);
-    renderSheet(skip);
+  function applyRange() {
+    const from = Math.max(1, parseInt(document.getElementById('from-tile').value, 10) || 1);
+    const to   = parseInt(document.getElementById('to-tile').value, 10) || allTiles.length;
+    renderSheet(from, to);
   }
 
-  function renderSheet(skipPages, skippedNoSku) {
+  function toggleIndex() {
+    const body  = document.getElementById('index-body');
+    const label = document.getElementById('index-toggle-label');
+    const open  = body.classList.toggle('open');
+    const count = allTiles.length;
+    label.textContent = open
+      ? `(${count} tiles total) ▼ Hide`
+      : `(${count} tiles total) ▶ Show`;
+  }
+
+  function renderSheet(fromTile, toTile) {
     const statusEl  = document.getElementById('status-line');
     const sheetArea = document.getElementById('sheet-area');
     sheetArea.innerHTML = '';
 
-    const tiles     = allTiles;
-    const startIdx  = skipPages * TILES_PER_PAGE;
-    const remaining = tiles.slice(startIdx);
+    const from = Math.max(1, fromTile);
+    const to   = Math.min(allTiles.length, toTile);
+    const slice = allTiles.slice(from - 1, to);  // 1-indexed → 0-indexed
 
-    const totalPages    = Math.max(1, Math.ceil(tiles.length / TILES_PER_PAGE));
-    const remainPages   = Math.max(1, Math.ceil(remaining.length / TILES_PER_PAGE));
-    const skippedMsg    = (typeof skippedNoSku === 'number' && skippedNoSku > 0)
-      ? ` · ${skippedNoSku} skipped (no SKU)` : '';
-    const skipMsg       = skipPages > 0 ? ` · showing pages ${skipPages + 1}–${totalPages}` : '';
+    const totalPages = Math.ceil(allTiles.length / TILES_PER_PAGE);
+    const rangeMsg   = (from > 1 || to < allTiles.length)
+      ? ` · printing tiles ${from}–${to}`
+      : '';
 
     statusEl.textContent =
-      `${tiles.length} QR code${tiles.length !== 1 ? 's' : ''}` +
-      ` · ${totalPages} A4 page${totalPages !== 1 ? 's' : ''}` +
-      skippedMsg + skipMsg;
+      `${allTiles.length} tiles · ${totalPages} A4 page${totalPages !== 1 ? 's' : ''}` +
+      rangeMsg;
 
-    if (remaining.length === 0) {
+    if (slice.length === 0) {
       sheetArea.innerHTML =
         '<p style="color:#6b7280;font-size:14px;padding:40px;text-align:center">' +
-        'All pages already printed — reduce the skip count to see more.</p>';
+        'No tiles in that range. Adjust the tile numbers above.</p>';
       return;
     }
 
-    // Render pages — qrcodejs is synchronous so no async needed
-    for (let p = 0; p < remainPages; p++) {
+    const pageCount = Math.ceil(slice.length / TILES_PER_PAGE);
+
+    for (let p = 0; p < pageCount; p++) {
       const page = document.createElement('div');
       page.className = 'a4-page';
 
@@ -326,18 +414,24 @@
       page.appendChild(grid);
       sheetArea.appendChild(page);
 
-      const pageTiles = remaining.slice(p * TILES_PER_PAGE, (p + 1) * TILES_PER_PAGE);
+      const pageTiles = slice.slice(p * TILES_PER_PAGE, (p + 1) * TILES_PER_PAGE);
 
-      for (const tile of pageTiles) {
+      pageTiles.forEach((tile, i) => {
+        const globalNum = from + p * TILES_PER_PAGE + i;
+
         const div = document.createElement('div');
         div.className = 'tile';
 
-        // QR code wrapper — qrcodejs injects a canvas inside
+        // Tile number badge (screen only — hidden in print CSS)
+        const numBadge = document.createElement('div');
+        numBadge.className = 'tile-num no-print';
+        numBadge.textContent = '#' + globalNum;
+        div.appendChild(numBadge);
+
         const qrWrap = document.createElement('div');
         qrWrap.className = 'qr-wrap';
         div.appendChild(qrWrap);
 
-        // Label
         const labelEl = document.createElement('div');
         labelEl.className = 'name';
         labelEl.textContent = tile.label;
@@ -350,7 +444,6 @@
 
         grid.appendChild(div);
 
-        // Generate QR — synchronous, renders into qrWrap
         new QRCode(qrWrap, {
           text:         tile.sku,
           width:        200,
@@ -359,7 +452,7 @@
           colorLight:   '#ffffff',
           correctLevel: QRCode.CorrectLevel.M,
         });
-      }
+      });
     }
   }
 </script>
