@@ -61,21 +61,41 @@
     .topbar-title h2 { font-size: 15px; font-weight: 800; }
     .topbar-title p  { font-size: 11px; color: #6b7280; margin-top: 2px; }
 
-    .range-row {
+    /* ─── Last-printed search ─── */
+    .resume-row {
       display: flex; align-items: center; gap: 8px;
-      font-size: 13px; color: #374151; flex-wrap: wrap;
+      font-size: 13px; color: #374151; flex-wrap: wrap; position: relative;
     }
-    .range-row label { font-weight: 600; white-space: nowrap; }
-    .range-row input[type=number] {
-      width: 70px; padding: 7px 10px; border: 1px solid #d1d5db;
-      border-radius: 8px; font-size: 13px; text-align: center; outline: none;
+    .resume-row label { font-weight: 600; white-space: nowrap; }
+    .resume-wrap { position: relative; }
+    .resume-row input[type=text] {
+      width: 220px; padding: 7px 10px; border: 1px solid #d1d5db;
+      border-radius: 8px; font-size: 13px; outline: none;
     }
-    .range-row input[type=number]:focus { border-color: #6366f1; }
-    .range-row .apply-btn {
-      padding: 7px 14px; background: #f3f4f6; border: 1px solid #d1d5db;
-      border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+    .resume-row input[type=text]:focus { border-color: #6366f1; }
+    .resume-hint { font-size: 11px; color: #6b7280; white-space: nowrap; }
+    .resume-hint.ok  { color: #16a34a; font-weight: 600; }
+    .resume-hint.bad { color: #dc2626; }
+    /* Autocomplete dropdown */
+    .ac-drop {
+      position: absolute; top: 100%; left: 0; z-index: 50;
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.12);
+      max-height: 240px; overflow-y: auto; min-width: 280px; display: none;
     }
-    .range-row .apply-btn:hover { background: #e5e7eb; }
+    .ac-drop.open { display: block; }
+    .ac-item {
+      padding: 8px 14px; cursor: pointer; font-size: 13px; color: #111827;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .ac-item:last-child { border-bottom: none; }
+    .ac-item:hover, .ac-item.active { background: #eef2ff; }
+    .ac-item small { color: #9ca3af; font-size: 11px; margin-left: 6px; font-family: monospace; }
+    .reset-btn {
+      padding: 7px 12px; background: #f3f4f6; border: 1px solid #d1d5db;
+      border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; color: #374151;
+    }
+    .reset-btn:hover { background: #e5e7eb; }
 
     .btn-print {
       display: inline-flex; align-items: center; gap: 6px;
@@ -230,12 +250,15 @@
       <h2>QR Code Print Sheet</h2>
       <p id="status-line">Loading…</p>
     </div>
-    <div class="range-row">
-      <label>Print tiles</label>
-      <input type="number" id="from-tile" min="1" value="1" />
-      <label>to</label>
-      <input type="number" id="to-tile" min="1" value="" placeholder="end" />
-      <button class="apply-btn" onclick="applyRange()">Apply</button>
+    <div class="resume-row">
+      <label>Last printed item:</label>
+      <div class="resume-wrap">
+        <input type="text" id="resume-input" placeholder="Type product name…" autocomplete="off"
+               oninput="onResumeInput()" onkeydown="onResumeKey(event)" />
+        <div class="ac-drop" id="ac-drop"></div>
+      </div>
+      <span class="resume-hint" id="resume-hint">type the last item you have printed</span>
+      <button class="reset-btn" onclick="resetToAll()" title="Show all tiles">✕ Reset</button>
     </div>
     <button class="btn-print" onclick="window.print()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -275,12 +298,17 @@
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoemRveGF4cXdlYXh4bHVqdXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0Nzc4NTksImV4cCI6MjA4NjA1Mzg1OX0.XlYh3-vMnkjTgqkLhmHvKUJbKUGzxNmtlC7WfEsYW3g'
   );
 
-  const TILES_PER_PAGE = 88;  // 8 cols × 11 rows
+  const TILES_PER_PAGE = 88;
 
-  let allTiles = [];
+  let allTiles    = [];
+  let acActive    = -1;   // keyboard-selected autocomplete index
+  let acMatches   = [];
 
   document.getElementById('password').addEventListener('keydown', e => {
     if (e.key === 'Enter') login();
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.resume-wrap')) closeDrop();
   });
 
   async function login() {
@@ -291,15 +319,12 @@
 
     errEl.textContent = '';
     if (!email || !password) { errEl.textContent = 'Enter your email and password.'; return; }
-
-    btn.disabled    = true;
-    btn.textContent = 'Signing in…';
+    btn.disabled = true; btn.textContent = 'Signing in…';
 
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) {
       errEl.textContent = error.message;
-      btn.disabled      = false;
-      btn.textContent   = 'Load QR Codes';
+      btn.disabled = false; btn.textContent = 'Load QR Codes';
       return;
     }
 
@@ -323,7 +348,7 @@
     let skipped = 0;
 
     for (const p of products) {
-      if (p.has_variants && p.variants && p.variants.length > 0) {
+      if (p.has_variants && p.variants?.length > 0) {
         for (const v of p.variants) {
           const qty = Math.max(0, Math.floor(v.stock ?? 0));
           if (!v.sku) { skipped++; continue; }
@@ -342,73 +367,135 @@
 
     allTiles = tiles;
 
-    // Populate the tile index table
+    // Populate tile index tbody
     const tbody = document.getElementById('index-tbody');
     tiles.forEach((t, i) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${i + 1}</td><td>${t.label}</td><td>${t.sku}</td>`;
       tbody.appendChild(tr);
     });
-    document.getElementById('to-tile').value = tiles.length;
     document.getElementById('index-section').style.display = '';
     document.getElementById('index-section').querySelector('span').textContent =
-      `(${tiles.length} tiles total) ▶ Show`;
+      `(${tiles.length} tiles) ▶ Show`;
 
     const pageCount = Math.ceil(tiles.length / TILES_PER_PAGE);
-    const skippedMsg = skipped > 0 ? ` · ${skipped} skipped (no SKU)` : '';
     statusEl.textContent =
-      `${tiles.length} tiles · ${pageCount} A4 page${pageCount !== 1 ? 's' : ''}${skippedMsg}`;
+      `${tiles.length} tiles · ${pageCount} A4 page${pageCount !== 1 ? 's' : ''}` +
+      (skipped > 0 ? ` · ${skipped} skipped (no SKU)` : '');
 
-    renderSheet(1, tiles.length);
+    renderSheet(0);  // start: show everything (0 = none skipped)
   }
 
-  function applyRange() {
-    const from = Math.max(1, parseInt(document.getElementById('from-tile').value, 10) || 1);
-    const to   = parseInt(document.getElementById('to-tile').value, 10) || allTiles.length;
-    renderSheet(from, to);
+  /* ── Autocomplete ── */
+  function onResumeInput() {
+    const q = document.getElementById('resume-input').value.trim().toLowerCase();
+    const drop = document.getElementById('ac-drop');
+    acActive = -1;
+
+    if (!q) { closeDrop(); setHint('', ''); return; }
+
+    // Unique labels, deduplicated — find all matching
+    const seen = new Set();
+    acMatches = [];
+    allTiles.forEach((t, i) => {
+      if (!seen.has(t.label) && t.label.toLowerCase().includes(q)) {
+        seen.add(t.label);
+        // Use the LAST occurrence index so we skip ALL copies of this product
+        const lastIdx = allTiles.map(x => x.label).lastIndexOf(t.label);
+        acMatches.push({ label: t.label, sku: t.sku, lastIdx });
+      }
+    });
+
+    if (!acMatches.length) { drop.innerHTML = ''; drop.classList.remove('open'); setHint('No match', 'bad'); return; }
+
+    drop.innerHTML = acMatches.slice(0, 12).map((m, i) =>
+      `<div class="ac-item" data-idx="${i}" onmousedown="pickItem(${i})">${m.label}<small>${m.sku}</small></div>`
+    ).join('');
+    drop.classList.add('open');
+    setHint('', '');
+  }
+
+  function onResumeKey(e) {
+    const drop = document.getElementById('ac-drop');
+    const items = drop.querySelectorAll('.ac-item');
+    if (e.key === 'ArrowDown') {
+      acActive = Math.min(acActive + 1, items.length - 1);
+      items.forEach((el, i) => el.classList.toggle('active', i === acActive));
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      acActive = Math.max(acActive - 1, 0);
+      items.forEach((el, i) => el.classList.toggle('active', i === acActive));
+      e.preventDefault();
+    } else if (e.key === 'Enter') {
+      if (acActive >= 0) pickItem(acActive);
+      e.preventDefault();
+    } else if (e.key === 'Escape') {
+      closeDrop();
+    }
+  }
+
+  function pickItem(i) {
+    const match = acMatches[i];
+    if (!match) return;
+    document.getElementById('resume-input').value = match.label;
+    closeDrop();
+
+    const startFrom = match.lastIdx + 1;  // 0-indexed, exclusive
+    const remaining = allTiles.length - startFrom;
+
+    if (remaining <= 0) {
+      setHint('Everything after this is already printed!', 'ok');
+      document.getElementById('sheet-area').innerHTML =
+        '<p style="color:#6b7280;font-size:14px;padding:40px;text-align:center">Nothing left to print after that item.</p>';
+      return;
+    }
+
+    setHint(`✓ Printing ${remaining} remaining tile${remaining !== 1 ? 's' : ''} (from tile #${startFrom + 1})`, 'ok');
+    renderSheet(startFrom);
+  }
+
+  function closeDrop() {
+    document.getElementById('ac-drop').classList.remove('open');
+    acActive = -1;
+  }
+
+  function setHint(msg, cls) {
+    const el = document.getElementById('resume-hint');
+    el.textContent = msg;
+    el.className = 'resume-hint' + (cls ? ' ' + cls : '');
+  }
+
+  function resetToAll() {
+    document.getElementById('resume-input').value = '';
+    setHint('type the last item you have printed', '');
+    closeDrop();
+    renderSheet(0);
+    const p = Math.ceil(allTiles.length / TILES_PER_PAGE);
+    document.getElementById('status-line').textContent =
+      `${allTiles.length} tiles · ${p} A4 page${p !== 1 ? 's' : ''}`;
   }
 
   function toggleIndex() {
     const body  = document.getElementById('index-body');
     const label = document.getElementById('index-toggle-label');
     const open  = body.classList.toggle('open');
-    const count = allTiles.length;
-    label.textContent = open
-      ? `(${count} tiles total) ▼ Hide`
-      : `(${count} tiles total) ▶ Show`;
+    label.textContent = open ? `(${allTiles.length} tiles) ▼ Hide` : `(${allTiles.length} tiles) ▶ Show`;
   }
 
-  function renderSheet(fromTile, toTile) {
-    const statusEl  = document.getElementById('status-line');
+  /* ── Render ── */
+  function renderSheet(startIdx) {
+    // startIdx: 0-indexed tile to start from
     const sheetArea = document.getElementById('sheet-area');
     sheetArea.innerHTML = '';
 
-    const from = Math.max(1, fromTile);
-    const to   = Math.min(allTiles.length, toTile);
-    const slice = allTiles.slice(from - 1, to);  // 1-indexed → 0-indexed
-
-    const totalPages = Math.ceil(allTiles.length / TILES_PER_PAGE);
-    const rangeMsg   = (from > 1 || to < allTiles.length)
-      ? ` · printing tiles ${from}–${to}`
-      : '';
-
-    statusEl.textContent =
-      `${allTiles.length} tiles · ${totalPages} A4 page${totalPages !== 1 ? 's' : ''}` +
-      rangeMsg;
-
-    if (slice.length === 0) {
-      sheetArea.innerHTML =
-        '<p style="color:#6b7280;font-size:14px;padding:40px;text-align:center">' +
-        'No tiles in that range. Adjust the tile numbers above.</p>';
-      return;
-    }
-
+    const slice     = allTiles.slice(startIdx);
     const pageCount = Math.ceil(slice.length / TILES_PER_PAGE);
+
+    if (!slice.length) return;
 
     for (let p = 0; p < pageCount; p++) {
       const page = document.createElement('div');
       page.className = 'a4-page';
-
       const grid = document.createElement('div');
       grid.className = 'grid';
       page.appendChild(grid);
@@ -417,12 +504,11 @@
       const pageTiles = slice.slice(p * TILES_PER_PAGE, (p + 1) * TILES_PER_PAGE);
 
       pageTiles.forEach((tile, i) => {
-        const globalNum = from + p * TILES_PER_PAGE + i;
+        const globalNum = startIdx + p * TILES_PER_PAGE + i + 1;
 
         const div = document.createElement('div');
         div.className = 'tile';
 
-        // Tile number badge (screen only — hidden in print CSS)
         const numBadge = document.createElement('div');
         numBadge.className = 'tile-num no-print';
         numBadge.textContent = '#' + globalNum;
