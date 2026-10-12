@@ -12,7 +12,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f3f4f6; color: #111; }
 
-    /* Login */
+    /* ── Login ── */
     #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
     .login-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 36px 32px; width: 340px; box-shadow: 0 4px 24px rgba(0,0,0,.08); }
     .login-card h1 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
@@ -26,67 +26,88 @@
     #login-btn:disabled { background: #9ca3af; cursor: not-allowed; }
     #login-error { margin-top: 12px; font-size: 12px; color: #dc2626; text-align: center; }
 
-    /* Sheet screen */
+    /* ── Sheet screen ── */
     #sheet-screen { display: none; }
 
-    /* Topbar */
-    .topbar { position: sticky; top: 0; z-index: 10; background: #fff; border-bottom: 1px solid #e5e7eb; padding: 10px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-    .topbar-title h2 { font-size: 15px; font-weight: 800; }
-    .topbar-title p  { font-size: 11px; color: #6b7280; margin-top: 2px; }
-    .topbar-spacer { flex: 1; }
-
-    /* Mode toggle */
-    .mode-toggle { display: flex; border: 1px solid #e5e7eb; border-radius: 9px; overflow: hidden; }
-    .mode-btn { padding: 7px 14px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; background: #f9fafb; color: #6b7280; transition: all .15s; }
-    .mode-btn.active { background: #111827; color: #fff; }
-
-    .btn-print { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; background: #111827; color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .topbar {
+      position: sticky; top: 0; z-index: 10;
+      background: #fff; border-bottom: 1px solid #e5e7eb;
+      padding: 12px 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .topbar h2 { font-size: 16px; font-weight: 800; }
+    .topbar p  { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .btn-print {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; background: #111827; color: #fff;
+      border: none; border-radius: 10px; font-size: 13px; font-weight: 700;
+      cursor: pointer; white-space: nowrap;
+    }
     .btn-print:hover { background: #374151; }
     .btn-print svg { width: 16px; height: 16px; }
 
-    /* Gap banner */
-    #gap-banner { margin: 14px 20px 0; padding: 12px 16px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; font-size: 13px; color: #92400e; display: none; }
-    #gap-banner strong { color: #78350f; }
-    #gap-banner .banner-actions { margin-top: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    #gap-banner input[type=number] { width: 60px; padding: 5px 8px; border: 1px solid #fcd34d; border-radius: 7px; font-size: 13px; text-align: center; outline: none; background: #fff; }
-    #gap-banner .mark-btn { padding: 6px 14px; background: #d97706; color: #fff; border: none; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; }
-    #gap-banner .mark-btn:hover { background: #b45309; }
-    #gap-banner .dismiss { font-size: 12px; color: #b45309; text-decoration: underline; cursor: pointer; }
-
-    /* Printed banner */
-    #printed-banner { margin: 14px 20px 0; padding: 10px 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; font-size: 13px; color: #166534; display: none; align-items: center; justify-content: space-between; gap: 10px; }
-    #printed-banner .reset-link { font-size: 12px; color: #16a34a; text-decoration: underline; cursor: pointer; white-space: nowrap; }
-
-    /* A4 */
+    /* ── A4 page ── */
     .sheet-area { padding: 20px; }
-    .a4-page { background: #fff; width: 210mm; min-height: 297mm; margin: 0 auto 16px; padding: 10mm; box-shadow: 0 2px 12px rgba(0,0,0,.12); }
-
-    /* Grid */
+    .a4-page {
+      background: #fff; width: 210mm; min-height: 297mm;
+      margin: 0 auto 16px; padding: 10mm;
+      box-shadow: 0 2px 12px rgba(0,0,0,.12);
+    }
     .grid { display: flex; flex-wrap: wrap; gap: 3mm; }
 
-    /* Tile */
-    .tile { display: flex; flex-direction: column; align-items: center; width: 21mm; text-align: center; padding: 2mm 1.5mm 1.5mm; border: 0.5pt solid #e5e7eb; border-radius: 3pt; position: relative; }
-    .tile-num { position: absolute; top: 1pt; left: 2pt; font-size: 5pt; color: #c4b5fd; font-weight: 700; font-family: monospace; }
+    /* ── Tile ──
+       Layout (top → bottom):
+         SKU code   ← cut line is below this
+         QR code
+         - - - - -  ← dotted cut guide (print only)
+         Name       ← below the cut, for reference only
+    */
+    .tile {
+      display: flex; flex-direction: column; align-items: center;
+      width: 21mm; text-align: center;
+      border: 0.5pt solid #e5e7eb; border-radius: 3pt;
+      overflow: hidden;
+    }
+    .tile-top {
+      display: flex; flex-direction: column; align-items: center;
+      width: 100%; padding: 2mm 1mm 1.5mm;
+    }
+    .tile .sku {
+      font-size: 6.5pt; font-weight: 800; color: #111827;
+      font-family: 'Courier New', monospace;
+      letter-spacing: .03em; margin-bottom: 1.5mm;
+    }
     .qr-wrap     { width: 15mm; height: 15mm; overflow: hidden; flex-shrink: 0; }
     .qr-wrap img { width: 15mm !important; height: 15mm !important; display: block !important; }
-    .tile .name { font-size: 7pt; font-weight: 700; color: #111827; margin-top: 2pt; line-height: 1.3; word-break: break-word; }
-    .tile .sku  { font-size: 6pt; color: #6b7280; font-family: 'Courier New', monospace; margin-top: 1pt; word-break: break-all; }
 
-    /* Print */
+    /* Dotted cut line separating QR+SKU from name */
+    .cut-line {
+      width: 100%; border-top: 0.5pt dashed #d1d5db;
+      margin: 0;
+    }
+    .tile .name {
+      width: 100%; font-size: 6pt; color: #6b7280;
+      padding: 1mm 1mm 1.5mm; line-height: 1.3; word-break: break-word;
+    }
+
+    /* ── Print ── */
     @media print {
       @page { size: A4 portrait; margin: 10mm; }
       body { background: #fff; }
       .no-print { display: none !important; }
       .sheet-area { padding: 0; }
-      .a4-page { width: 100%; min-height: auto; margin: 0; padding: 0; box-shadow: none; page-break-after: always; break-after: page; }
+      .a4-page {
+        width: 100%; min-height: auto; margin: 0; padding: 0;
+        box-shadow: none; page-break-after: always; break-after: page;
+      }
       .a4-page:last-child { page-break-after: auto; break-after: auto; }
       .grid { gap: 2mm; }
-      .tile { width: 21mm; padding: 1.5mm 1mm 1mm; page-break-inside: avoid; break-inside: avoid; }
-      .tile-num { display: none; }
+      .tile { width: 21mm; page-break-inside: avoid; break-inside: avoid; }
+      .tile-top { padding: 1.5mm 1mm 1mm; }
+      .tile .sku { font-size: 6pt; margin-bottom: 1mm; }
       .qr-wrap     { width: 1.5cm; height: 1.5cm; }
       .qr-wrap img { width: 1.5cm !important; height: 1.5cm !important; display: block !important; }
-      .tile .name { font-size: 5.5pt; }
-      .tile .sku  { font-size: 4.5pt; }
+      .tile .name { font-size: 5pt; padding: 0.8mm 1mm 1mm; }
     }
   </style>
 </head>
@@ -110,18 +131,12 @@
 </div>
 
 <div id="sheet-screen">
-
   <div class="topbar no-print">
-    <div class="topbar-title">
-      <h2>QR Code Sheet</h2>
+    <div>
+      <h2>QR Code Print Sheet — A4</h2>
       <p id="status-line">Loading…</p>
     </div>
-    <div class="topbar-spacer"></div>
-    <div class="mode-toggle">
-      <button class="mode-btn active" id="btn-gap" onclick="setMode('gap')">⚡ Print Missing</button>
-      <button class="mode-btn" id="btn-all" onclick="setMode('all')">All Tiles</button>
-    </div>
-    <button class="btn-print" onclick="onPrint()">
+    <button class="btn-print" onclick="window.print()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="6 9 6 2 18 2 18 9"/>
         <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
@@ -130,25 +145,6 @@
       Print / Save PDF
     </button>
   </div>
-
-  <!-- Shown when no baseline exists yet -->
-  <div id="gap-banner" class="no-print">
-    <strong>First time setup — tell me what you've already printed:</strong><br/>
-    How many pages did you print in your <em>previous</em> run?
-    <div class="banner-actions">
-      <input type="number" id="pages-printed-input" min="0" value="1" />
-      <span style="font-size:13px">page(s) already printed</span>
-      <button class="mark-btn" onclick="saveBaseline()">Save &amp; Show Gap</button>
-      <span class="dismiss" onclick="dismissBanner()">I'll print everything (skip gap tracking)</span>
-    </div>
-  </div>
-
-  <!-- Shown when baseline exists -->
-  <div id="printed-banner" class="no-print">
-    <span id="printed-banner-text"></span>
-    <span class="reset-link" onclick="resetBaseline()">Reset (reprint everything)</span>
-  </div>
-
   <div class="sheet-area" id="sheet-area"></div>
 </div>
 
@@ -160,11 +156,6 @@
   );
 
   const TILES_PER_PAGE = 88;
-  const LS_KEY = 'naitree_qr_printed_v1';
-
-  let allTiles  = [];
-  let gapTiles  = [];
-  let mode      = 'gap';  // 'gap' | 'all'
 
   document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 
@@ -190,159 +181,54 @@
     const { data: products, error } = await sb
       .from('products')
       .select('id, name, sku, stock, has_variants, variants(id, name, sku, stock)')
-      .order('name', { ascending: true });
+      .order('sku', { ascending: true });   // ← sort by SKU / product code
 
     if (error) { statusEl.textContent = 'Error: ' + error.message; return; }
 
+    // Build tile list sorted by SKU; one tile per unit in stock
     const tiles  = [];
     let skipped  = 0;
+
     for (const p of products) {
       if (p.has_variants && p.variants?.length > 0) {
-        for (const v of p.variants) {
+        // Sort variants by their SKU too
+        const sorted = [...p.variants].sort((a, b) => (a.sku || '').localeCompare(b.sku || ''));
+        for (const v of sorted) {
           const qty = Math.max(0, Math.floor(v.stock ?? 0));
           if (!v.sku) { skipped++; continue; }
           if (qty === 0) continue;
-          for (let i = 0; i < qty; i++) tiles.push({ sku: v.sku, label: `${p.name} — ${v.name}` });
+          for (let i = 0; i < qty; i++)
+            tiles.push({ sku: v.sku, label: `${p.name} — ${v.name}` });
         }
       } else {
         const qty = Math.max(0, Math.floor(p.stock ?? 0));
         if (!p.sku) { skipped++; continue; }
         if (qty === 0) continue;
-        for (let i = 0; i < qty; i++) tiles.push({ sku: p.sku, label: p.name });
+        for (let i = 0; i < qty; i++)
+          tiles.push({ sku: p.sku, label: p.name });
       }
     }
-    allTiles = tiles;
 
-    computeGap();
-    updateUI();
-
-    const pageCount = Math.ceil(allTiles.length / TILES_PER_PAGE);
-    statusEl.textContent = `${allTiles.length} total tiles · ${pageCount} pages` +
+    const pageCount = Math.ceil(tiles.length / TILES_PER_PAGE);
+    statusEl.textContent =
+      `${tiles.length} QR code${tiles.length !== 1 ? 's' : ''}` +
+      ` · ${pageCount} A4 page${pageCount !== 1 ? 's' : ''}` +
       (skipped > 0 ? ` · ${skipped} skipped (no SKU)` : '');
+
+    renderSheet(tiles);
   }
-
-  /* ── Gap logic ─────────────────────────────────────────── */
-
-  function computeGap() {
-    const saved = getBaseline();
-    if (!saved) { gapTiles = [...allTiles]; return; }
-
-    // Count how many of each SKU were already printed
-    const printedCounts = {};
-    for (const sku of saved) printedCounts[sku] = (printedCounts[sku] || 0) + 1;
-
-    // For each tile in current stock, skip it if already printed
-    const usedCounts = {};
-    gapTiles = [];
-    for (const t of allTiles) {
-      usedCounts[t.sku] = (usedCounts[t.sku] || 0) + 1;
-      const printed = printedCounts[t.sku] || 0;
-      if (usedCounts[t.sku] > printed) gapTiles.push(t);
-    }
-  }
-
-  function getBaseline() {
-    try { return JSON.parse(localStorage.getItem(LS_KEY)); } catch { return null; }
-  }
-
-  function saveBaseline() {
-    const pages = Math.max(0, parseInt(document.getElementById('pages-printed-input').value, 10) || 0);
-    // Take the first pages×TILES_PER_PAGE tiles as the printed baseline
-    const printed = allTiles.slice(0, pages * TILES_PER_PAGE).map(t => t.sku);
-    localStorage.setItem(LS_KEY, JSON.stringify(printed));
-    computeGap();
-    updateUI();
-  }
-
-  function saveCurrentAsBaseline() {
-    // Called after user prints — the tiles just shown are now "printed"
-    const tilesShown = mode === 'gap' ? gapTiles : allTiles;
-    const existing   = getBaseline() || [];
-    const combined   = [...existing, ...tilesShown.map(t => t.sku)];
-    localStorage.setItem(LS_KEY, JSON.stringify(combined));
-    computeGap();
-    updateUI();
-  }
-
-  function resetBaseline() {
-    if (!confirm('This will mark nothing as printed and show the full tile list. Continue?')) return;
-    localStorage.removeItem(LS_KEY);
-    computeGap();
-    updateUI();
-  }
-
-  function dismissBanner() {
-    // Save empty array as baseline so banner doesn't show again, and show all tiles
-    localStorage.setItem(LS_KEY, JSON.stringify([]));
-    computeGap();
-    setMode('all');
-    updateUI();
-  }
-
-  /* ── Mode / UI ─────────────────────────────────────────── */
-
-  function setMode(m) {
-    mode = m;
-    document.getElementById('btn-gap').classList.toggle('active', m === 'gap');
-    document.getElementById('btn-all').classList.toggle('active', m === 'all');
-    renderSheet(m === 'gap' ? gapTiles : allTiles);
-    updateStatus();
-  }
-
-  function updateUI() {
-    const baseline = getBaseline();
-    const gapBanner     = document.getElementById('gap-banner');
-    const printedBanner = document.getElementById('printed-banner');
-
-    if (!baseline) {
-      // No baseline — ask user
-      gapBanner.style.display     = 'block';
-      printedBanner.style.display = 'none';
-      setMode('all');
-    } else {
-      gapBanner.style.display     = 'none';
-      printedBanner.style.display = 'flex';
-      const printedCount = baseline.length;
-      const gapCount     = gapTiles.length;
-      document.getElementById('printed-banner-text').innerHTML =
-        `✅ <strong>${printedCount}</strong> stickers already tracked as printed · ` +
-        `<strong>${gapCount}</strong> remaining to print`;
-      setMode('gap');
-    }
-  }
-
-  function updateStatus() {
-    const tiles     = mode === 'gap' ? gapTiles : allTiles;
-    const pageCount = Math.ceil(tiles.length / TILES_PER_PAGE) || 0;
-    const label     = mode === 'gap' ? 'missing' : 'total';
-    document.getElementById('status-line').textContent =
-      `${tiles.length} ${label} tiles · ${pageCount} page${pageCount !== 1 ? 's' : ''}`;
-  }
-
-  /* ── Print callback — offer to save baseline ───────────── */
-
-  function onPrint() {
-    window.print();
-    const tiles = mode === 'gap' ? gapTiles : allTiles;
-    if (tiles.length > 0) {
-      setTimeout(() => {
-        if (confirm(`Mark these ${tiles.length} tiles as printed?\n\nSay Yes after you've confirmed the print came out correctly. Next time the page will only show what's still missing.`)) {
-          saveCurrentAsBaseline();
-        }
-      }, 500);
-    }
-  }
-
-  /* ── Render ─────────────────────────────────────────────── */
 
   function renderSheet(tiles) {
     const sheetArea = document.getElementById('sheet-area');
     sheetArea.innerHTML = '';
+
     if (!tiles.length) {
-      sheetArea.innerHTML = '<p style="color:#6b7280;font-size:14px;padding:40px;text-align:center">🎉 Nothing to print — all items have stickers!</p>';
+      sheetArea.innerHTML = '<p style="color:#6b7280;font-size:14px;padding:40px;text-align:center">No items in stock with SKUs.</p>';
       return;
     }
+
     const pageCount = Math.ceil(tiles.length / TILES_PER_PAGE);
+
     for (let p = 0; p < pageCount; p++) {
       const page = document.createElement('div');
       page.className = 'a4-page';
@@ -351,35 +237,44 @@
       page.appendChild(grid);
       sheetArea.appendChild(page);
 
-      tiles.slice(p * TILES_PER_PAGE, (p + 1) * TILES_PER_PAGE).forEach((tile, i) => {
-        const globalNum = p * TILES_PER_PAGE + i + 1;
+      tiles.slice(p * TILES_PER_PAGE, (p + 1) * TILES_PER_PAGE).forEach(tile => {
         const div = document.createElement('div');
         div.className = 'tile';
 
-        const numBadge = document.createElement('div');
-        numBadge.className = 'tile-num no-print';
-        numBadge.textContent = '#' + globalNum;
-        div.appendChild(numBadge);
+        // Top section: SKU + QR (this is what gets cut and stuck)
+        const top = document.createElement('div');
+        top.className = 'tile-top';
+
+        const skuEl = document.createElement('div');
+        skuEl.className = 'sku';
+        skuEl.textContent = tile.sku;
+        top.appendChild(skuEl);
 
         const qrWrap = document.createElement('div');
         qrWrap.className = 'qr-wrap';
-        div.appendChild(qrWrap);
+        top.appendChild(qrWrap);
 
+        div.appendChild(top);
+
+        // Dotted cut line
+        const cut = document.createElement('div');
+        cut.className = 'cut-line';
+        div.appendChild(cut);
+
+        // Name below cut line (reference only — not part of the sticker)
         const nameEl = document.createElement('div');
         nameEl.className = 'name';
         nameEl.textContent = tile.label;
         div.appendChild(nameEl);
 
-        const skuEl = document.createElement('div');
-        skuEl.className = 'sku';
-        skuEl.textContent = tile.sku;
-        div.appendChild(skuEl);
-
         grid.appendChild(div);
 
         new QRCode(qrWrap, {
-          text: tile.sku, width: 200, height: 200,
-          colorDark: '#111827', colorLight: '#ffffff',
+          text:         tile.sku,
+          width:        200,
+          height:       200,
+          colorDark:    '#111827',
+          colorLight:   '#ffffff',
           correctLevel: QRCode.CorrectLevel.M,
         });
       });
