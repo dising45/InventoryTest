@@ -358,18 +358,16 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
         </select>
 
         {/* Paid By Filter */}
-        {paidByOptions.length > 0 && (
-          <select
-            value={paidByFilter}
-            onChange={(e) => setPaidByFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-200 rounded-xl text-sm"
-          >
-            <option value="">All Payers</option>
-            {paidByOptions.map(p => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-        )}
+        <select
+          value={paidByFilter}
+          onChange={(e) => setPaidByFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-xl text-sm"
+        >
+          <option value="">All Payers</option>
+          {paidByOptions.map(p => (
+            <option key={p} value={p}>{p}</option>
+          ))}
+        </select>
 
         {/* Date Range Filter */}
         <select
