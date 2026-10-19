@@ -75,6 +75,7 @@ class ExpenseServiceSupabase {
     payment_mode?: string
     reference?: string
     vendor?: string
+    paid_by?: string
   }) {
     const { data, error } = await supabase
       .from('expenses')
@@ -89,6 +90,7 @@ class ExpenseServiceSupabase {
           payment_mode: expense.payment_mode ?? null,
           reference: expense.reference ?? null,
           vendor: expense.vendor ?? null,
+          paid_by: expense.paid_by ?? null,
         },
       ])
       .select()
@@ -115,6 +117,7 @@ class ExpenseServiceSupabase {
     payment_mode?: string
     reference?: string
     vendor?: string
+    paid_by?: string
   }) {
     const { data, error } = await supabase
       .from('expenses')
@@ -128,6 +131,7 @@ class ExpenseServiceSupabase {
         payment_mode: expense.payment_mode ?? null,
         reference: expense.reference ?? null,
         vendor: expense.vendor ?? null,
+        paid_by: expense.paid_by ?? null,
       })
       .eq('id', id)
       .select()

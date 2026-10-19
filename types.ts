@@ -141,5 +141,6 @@ export interface Expense {
   payment_mode?: string
   reference?: string
   vendor?: string
+  paid_by?: string
   created_at?: string
 }

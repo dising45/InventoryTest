@@ -11,7 +11,8 @@ import {
   FileText,
   Package,
   Ruler,
-  Loader2
+  Loader2,
+  User
 } from 'lucide-react'
 
 interface ExpenseFormProps {
@@ -26,6 +27,7 @@ interface ExpenseFormProps {
     payment_mode?: string
     reference?: string
     vendor?: string
+    paid_by?: string
   }
   onSave: (data: {
     expense_date: string
@@ -37,6 +39,7 @@ interface ExpenseFormProps {
     payment_mode?: string
     reference?: string
     vendor?: string
+    paid_by?: string
   }) => Promise<void>
   onCancel: () => void
 }
@@ -78,6 +81,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     payment_mode: initialData?.payment_mode || '',
     reference: initialData?.reference || '',
     vendor: initialData?.vendor || '',
+    paid_by: initialData?.paid_by || '',
   })
 
   const handleChange = (
@@ -99,6 +103,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
         ...form,
         quantity: form.quantity > 0 ? form.quantity : null,
         unit: form.unit.trim() || null,
+        paid_by: form.paid_by.trim() || undefined,
       })
     } finally {
       setLoading(false)
@@ -240,6 +245,14 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 icon={FileText}
                 placeholder="Ref No. or Notes"
                 value={form.reference}
+                onChange={handleChange}
+              />
+              <InputField
+                label="Paid By"
+                name="paid_by"
+                icon={User}
+                placeholder="Who paid this expense?"
+                value={form.paid_by}
                 onChange={handleChange}
               />
             </div>

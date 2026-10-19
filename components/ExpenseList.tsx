@@ -12,7 +12,8 @@ import {
   Building2,
   Search,
   Download,
-  Plus
+  Plus,
+  User
 } from 'lucide-react'
 import { exportCSV } from '../utils/exportCSV'
 
@@ -35,6 +36,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
   const [vendorFilter, setVendorFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [referenceFilter, setReferenceFilter] = useState('')
+  const [paidByFilter, setPaidByFilter] = useState('')
   const [dateRange, setDateRange] = useState<'all' | 'this_month' | 'last_month' | 'this_year' | 'custom'>('all')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
@@ -112,6 +114,10 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
       data = data.filter(e => e.reference === referenceFilter)
     }
 
+    if (paidByFilter) {
+      data = data.filter(e => e.paid_by === paidByFilter)
+    }
+
     if (dateFrom) {
       data = data.filter(e => (e.expense_date ?? '').slice(0, 10) >= dateFrom)
     }
@@ -134,11 +140,12 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
     })
 
     return data
-  }, [expenses, search, vendorFilter, categoryFilter, referenceFilter, dateFrom, dateTo, sortBy, sortOrder])
+  }, [expenses, search, vendorFilter, categoryFilter, referenceFilter, paidByFilter, dateFrom, dateTo, sortBy, sortOrder])
 
   const vendors = [...new Set(expenses.map(e => e.vendor).filter((v): v is string => !!v))]
   const categories = [...new Set(expenses.map(e => e.category).filter((c): c is string => !!c))]
   const references = [...new Set(expenses.map(e => e.reference).filter((r): r is string => !!r))]
+  const paidByOptions = [...new Set(expenses.map(e => e.paid_by).filter((p): p is string => !!p))]
   /* ================= SUMMARY CALCULATIONS ================= */
 
   const totalExpenseAmount = filteredExpenses.reduce(
@@ -166,6 +173,18 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
   const thisMonthTotal = filteredExpenses
     .filter(e => (e.expense_date ?? '') >= monthStart)
     .reduce((sum, e) => sum + Number(e.amount || 0), 0)
+
+  const paidByTotals = filteredExpenses.reduce<Record<string, number>>(
+    (acc, e) => {
+      if (e.paid_by?.trim()) {
+        const key = e.paid_by.trim()
+        acc[key] = (acc[key] || 0) + Number(e.amount || 0)
+      }
+      return acc
+    },
+    {}
+  )
+  const paidByEntries = (Object.entries(paidByTotals) as [string, number][]).sort((a, b) => b[1] - a[1])
   /* ================= RENDER ================= */
 
   return (
@@ -222,6 +241,32 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
 
         </div>
       </div>
+
+      {/* ================= WHO PAID BREAKDOWN ================= */}
+      {paidByEntries.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 ml-1">Who Paid</p>
+          <div className="flex flex-wrap gap-3">
+            {paidByEntries.map(([person, total]) => (
+              <button
+                key={person}
+                onClick={() => setPaidByFilter(paidByFilter === person ? '' : person)}
+                className={`flex items-center gap-2 px-4 py-3 rounded-2xl border text-sm font-bold transition-all shadow-sm ${
+                  paidByFilter === person
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-200'
+                    : 'bg-white border-gray-200 text-gray-800 hover:border-indigo-300 hover:bg-indigo-50'
+                }`}
+              >
+                <User className="w-4 h-4 shrink-0" />
+                <span>{person}</span>
+                <span className={`ml-1 tabular-nums ${paidByFilter === person ? 'text-indigo-100' : 'text-gray-500'}`}>
+                  {formatCurrency(total)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {/* ================= DOWNLOAD BUTTON ================= */}
       <div className="flex justify-end">
         <button
@@ -237,6 +282,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                 { key: 'unit', label: 'Unit' },
                 { key: 'payment_mode', label: 'Payment Mode' },
                 { key: 'reference', label: 'Reference' },
+                { key: 'paid_by', label: 'Paid By' },
                 { key: 'amount', label: 'Amount (₹)' },
               ],
               data: filteredExpenses.map(e => ({
@@ -248,6 +294,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                 unit: e.unit || '',
                 payment_mode: e.payment_mode || '',
                 reference: e.reference || '',
+                paid_by: e.paid_by || '',
                 amount: Number(e.amount || 0).toFixed(2),
               })),
             })
@@ -310,6 +357,20 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
           ))}
         </select>
 
+        {/* Paid By Filter */}
+        {paidByOptions.length > 0 && (
+          <select
+            value={paidByFilter}
+            onChange={(e) => setPaidByFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-xl text-sm"
+          >
+            <option value="">All Payers</option>
+            {paidByOptions.map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        )}
+
         {/* Date Range Filter */}
         <select
           value={dateRange}
@@ -369,12 +430,12 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
       {filteredExpenses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 px-4 bg-white rounded-2xl border border-gray-200 border-dashed text-center">
           <Wallet className="h-8 w-8 text-red-400 mb-4" />
-          {search || vendorFilter || categoryFilter || referenceFilter || dateRange !== 'all' ? (
+          {search || vendorFilter || categoryFilter || referenceFilter || paidByFilter || dateRange !== 'all' ? (
             <>
               <h3 className="text-lg font-bold text-gray-900">No results found</h3>
               <p className="text-sm text-gray-400 mt-1 mb-5">Try adjusting your filters</p>
               <button
-                onClick={() => { setSearch(''); setVendorFilter(''); setCategoryFilter(''); setReferenceFilter(''); setDateRange('all'); setCustomFrom(''); setCustomTo('') }}
+                onClick={() => { setSearch(''); setVendorFilter(''); setCategoryFilter(''); setReferenceFilter(''); setPaidByFilter(''); setDateRange('all'); setCustomFrom(''); setCustomTo('') }}
                 className="px-4 py-2 text-sm font-bold text-indigo-600 bg-indigo-50 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-colors"
               >
                 Clear Filters
@@ -407,6 +468,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Vendor</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Paid By</th>
                   <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Amount</th>
                   {(onEdit || onDelete) && <th className="px-6 py-4" />}
                 </tr>
@@ -434,6 +496,17 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                         <span className="inline-block mt-1 text-[10px] font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
                           {formatQtyUnit(e)}
                         </span>
+                      )}
+                    </td>
+
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {e.paid_by ? (
+                        <span className="inline-flex items-center gap-1">
+                          <User className="w-3.5 h-3.5 text-gray-400" />
+                          {e.paid_by}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
                       )}
                     </td>
 
@@ -494,7 +567,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                       )}
                     </div>
                     <p className="text-[11px] text-gray-400 truncate mt-0.5">
-                      {formatDate(e.expense_date)}{e.description ? ` · ${e.description}` : ''}{formatQtyUnit(e) ? ` · ${formatQtyUnit(e)}` : ''}
+                      {formatDate(e.expense_date)}{e.description ? ` · ${e.description}` : ''}{formatQtyUnit(e) ? ` · ${formatQtyUnit(e)}` : ''}{e.paid_by ? ` · ${e.paid_by}` : ''}
                     </p>
                   </div>
 
