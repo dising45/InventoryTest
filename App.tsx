@@ -35,6 +35,7 @@ import ProfitLoss from './components/ProfitLoss'
 import InvoiceModal from './components/InvoiceModal'
 import PurchaseOrderList from './components/PurchaseOrderList'
 import PurchaseOrderForm from './components/PurchaseOrderForm'
+import ProductLedger from './components/ProductLedger'
 import Login from './components/Login'
 import Settings from './components/Settings'
 
@@ -52,6 +53,7 @@ import {
   ClipboardList,
   LogOut,
   Settings as SettingsIcon,
+  BookOpen,
 } from 'lucide-react'
 
 /* =======================
@@ -263,6 +265,7 @@ function AppInner({ businessName, businessLogoUrl, userEmail, onSignOut, onUpdat
     expenses: 'Expenses',
     pl: 'Reports',
     'purchase-orders': 'Vendor Bills',
+    'product-ledger': 'Product Ledger',
     settings: 'Settings'
   }
 
@@ -308,6 +311,7 @@ function AppInner({ businessName, businessLogoUrl, userEmail, onSignOut, onUpdat
           <NavButton view="purchase-orders" icon={ClipboardList} label="Vendor Bills" currentView={currentView} setCurrentView={setCurrentView} />
           <NavButton view="expenses" icon={Wallet} label="Expenses" currentView={currentView} setCurrentView={setCurrentView} />
           <NavButton view="pl" icon={BarChart3} label="Profit & Loss" currentView={currentView} setCurrentView={setCurrentView} />
+          <NavButton view="product-ledger" icon={BookOpen} label="Ledger" currentView={currentView} setCurrentView={setCurrentView} />
           <NavButton view="settings" icon={SettingsIcon} label="Settings" currentView={currentView} setCurrentView={setCurrentView} />
         </nav>
 
@@ -577,6 +581,18 @@ function AppInner({ businessName, businessLogoUrl, userEmail, onSignOut, onUpdat
                     <>
                       <PageHeader title="Profit & Loss" />
                       <ProfitLoss />
+                    </>
+                  )}
+
+                  {/* PRODUCT LEDGER */}
+                  {currentView === 'product-ledger' && (
+                    <>
+                      <PageHeader title="Product Ledger" />
+                      <ProductLedger
+                        products={products}
+                        purchaseOrders={purchaseOrders}
+                        sales={sales}
+                      />
                     </>
                   )}
 

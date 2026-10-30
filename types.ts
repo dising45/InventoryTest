@@ -84,6 +84,7 @@ export type ViewState =
   | 'expenses' | 'add-expense' | 'edit-expense'
   | 'purchase-orders' | 'add-po'
   | 'pl'
+  | 'product-ledger'
   | 'settings';
 
 export interface InventoryStats {

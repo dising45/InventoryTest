@@ -12,6 +12,7 @@ import {
   ClipboardList,
   Settings,
   X,
+  BookOpen,
 } from 'lucide-react'
 
 interface Props {
@@ -31,6 +32,7 @@ const moreItems = [
   { id: 'purchase-orders', icon: ClipboardList, label: 'Vendor Bills' },
   { id: 'expenses', icon: Wallet, label: 'Expenses' },
   { id: 'pl', icon: BarChart3, label: 'Profit & Loss' },
+  { id: 'product-ledger', icon: BookOpen, label: 'Ledger' },
   { id: 'settings', icon: Settings, label: 'Settings' },
 ]
 
