@@ -26,6 +26,7 @@ type POInput = {
   discount_type?: 'flat' | 'percent';
   status?: 'unpaid' | 'paid';
   is_legacy?: boolean;
+  bill_photo_url?: string;
   items: POItemInput[];
   charges?: POChargeInput[];
 };
@@ -71,6 +72,7 @@ export const purchaseService = {
         status,
         paid_at: status === 'paid' ? new Date().toISOString() : null,
         is_legacy: isLegacy,
+        bill_photo_url: data.bill_photo_url ?? null,
       })
       .select()
       .single();
@@ -189,6 +191,7 @@ export const purchaseService = {
         status,
         paid_at: status === 'paid' ? existing.paid_at ?? new Date().toISOString() : null,
         is_legacy: isLegacy,
+        bill_photo_url: data.bill_photo_url ?? null,
       })
       .eq('id', poId)
       .select()

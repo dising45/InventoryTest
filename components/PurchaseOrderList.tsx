@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, ChevronDown, ChevronUp, Pencil, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronUp, Pencil, CheckCircle2, RotateCcw, Camera } from 'lucide-react';
 
 interface Props {
   purchaseOrders: any[];
@@ -181,6 +181,26 @@ const PurchaseOrderList: React.FC<Props> = ({
                     <span>Charges total</span>
                     <span className="tabular-nums">₹{chargesTotal.toFixed(2)}</span>
                   </div>
+                </div>
+              )}
+
+              {po.bill_photo_url && (
+                <div className="pt-3 border-t">
+                  <a
+                    href={po.bill_photo_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block group"
+                  >
+                    <img
+                      src={po.bill_photo_url}
+                      alt="Bill"
+                      className="w-full max-h-48 object-contain rounded-lg bg-gray-50 border border-gray-100"
+                    />
+                    <p className="mt-1.5 text-xs text-indigo-600 flex items-center gap-1 group-hover:underline">
+                      <Camera className="w-3.5 h-3.5" /> View full bill photo →
+                    </p>
+                  </a>
                 </div>
               )}
             </div>

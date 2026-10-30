@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Supplier, Product, PurchaseOrder } from '../types';
 import PurchaseItemRow, {
   PurchaseItem,
 } from './PurchaseItemRow';
 import { purchaseService } from '../services/purchaseService.supabase';
 import { inventoryService } from '../services/inventoryService.supabase';
-import { Plus, Save, Trash2, CheckCircle2 } from 'lucide-react';
+import { imageService } from '../services/imageService.supabase';
+import { Plus, Save, Trash2, CheckCircle2, Camera, Loader2 } from 'lucide-react';
 import { useToast } from './ui';
 
 interface Props {
@@ -57,7 +58,10 @@ const PurchaseOrderForm: React.FC<Props> = ({
     })) ?? []
   );
   const [isLegacy, setIsLegacy] = useState(editingPO?.is_legacy ?? false);
+  const [billPhotoUrl, setBillPhotoUrl] = useState(editingPO?.bill_photo_url ?? '');
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
   /* ---------------- Item Rows ---------------- */
@@ -101,6 +105,27 @@ const PurchaseOrderForm: React.FC<Props> = ({
     });
   };
 
+  /* ---------------- Bill Photo ---------------- */
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.warning('Please select an image file');
+      return;
+    }
+    setPhotoUploading(true);
+    try {
+      const url = await imageService.uploadBillPhoto(file);
+      setBillPhotoUrl(url);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to upload photo');
+    } finally {
+      setPhotoUploading(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
+
   /* ---------------- Totals ---------------- */
   const goodsSubtotal = items.reduce((sum, i) => sum + i.quantity * i.unit_cost, 0);
   const discountValue =
@@ -135,6 +160,7 @@ const PurchaseOrderForm: React.FC<Props> = ({
       discount: Number(discount) || 0,
       discount_type: discountType,
       is_legacy: isLegacy,
+      bill_photo_url: billPhotoUrl || undefined,
       items: items.map(i => ({
         product_id: i.product_id || undefined,
         product_name: i.product_id ? undefined : i.product_name,
@@ -348,6 +374,50 @@ const PurchaseOrderForm: React.FC<Props> = ({
           rows={2}
           placeholder="e.g. Invoice #123, payment terms..."
           className="w-full border rounded px-3 py-2 text-sm resize-none mt-1"
+        />
+      </div>
+
+      {/* Bill Photo */}
+      <div className="mt-6">
+        <label className="text-sm text-gray-600">Bill photo (optional)</label>
+        <div
+          onClick={() => !photoUploading && photoInputRef.current?.click()}
+          className={`mt-1 border-2 border-dashed rounded-lg overflow-hidden cursor-pointer transition-colors ${
+            photoUploading ? 'border-gray-200' : 'border-gray-200 hover:border-indigo-400'
+          }`}
+        >
+          {billPhotoUrl ? (
+            <div className="relative group">
+              <img
+                src={billPhotoUrl}
+                alt="Bill"
+                className="w-full max-h-64 object-contain bg-gray-50"
+              />
+              {!photoUploading && (
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <p className="text-white text-sm font-semibold">Replace photo</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-28 text-gray-400">
+              {photoUploading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  <Camera className="w-5 h-5 mb-1" />
+                  <p className="text-sm">Attach bill photo</p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handlePhotoUpload}
         />
       </div>
 

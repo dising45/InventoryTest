@@ -106,6 +106,7 @@ export interface PurchaseOrder {
   status?: 'unpaid' | 'paid';
   paid_at?: string | null;
   is_legacy?: boolean;
+  bill_photo_url?: string;
   created_at: string;
   items: PurchaseItem[];
   charges?: PurchaseCharge[];
